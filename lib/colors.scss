@@ -1,0 +1,180 @@
+$transparent: transparent;
+$white: #ffffff;
+$overlay: rgba(0, 0, 0, 0.6);
+
+$black10: #fbfcfc;
+$black20: #efefef;
+$black30: #d3d3d3;
+$black40: #999999;
+$black50: #7a7a7a;
+$black60: #616161;
+$black70: #494949;
+$black80: #313131;
+$black90: #292929;
+
+$blue10: #edfbff;
+$blue20: #ace9fa;
+$blue30: #84dffb;
+$blue40: #59caf1;
+$blue50: #00b4d8;
+$blue60: #03aacb;
+$blue70: #0088b6;
+$blue80: #006b8e;
+$blue90: #004b63;
+
+$green10: #daf4ea;
+$green20: #aef3d8;
+$green30: #72dfa7;
+$green40: #3ecb84;
+$green50: #0dab76;
+$green60: #119956;
+$green70: #078345;
+$green80: #006635;
+$green90: #003e21;
+
+$indigo10: #f2f4ff;
+$indigo20: #d9ddff;
+$indigo30: #aeb7ff;
+$indigo40: #8891ff;
+$indigo50: #515de8;
+$indigo60: #3f4ef5;
+$indigo70: #323ecd;
+$indigo80: #1f299c;
+$indigo90: #172573;
+
+$limegreen10: #f8ffcd;
+$limegreen20: #e9f891;
+$limegreen30: #dcf067;
+$limegreen40: #cde53c;
+$limegreen50: #b5cd27;
+$limegreen60: #a8c01c;
+$limegreen70: #8fa50e;
+$limegreen80: #566405;
+$limegreen90: #3c4505;
+
+$orange10: #fff0e5;
+$orange20: #f7d8c3;
+$orange30: #f9c6a3;
+$orange40: #f9b688;
+$orange50: #f49553;
+$orange60: #f17c2f;
+$orange70: #d5661c;
+$orange80: #bb520e;
+$orange90: #a14304;
+
+$pink10: #ffe8f3;
+$pink20: #ffc0de;
+$pink30: #ff98c6;
+$pink40: #ff6ead;
+$pink50: #fa4093;
+$pink60: #e03879;
+$pink70: #d32468;
+$pink80: #cb185d;
+$pink90: #ac0042;
+
+$red10: #ffd7da;
+$red20: #f9b1b9;
+$red30: #ec7d89;
+$red40: #f03246;
+$red50: #d7263d;
+$red60: #bf2934;
+$red70: #a00d18;
+$red80: #820c15;
+$red90: #61030d;
+
+$yellow10: #fffce3;
+$yellow20: #fff9c2;
+$yellow30: #fff280;
+$yellow40: #fee930;
+$yellow50: #efdc36;
+$yellow60: #ddc91f;
+$yellow70: #988800;
+$yellow80: #988800;
+$yellow90: #685d00;
+
+$colors: (
+  transparent: $transparent,
+  white: $white,
+  overlay: $overlay,
+  black10: $black10,
+  black20: $black20,
+  black30: $black30,
+  black40: $black40,
+  black50: $black50,
+  black60: $black60,
+  black70: $black70,
+  black80: $black80,
+  black90: $black90,
+  blue10: $blue10,
+  blue20: $blue20,
+  blue30: $blue30,
+  blue40: $blue40,
+  blue50: $blue50,
+  blue60: $blue60,
+  blue70: $blue70,
+  blue80: $blue80,
+  blue90: $blue90,
+  green10: $green10,
+  green20: $green20,
+  green30: $green30,
+  green40: $green40,
+  green50: $green50,
+  green60: $green60,
+  green70: $green70,
+  green80: $green80,
+  green90: $green90,
+  indigo10: $indigo10,
+  indigo20: $indigo20,
+  indigo30: $indigo30,
+  indigo40: $indigo40,
+  indigo50: $indigo50,
+  indigo60: $indigo60,
+  indigo70: $indigo70,
+  indigo80: $indigo80,
+  indigo90: $indigo90,
+  limegreen10: $limegreen10,
+  limegreen20: $limegreen20,
+  limegreen30: $limegreen30,
+  limegreen40: $limegreen40,
+  limegreen50: $limegreen50,
+  limegreen60: $limegreen60,
+  limegreen70: $limegreen70,
+  limegreen80: $limegreen80,
+  limegreen90: $limegreen90,
+  orange10: $orange10,
+  orange20: $orange20,
+  orange30: $orange30,
+  orange40: $orange40,
+  orange50: $orange50,
+  orange60: $orange60,
+  orange70: $orange70,
+  orange80: $orange80,
+  orange90: $orange90,
+  pink10: $pink10,
+  pink20: $pink20,
+  pink30: $pink30,
+  pink40: $pink40,
+  pink50: $pink50,
+  pink60: $pink60,
+  pink70: $pink70,
+  pink80: $pink80,
+  pink90: $pink90,
+  red10: $red10,
+  red20: $red20,
+  red30: $red30,
+  red40: $red40,
+  red50: $red50,
+  red60: $red60,
+  red70: $red70,
+  red80: $red80,
+  red90: $red90,
+  yellow10: $yellow10,
+  yellow20: $yellow20,
+  yellow30: $yellow30,
+  yellow40: $yellow40,
+  yellow50: $yellow50,
+  yellow60: $yellow60,
+  yellow70: $yellow70,
+  yellow80: $yellow80,
+  yellow90: $yellow90,
+);

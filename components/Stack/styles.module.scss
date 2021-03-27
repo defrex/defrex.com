@@ -1,0 +1,28 @@
+@use "sass:meta";
+@use "sass:map";
+@use '../../lib/spacing';
+
+@mixin stack($spacing, $debug: false) {
+  margin-bottom: $spacing;
+
+  @if $debug {
+    position: relative;
+
+    &:after {
+      content: "";
+      position: absolute;
+      display: block;
+      height: $spacing;
+      width: 100%;
+      background-color: rgba(0, 0, 0, 0.3);
+    }
+  }
+}
+
+@each $spacing-key, $spacing-value in spacing.$spacing {
+  @each $debug in true, false {
+    .stack-#{$spacing-key}#{if($debug, "-debug", "")} {
+      @include stack($spacing-value, $debug);
+    }
+  }
+}

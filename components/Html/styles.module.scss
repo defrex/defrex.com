@@ -1,0 +1,32 @@
+@use "../../lib/spacing";
+@use "../../lib/colors";
+
+.html {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin-top: spacing.$large * 2;
+    margin-bottom: spacing.$large;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+
+  p {
+    font-size: 18px;
+    line-height: 1.4;
+    margin-top: spacing.$large;
+    margin-bottom: spacing.$large;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  a {
+    color: colors.$indigo80;
+    text-decoration: none;
+  }
+}

@@ -1,0 +1,69 @@
+$smallMax: 768px;
+$mediumMin: $smallMax + 1px;
+$mediumMax: 1024px;
+$largeMin: $mediumMax + 1px;
+
+@mixin small {
+  @media screen and (max-width: $smallMax) {
+    @content;
+  }
+}
+
+@mixin lt-medium {
+  @media screen and (max-width: $mediumMax) {
+    @content;
+  }
+}
+
+@mixin medium {
+  @media screen and (min-width: $mediumMin) and (max-width: $mediumMax) {
+    @content;
+  }
+}
+
+@mixin gt-medium {
+  @media screen and (min-width: $mediumMin) {
+    @content;
+  }
+}
+
+@mixin large {
+  @media screen and (min-width: $largeMin) {
+    @content;
+  }
+}
+
+@mixin condition-classes($prefix, $extend: false) {
+  $selector: ".";
+  @if ($extend) {
+    $selector: "&.";
+  }
+
+  @include small {
+    #{$selector}#{$prefix}-lte-small,
+    #{$selector}#{$prefix}-lte-medium,
+    #{$selector}#{$prefix}-lte-large,
+    #{$selector}#{$prefix}-eq-small {
+      @content;
+    }
+  }
+
+  @include medium {
+    #{$selector}#{$prefix}-lte-medium,
+    #{$selector}#{$prefix}-lte-large,
+    #{$selector}#{$prefix}-eq-medium,
+    #{$selector}#{$prefix}-gte-medium,
+    #{$selector}#{$prefix}-gte-small {
+      @content;
+    }
+  }
+
+  @include large {
+    #{$selector}#{$prefix}-lte-large,
+    #{$selector}#{$prefix}-eq-large,
+    #{$selector}#{$prefix}-gte-small,
+    #{$selector}#{$prefix}-gte-medium {
+      @content;
+    }
+  }
+}

@@ -1,0 +1,44 @@
+import Link from 'next/link'
+import { Post } from '../@types/content'
+import { PageContainer } from '../components/PageContainer'
+import { Stack } from '../components/Stack'
+import { Text } from '../components/Text'
+
+interface IndexProps {
+  posts: Post[]
+}
+
+export default function Index({ posts }: IndexProps) {
+  return (
+    <PageContainer>
+      <Stack>
+        <Text value='Articles' styleNumber={61} />
+        {posts.map((post, index) => (
+          <Link href={`/posts/${post.slug}`} key={index}>
+            <a>
+              <Text value={post.attributes.title} styleNumber={52} />
+            </a>
+          </Link>
+        ))}
+      </Stack>
+    </PageContainer>
+  )
+}
+
+export async function getStaticProps(): Promise<{ props: { posts: Post[] } }> {
+  const markdownFiles = require
+    .context('../content/posts', false, /\.md$/)
+    .keys()
+    .map((path: string) => path.substring(2))
+
+  const posts: Post[] = await Promise.all(
+    markdownFiles.map(async (path: string) => {
+      const markdown = await import(`../content/posts/${path}`)
+      return { ...markdown, slug: path.substring(0, path.length - 3) }
+    }),
+  )
+
+  return {
+    props: { posts },
+  }
+}

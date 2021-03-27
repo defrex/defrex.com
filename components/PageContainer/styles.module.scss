@@ -1,0 +1,26 @@
+@use "../../lib/colors";
+@use "../../lib/spacing";
+@use "../../lib/screens";
+
+.container {
+  max-width: screens.$smallMax;
+  margin: auto;
+}
+
+.preview {
+  background-color: colors.$indigo60;
+}
+
+.footer {
+  background-color: colors.$indigo60;
+}
+
+.footer-heading {
+  min-height: spacing.$large;
+}
+
+.footer-logo {
+  display: block;
+  // Adjust to match the other headers
+  margin-top: -#{spacing.$small};
+}

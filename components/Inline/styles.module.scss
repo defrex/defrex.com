@@ -1,0 +1,78 @@
+@use "sass:map";
+@use '../../lib/spacing';
+@use '../../lib/screens';
+
+.inline-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+
+  &.center {
+    justify-content: center;
+  }
+
+  &.right {
+    justify-content: flex-end;
+  }
+
+  &.bottom {
+    align-items: flex-end;
+  }
+
+  &.top {
+    align-items: flex-start;
+  }
+
+  &.fill {
+    width: "100%";
+  }
+}
+
+@include screens.condition-classes("vertical") {
+  flex-direction: column;
+}
+
+@include screens.condition-classes("vertical-reverse") {
+  flex-direction: column-reverse;
+}
+
+@mixin inline-item($spacing, $debug: false) {
+  margin-right: $spacing;
+
+  @include screens.condition-classes("vertical-item", true) {
+    margin-right: 0;
+    margin-bottom: $spacing;
+  }
+
+  @if $debug {
+    position: relative;
+
+    &:after {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: -$spacing;
+      display: block;
+      width: $spacing;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.3);
+    }
+  }
+}
+
+@each $spacing-key, $spacing-value in spacing.$spacing {
+  @each $debug in true, false {
+    .inline-item-#{$spacing-key}#{if($debug, "-debug", "")} {
+      @include inline-item($spacing-value, $debug);
+    }
+  }
+}
+
+.expanded-item {
+  flex-grow: 1;
+}
+
+.shrunk-item {
+  flex-shrink: 1;
+}

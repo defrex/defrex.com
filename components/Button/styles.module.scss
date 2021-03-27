@@ -1,0 +1,50 @@
+@use "sass:color";
+@use "../../lib/colors";
+@use "../../lib/spacing";
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: spacing.$large;
+  text-decoration: none;
+  cursor: pointer;
+}
+.button:hover {
+  text-decoration: none;
+}
+.buttonText {
+}
+
+.primary {
+  background-color: colors.$indigo60;
+}
+.primary:hover {
+  background-color: colors.$indigo80;
+}
+.primaryText {
+  color: colors.$white;
+}
+
+.secondary {
+  background-color: colors.$indigo80;
+}
+.secondary:hover {
+  background-color: colors.$indigo90;
+}
+.secondaryText {
+  color: colors.$indigo10;
+}
+
+.plain {
+  border: 1px solid colors.$white;
+}
+.plain:hover {
+  border: 1px solid colors.$indigo20;
+}
+.plain:hover .plainText {
+  color: colors.$indigo20;
+}
+.plainText {
+  color: colors.$white;
+}

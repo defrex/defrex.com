@@ -1,0 +1,21 @@
+$none: 0px;
+$xxsmall: 2px;
+$xsmall: 4px;
+$small: 8px;
+$medium: 16px;
+$large: 24px;
+$xlarge: 32px;
+$xxlarge: 64px;
+$xxxlarge: 128px;
+
+$spacing: (
+  none: $none,
+  xxsmall: $xxsmall,
+  xsmall: $xsmall,
+  small: $small,
+  medium: $medium,
+  large: $large,
+  xlarge: $xlarge,
+  xxlarge: $xxlarge,
+  xxxlarge: $xxxlarge,
+);
