@@ -1,4 +1,6 @@
+import fs from 'fs'
 import Link from 'next/link'
+import path from 'path'
 import { Post } from '../@types/content'
 import { PageContainer } from '../components/PageContainer'
 import { Stack } from '../components/Stack'
@@ -26,10 +28,13 @@ export default function Index({ posts }: IndexProps) {
 }
 
 export async function getStaticProps(): Promise<{ props: { posts: Post[] } }> {
-  const markdownFiles = require
-    .context('../content/posts', false, /\.md$/)
-    .keys()
-    .map((path: string) => path.substring(2))
+  // const markdownFiles = require
+  //   .context('../content/posts', false, /\.md$/)
+  //   .keys()
+  //   .map((path: string) => path.substring(2))
+  const markdownFiles = fs.readdirSync(
+    path.join(process.cwd(), 'content/posts'),
+  )
 
   const posts: Post[] = await Promise.all(
     markdownFiles.map(async (path: string) => {
