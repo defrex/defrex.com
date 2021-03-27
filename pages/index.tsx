@@ -28,10 +28,6 @@ export default function Index({ posts }: IndexProps) {
 }
 
 export async function getStaticProps(): Promise<{ props: { posts: Post[] } }> {
-  // const markdownFiles = require
-  //   .context('../content/posts', false, /\.md$/)
-  //   .keys()
-  //   .map((path: string) => path.substring(2))
   const markdownFiles = fs.readdirSync(
     path.join(process.cwd(), 'content/posts'),
   )

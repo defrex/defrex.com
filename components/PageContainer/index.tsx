@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import { ReactNode, useMemo } from 'react'
+import { colors } from '../../lib/colors'
 import { spacing } from '../../lib/spacing'
 import { Inline } from '../Inline'
 import { Inset } from '../Inset'
@@ -26,16 +27,17 @@ export function PageContainer({ children, title }: PageContainerProps) {
       </Head>
 
       <div className={styles.container}>
-        <Stack>
+        <Stack spacing={spacing.large}>
           <Inset>
             <Inline expand={0} spacing={spacing.xlarge}>
               <Link href='/'>
                 <a>
-                  <Stack>
+                  <Stack spacing={spacing.small}>
                     <Text value='Aron Jones' styleNumber={90} />
                     <Text
                       value='Founder, Philosopher, Friend'
-                      styleNumber={62}
+                      styleNumber={52}
+                      color={colors.black60}
                     />
                   </Stack>
                 </a>
