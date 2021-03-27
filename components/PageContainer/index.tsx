@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ReactNode, useMemo } from 'react'
 import { colors } from '../../lib/colors'
 import { spacing } from '../../lib/spacing'
+import { HideIf } from '../HideIf'
 import { Inline } from '../Inline'
 import { Inset } from '../Inset'
 import { Stack } from '../Stack'
@@ -42,20 +43,22 @@ export function PageContainer({ children, title }: PageContainerProps) {
                   </Stack>
                 </a>
               </Link>
-              <Inline spacing={spacing.large}>
-                <a href='https://www.treasurecard.com?utm_source=defrex.com&utm_medium=referer&utm_campaign=top-nav'>
-                  <Text value='💎 Treasure' styleNumber={51} />
-                </a>
-                <a href='https://github.com/defrex'>
-                  <Text value='GitHub' styleNumber={51} />
-                </a>
-                <a href='https://twitter.com/defrex'>
-                  <Text value='Twitter' styleNumber={51} />
-                </a>
-                <a href='https://www.linkedin.com/in/aronjones/'>
-                  <Text value='LinkedIn' styleNumber={51} />
-                </a>
-              </Inline>
+              <HideIf screen={{ lte: 'small' }}>
+                <Inline spacing={spacing.large}>
+                  <a href='https://www.treasurecard.com?utm_source=defrex.com&utm_medium=referer&utm_campaign=top-nav'>
+                    <Text value='💎 Treasure' styleNumber={51} />
+                  </a>
+                  <a href='https://github.com/defrex'>
+                    <Text value='GitHub' styleNumber={51} />
+                  </a>
+                  <a href='https://twitter.com/defrex'>
+                    <Text value='Twitter' styleNumber={51} />
+                  </a>
+                  <a href='https://www.linkedin.com/in/aronjones/'>
+                    <Text value='LinkedIn' styleNumber={51} />
+                  </a>
+                </Inline>
+              </HideIf>
             </Inline>
           </Inset>
           <Inset>{children}</Inset>
