@@ -7,7 +7,6 @@ import { Stack } from '../../components/Stack'
 import { Text } from '../../components/Text'
 import { colors } from '../../lib/colors'
 import { humanizeDate } from '../../lib/humanizeDate'
-import { spacing } from '../../lib/spacing'
 
 interface PostDetailsProps {
   post: Post
@@ -16,12 +15,12 @@ interface PostDetailsProps {
 export default function PostDetails({ post }: PostDetailsProps) {
   return (
     <PageContainer>
-      <Stack spacing={spacing.small}>
+      <Stack>
         <Text value={post.attributes.title} size={32} element='h1' />
         <Text
           value={humanizeDate(new Date(post.attributes.date))}
-          size={12}
-          color={colors.black60}
+          size={16}
+          color={colors.black30}
         />
       </Stack>
 

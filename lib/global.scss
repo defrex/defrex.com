@@ -10,14 +10,18 @@ body {
   padding: 0;
   max-width: 100vw;
   overflow-x: hidden;
-  font-family: "Inter", "Helvetica Neue", "Arial", "sans-serif";
+}
 
-  background-color: colors.$black90;
-  color: colors.$black10;
+body {
+  font-family: Montserrat, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  border-top: 2px solid colors.$brandDark;
+  border-bottom: 2px solid colors.$brandDark;
+  color: white;
+  background-color: colors.$black80;
 }
 
 a {
-  color: colors.$black10;
+  color: colors.$brand;
   text-decoration: none;
 }
 

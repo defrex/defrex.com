@@ -1,4 +1,5 @@
 import fs from 'fs'
+import { orderBy } from 'lodash'
 import Link from 'next/link'
 import path from 'path'
 import { Post } from '../@types/content'
@@ -15,7 +16,7 @@ export default function Index({ posts }: IndexProps) {
     <PageContainer>
       <Stack>
         <Text value='Articles' size={24} />
-        {posts.map((post, index) => (
+        {orderBy(posts, ['attributes.date'], ['desc']).map((post, index) => (
           <Link href={`/posts/${post.slug}`} key={index}>
             <a>
               <Text value={post.attributes.title} />

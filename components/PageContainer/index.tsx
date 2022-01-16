@@ -33,12 +33,12 @@ export function PageContainer({ children, title }: PageContainerProps) {
             <Inline expand={0} spacing={spacing.xlarge}>
               <Link href='/'>
                 <a>
-                  <Stack spacing={spacing.small}>
-                    <Text value='Aron Jones' size={32} />
+                  <Stack>
+                    <Text value='Aron Jones' size={32} color={colors.black10} />
                     <Text
                       value='Founder, Philosopher, Friend'
                       size={16}
-                      color={colors.black60}
+                      color={colors.black30}
                     />
                   </Stack>
                 </a>
@@ -46,13 +46,13 @@ export function PageContainer({ children, title }: PageContainerProps) {
               <HideIf screen={{ lte: 'small' }}>
                 <Inline spacing={spacing.large}>
                   <a href='https://github.com/defrex'>
-                    <Text value='GitHub' />
+                    <Text value='GitHub' color={colors.black10} />
                   </a>
                   <a href='https://twitter.com/defrex'>
-                    <Text value='Twitter' />
+                    <Text value='Twitter' color={colors.black10} />
                   </a>
                   <a href='https://www.linkedin.com/in/aronjones/'>
-                    <Text value='LinkedIn' />
+                    <Text value='LinkedIn' color={colors.black10} />
                   </a>
                 </Inline>
               </HideIf>
