@@ -43,7 +43,7 @@ This way of viewing normativity is potentially quite useful for explaining pheno
 
 Take diversity for example. Including people with diverse experiences in a group forces norms to achieve compatibility with a wider sample of the world.
 
-Or take organization structure. If we want to maximize the utility from individuals, we should normalize a clear vision of what needs to be done, and then maximize the autonomy of that individual to make decisions (perform computation) in a minimally overlapping domain, ensuring that we have processes to renormalize their work (feedback, source control, meetings, etc).
+Or take organization structure. If we want to maximize the utility from an individual, we should normalize a clear vision of what needs to be done, and then maximize the autonomy of that individual to make decisions (perform computation) in a minimally overlapping domain, ensuring that we have processes to renormalize their work (feedback, source control, meetings, etc).
 
 ### More to be Done
 
