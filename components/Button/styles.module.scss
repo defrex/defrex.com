@@ -17,33 +17,21 @@
 }
 
 .primary {
-  background-color: colors.$indigo60;
+  background-color: colors.$brand;
 }
 .primary:hover {
-  background-color: colors.$indigo80;
+  background-color: darken(colors.$brand, 0.8);
 }
 .primaryText {
   color: colors.$white;
 }
 
-.secondary {
-  background-color: colors.$indigo80;
-}
-.secondary:hover {
-  background-color: colors.$indigo90;
-}
-.secondaryText {
-  color: colors.$indigo10;
-}
-
 .plain {
-  border: 1px solid colors.$white;
+  border: 1px solid colors.$black10;
+  background-color: colors.$black90;
 }
 .plain:hover {
-  border: 1px solid colors.$indigo20;
-}
-.plain:hover .plainText {
-  color: colors.$indigo20;
+  background-color: colors.$black70;
 }
 .plainText {
   color: colors.$white;

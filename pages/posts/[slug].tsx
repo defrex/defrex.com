@@ -17,10 +17,10 @@ export default function PostDetails({ post }: PostDetailsProps) {
   return (
     <PageContainer>
       <Stack spacing={spacing.small}>
-        <Text value={post.attributes.title} styleNumber={80} element='h1' />
+        <Text value={post.attributes.title} size={32} element='h1' />
         <Text
           value={humanizeDate(new Date(post.attributes.date))}
-          styleNumber={42}
+          size={12}
           color={colors.black60}
         />
       </Stack>

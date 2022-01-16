@@ -34,10 +34,10 @@ export function PageContainer({ children, title }: PageContainerProps) {
               <Link href='/'>
                 <a>
                   <Stack spacing={spacing.small}>
-                    <Text value='Aron Jones' styleNumber={90} />
+                    <Text value='Aron Jones' size={32} />
                     <Text
                       value='Founder, Philosopher, Friend'
-                      styleNumber={52}
+                      size={16}
                       color={colors.black60}
                     />
                   </Stack>
@@ -45,17 +45,14 @@ export function PageContainer({ children, title }: PageContainerProps) {
               </Link>
               <HideIf screen={{ lte: 'small' }}>
                 <Inline spacing={spacing.large}>
-                  <a href='https://www.treasurecard.com?utm_source=defrex.com&utm_medium=referer&utm_campaign=top-nav'>
-                    <Text value='💎 Treasure' styleNumber={51} />
-                  </a>
                   <a href='https://github.com/defrex'>
-                    <Text value='GitHub' styleNumber={51} />
+                    <Text value='GitHub' />
                   </a>
                   <a href='https://twitter.com/defrex'>
-                    <Text value='Twitter' styleNumber={51} />
+                    <Text value='Twitter' />
                   </a>
                   <a href='https://www.linkedin.com/in/aronjones/'>
-                    <Text value='LinkedIn' styleNumber={51} />
+                    <Text value='LinkedIn' />
                   </a>
                 </Inline>
               </HideIf>

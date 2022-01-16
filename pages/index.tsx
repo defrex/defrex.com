@@ -14,11 +14,11 @@ export default function Index({ posts }: IndexProps) {
   return (
     <PageContainer>
       <Stack>
-        <Text value='Articles' styleNumber={61} />
+        <Text value='Articles' size={24} />
         {posts.map((post, index) => (
           <Link href={`/posts/${post.slug}`} key={index}>
             <a>
-              <Text value={post.attributes.title} styleNumber={52} />
+              <Text value={post.attributes.title} />
             </a>
           </Link>
         ))}

@@ -1,53 +1,38 @@
 import classnames from 'classnames'
 import { createElement, ReactNode } from 'react'
-import { Color, colors } from '../../lib/colors'
+import { Color } from '../../lib/colors'
 import styles from './styles.module.scss'
 
-export type TextStyleNumber =
-  | 20
-  | 21
-  | 22
-  | 30
-  | 31
-  | 32
-  | 40
-  | 41
-  | 42
-  | 50
-  | 51
-  | 52
-  | 60
-  | 61
-  | 62
-  | 70
-  | 71
-  | 72
-  | 80
-  | 81
-  | 82
-  | 90
-  | 91
-  | 92
+type TextWeights = 400 | 700
+type TextSizes = 12 | 13 | 14 | 16 | 20 | 24 | 32
 
 interface TextProps {
   className?: string | string[]
-  color?: Color
+  color?: Color | 'inherit'
   element?: string
-  styleNumber?: TextStyleNumber
+  size?: TextSizes
+  uppercase?: boolean
   value: string | ReactNode
+  weight?: TextWeights
 }
 
 export function Text({
   className,
-  color = colors.black80,
+  color = 'inherit',
   element = 'span',
-  styleNumber = 42,
+  size = 14,
+  uppercase = false,
   value,
+  weight = 400,
 }: TextProps) {
   return createElement(
     element,
     {
-      className: classnames(styles[`text-${styleNumber}-${color}`], className),
+      className: classnames(
+        styles[`text-${size}px-${weight}-${color}`],
+        uppercase ? styles.uppercase : null,
+        className,
+      ),
     },
     value,
   )

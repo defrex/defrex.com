@@ -1,78 +1,25 @@
 @use "sass:map";
 @use "../../lib/colors";
 
-$inter: "Inter", "Helvetica Neue", "Arial", "sans-serif";
+$montserrat: Montserrat, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
 $line-height: 1.1;
-
-$style-numbers: 20, 21, 22, 30, 31, 32, 40, 41, 42, 50, 51, 52, 60, 61, 62, 70, 71, 72, 80, 81, 82, 90, 91, 92;
-
-$fonts-weights-by-style-number: (
-  20: 700,
-  21: 600,
-  22: 400,
-  30: 700,
-  31: 600,
-  32: 400,
-  40: 700,
-  41: 600,
-  42: 400,
-  50: 700,
-  51: 600,
-  52: 400,
-  60: 700,
-  61: 600,
-  62: 400,
-  70: 700,
-  71: 600,
-  72: 400,
-  80: 700,
-  81: 600,
-  82: 400,
-  90: 700,
-  91: 600,
-  92: 400,
-);
-
-$sizes-by-style-number: (
-  20: 12px,
-  21: 12px,
-  22: 12px,
-  30: 13px,
-  31: 13px,
-  32: 13px,
-  40: 14px,
-  41: 14px,
-  42: 14px,
-  50: 16px,
-  51: 16px,
-  52: 16px,
-  60: 17px,
-  61: 17px,
-  62: 17px,
-  70: 19px,
-  71: 19px,
-  72: 19px,
-  80: 24px,
-  81: 24px,
-  82: 24px,
-  90: 32px,
-  91: 32px,
-  92: 32px,
-);
+$weights: 400, 700;
+$sizes: 12px, 13px, 14px, 16px, 20px, 24px, 32px;
 
 // The below is attempting to factor line-height out of the
 // top and bottom of any given text block, while maintaining
 // it between lines.
-@mixin text($style-number, $color) {
+@mixin text($size, $weight, $color) {
   display: block;
   padding-top: 1px;
   padding-bottom: 1px;
 
-  font-family: $inter;
-  font-weight: map.get($fonts-weights-by-style-number, $style-number);
-  font-size: map.get($sizes-by-style-number, $style-number);
-  color: $color;
+  font-family: $montserrat;
+  font-weight: $weight;
+  font-size: $size;
   line-height: $line-height;
+
+  color: $color;
 
   &::before,
   &::after {
@@ -94,10 +41,20 @@ $sizes-by-style-number: (
   }
 }
 
-@each $style-number in $style-numbers {
-  @each $color-name, $color-value in colors.$colors {
-    .text-#{$style-number}-#{"" + $color-name} {
-      @include text($style-number, $color-value);
+@each $weight in $weights {
+  @each $size in $sizes {
+    .text-#{$size}-#{$weight}-inherit {
+      @include text($size, $weight, inherit);
+    }
+
+    @each $color-name, $color-value in colors.$colors {
+      .text-#{$size}-#{$weight}-#{"" + $color-name} {
+        @include text($size, $weight, inherit);
+      }
     }
   }
+}
+
+.uppercase {
+  text-transform: uppercase;
 }
