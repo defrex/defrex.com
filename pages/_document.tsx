@@ -1,15 +1,20 @@
-import Document, { Head, Html, Main, NextScript } from "next/document";
-import React from "react";
+import Document, { Head, Html, Main, NextScript } from 'next/document'
+import React from 'react'
 
 export default class WebDocument extends Document {
   render() {
     return (
       <Html>
         <Head>
-          <link rel="preconnect" href="https://fonts.gstatic.com" />
+          <link rel='preconnect' href='https://fonts.googleapis.com' />
           <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
-            rel="stylesheet"
+            rel='preconnect'
+            href='https://fonts.gstatic.com'
+            crossOrigin='anonymous'
+          />
+          <link
+            href='https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500&display=swap'
+            rel='stylesheet'
           />
         </Head>
         <body>
@@ -17,6 +22,6 @@ export default class WebDocument extends Document {
           <NextScript />
         </body>
       </Html>
-    );
+    )
   }
 }
