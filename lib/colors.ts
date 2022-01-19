@@ -14,4 +14,20 @@ export const colors = {
   black90: 'black90' as const,
 }
 
+export const colorValues = {
+  brand: '#da87ed',
+  green60: '#119956',
+  blue60: '#03aacb',
+  black10: '#fbfcfc',
+  black20: '#efefef',
+  black30: '#d3d3d3',
+  black40: '#999999',
+  black50: '#7a7a7a',
+  black60: '#616161',
+  black70: '#494949',
+  black80: '#313131',
+  black90: '#292929',
+  transparent: 'rgba(0,0,0,1)',
+}
+
 export type Color = typeof colors[keyof typeof colors]

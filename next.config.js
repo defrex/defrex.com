@@ -6,4 +6,5 @@ module.exports = {
     })
     return configuration
   },
+  pageExtensions: ['page.tsx', 'page.ts'],
 }
