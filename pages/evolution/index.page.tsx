@@ -32,42 +32,34 @@ import styles from './styles.module.scss'
 
 interface EvolutionProps {}
 
+const nodeSize = 64
+const gridWidth = 768 / nodeSize
+const gridHeight = 512 / nodeSize
+
 export default function Evolution(_props: EvolutionProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [currentPosition, setCurrentPosition] = useState<Position>([0, 0])
-  const previousPosition = usePrevious(currentPosition)
-  const [nodeSize] = useState(128)
-  const [gridWidth, setGridWidth] = useState<number>()
-  const [gridHeight, setGridHeight] = useState<number>()
+  const [cursorPosition, setCursorPosition] = useState<Position>([0, 0])
+  const prevCursorPosition = usePrevious(cursorPosition)
+  const [exitPosition, setExitPosition] = useState<Position>([1, 1])
   const [edges, setEdges] = useState<EdgeSet>()
+  const [generating, setGenerating] = useState(false)
 
-  useEffect(() => {
-    const context = canvasRef.current?.getContext('2d')
-    if (!context) return
-
-    context.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height)
-
-    setGridWidth(canvasRef.current!.width / nodeSize)
-    setGridHeight(canvasRef.current!.height / nodeSize)
-  }, [setGridWidth, setGridHeight])
-
-  useEffect(() => {
-    if (!edges && gridHeight && gridWidth) {
-      setEdges(new EdgeSet(gridHeight, gridWidth))
-    }
-  }, [gridHeight, gridWidth, edges, setEdges])
-
+  // Paint Grid
   useEffect(() => {
     if (!gridHeight || !gridWidth) return
 
     const context = canvasRef.current?.getContext('2d')
     if (!context) return
 
-    if (previousPosition) {
-      clearNode(context, nodeSize, previousPosition)
+    context.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height)
+
+    if (!edges && gridHeight && gridWidth) {
+      setEdges(new EdgeSet(gridHeight, gridWidth))
     }
 
-    paintNode(context, nodeSize, currentPosition)
+    if (prevCursorPosition) {
+      clearNode(context, nodeSize, prevCursorPosition)
+    }
 
     if (edges) {
       for (const [edge, enabled] of edges.getEdgeStates()) {
@@ -78,15 +70,26 @@ export default function Evolution(_props: EvolutionProps) {
         }
       }
     }
+
+    if (
+      exitPosition[0] === cursorPosition[0] &&
+      exitPosition[1] === cursorPosition[1]
+    ) {
+      paintNode(context, nodeSize, cursorPosition, colorValues.blue60)
+    } else {
+      paintNode(context, nodeSize, cursorPosition)
+      paintNode(context, nodeSize, exitPosition, colorValues.green60)
+    }
   }, [
-    previousPosition,
-    currentPosition,
+    prevCursorPosition,
+    cursorPosition,
     nodeSize,
     edges,
     gridHeight,
     gridWidth,
   ])
 
+  // Reset Grid State
   const handleReset = useCallback(() => {
     if (!gridHeight || !gridWidth) return
 
@@ -95,18 +98,19 @@ export default function Evolution(_props: EvolutionProps) {
 
     context.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height)
     setEdges(new EdgeSet(gridHeight, gridWidth))
-    setCurrentPosition([0, 0])
+    setCursorPosition([0, 0])
   }, [gridHeight, gridWidth, canvasRef])
 
-  const handleGenerate = useCallback(() => {
+  // Generate Maze
+  useEffect(() => {
+    if (!generating) return
     if (!gridHeight || !gridWidth || !edges) return
-
     const context = canvasRef.current?.getContext('2d')
     if (!context) return
 
     context.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height)
 
-    const maxSteps = gridWidth * gridHeight * 10
+    const maxSteps = gridWidth * gridHeight * 50
     let currentStep = 0
     let position: Position = [0, 0]
     let exitPosition: Position | null = null
@@ -145,7 +149,6 @@ export default function Evolution(_props: EvolutionProps) {
           const openEdges = Object.values(edgeMap).filter(
             (enabled) => enabled,
           ).length
-          console.log(prevPositionString, edgeMap, openEdges)
           if (openEdges <= 3) {
             position = prevPosition
             continue stepper
@@ -158,12 +161,10 @@ export default function Evolution(_props: EvolutionProps) {
 
       const nextPosition = move(position, direction)
 
-      paintNode(context, nodeSize, position, colorValues.blue60)
-      // console.log(`moving ${direction}`, [position, nextPosition], false)
+      // paintNode(context, nodeSize, position, colorValues.blue60)
       nextEdges = nextEdges.setEdgeEnabled([position, nextPosition], false)
 
       if (positionHistory.indexOf(positionKey(position)) === -1) {
-        console.log('adding history', positionKey(position))
         positionHistory.push(positionKey(position))
       }
 
@@ -171,57 +172,69 @@ export default function Evolution(_props: EvolutionProps) {
     }
 
     if (exitPosition) {
-      console.log('Exit Position', positionKey(exitPosition))
-      paintNode(context, nodeSize, exitPosition, colorValues.green60)
+      console.log('Exit position', positionKey(exitPosition))
+      setExitPosition(exitPosition)
     } else {
       console.warn('No exit position found')
     }
 
     setEdges(nextEdges)
-  }, [canvasRef, gridHeight, gridWidth, nodeSize, setEdges, edges, handleReset])
+    setGenerating(false)
+  }, [
+    canvasRef,
+    gridHeight,
+    gridWidth,
+    nodeSize,
+    setEdges,
+    edges,
+    handleReset,
+    generating,
+    setGenerating,
+  ])
 
+  const handleGenerate = useCallback(() => {
+    setGenerating(true)
+  }, [setGenerating])
+
+  // Move Cursor
   const handleKeyDown = useCallback(
     ({ key }: KeyboardEvent) => {
-      if (!gridHeight || !gridWidth) return
+      if (!gridHeight || !gridWidth || !edges) return
 
-      const nextPosition: Position | null =
-        key === 'ArrowUp' && currentPosition[1] - 1 >= 0
-          ? [currentPosition[0], currentPosition[1] - 1]
-          : key === 'ArrowDown' && currentPosition[1] + 1 < gridHeight
-          ? [currentPosition[0], currentPosition[1] + 1]
-          : key === 'ArrowLeft' && currentPosition[0] - 1 >= 0
-          ? [currentPosition[0] - 1, currentPosition[1]]
-          : key === 'ArrowRight' && currentPosition[0] + 1 < gridWidth
-          ? [currentPosition[0] + 1, currentPosition[1]]
+      const direction: Direction | null =
+        key === 'ArrowUp'
+          ? 'up'
+          : key === 'ArrowDown'
+          ? 'down'
+          : key === 'ArrowLeft'
+          ? 'left'
+          : key === 'ArrowRight'
+          ? 'right'
           : null
-      if (nextPosition !== null) {
-        setCurrentPosition(nextPosition)
+      if (direction !== null) {
+        const blockedEdges = edges.edgeMapForNode(cursorPosition)
+        if (!blockedEdges[direction]) {
+          setCursorPosition(move(cursorPosition, direction))
+        }
       }
 
       if (edges) {
         const clearEdgeTo: Position | null =
           key === 'w'
-            ? move(currentPosition, 'up')
+            ? move(cursorPosition, 'up')
             : key === 's'
-            ? move(currentPosition, 'down')
+            ? move(cursorPosition, 'down')
             : key === 'a'
-            ? move(currentPosition, 'left')
+            ? move(cursorPosition, 'left')
             : key === 'd'
-            ? move(currentPosition, 'right')
+            ? move(cursorPosition, 'right')
             : null
         if (clearEdgeTo) {
-          setEdges(edges.setEdgeEnabled([currentPosition, clearEdgeTo]))
+          setEdges(edges.setEdgeEnabled([cursorPosition, clearEdgeTo]))
         }
       }
     },
-    [
-      currentPosition,
-      setCurrentPosition,
-      gridHeight,
-      gridWidth,
-      edges,
-      setEdges,
-    ],
+    [cursorPosition, setCursorPosition, gridHeight, gridWidth, edges, setEdges],
   )
 
   useEffect(() => {
@@ -237,14 +250,18 @@ export default function Evolution(_props: EvolutionProps) {
         <Text value='Evolution' size={24} />
         <Inline>
           {/* <Button onClick={handleStart} text='Start Evolution' /> */}
-          <Button onClick={handleGenerate} text='Generate Map' />
           <Button onClick={handleReset} text='Reset Board' />
+          {!generating ? (
+            <Button onClick={handleGenerate} text='Generate Map' />
+          ) : (
+            <Text value='Generating..' />
+          )}
         </Inline>
         <canvas
           className={styles.canvas}
           ref={canvasRef}
-          width='768'
-          height='512'
+          width={gridWidth * nodeSize}
+          height={gridHeight * nodeSize}
         />
       </Stack>
     </PageContainer>

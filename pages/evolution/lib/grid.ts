@@ -61,17 +61,17 @@ export class EdgeSet {
 
   edgeMapForNode(node: Position): Record<Direction, boolean> {
     const edgeMap: Record<Direction, boolean> = {
-      up: false,
-      right: false,
-      down: false,
-      left: false,
+      up: node[1] === 0 ? true : false,
+      left: node[0] === 0 ? true : false,
+      down: node[1] === this.gridHeight ? true : false,
+      right: node[0] === this.gridWidth ? true : false,
     }
     for (const [[fromPosition, toPosition], enabled] of this.getEdgeStates()) {
-      if (
-        (fromPosition[0] === node[0] && fromPosition[1] === node[1]) ||
-        (toPosition[0] === node[0] && toPosition[1] === node[1])
-      ) {
+      if (fromPosition[0] === node[0] && fromPosition[1] === node[1]) {
         edgeMap[edgeDirection([fromPosition, toPosition])] = enabled
+      }
+      if (toPosition[0] === node[0] && toPosition[1] === node[1]) {
+        edgeMap[edgeDirection([toPosition, fromPosition])] = enabled
       }
     }
     return edgeMap
@@ -105,8 +105,7 @@ export class EdgeSet {
   }
 }
 
-export function edgeDirection(edge: Edge): Direction {
-  const [fromPosition, toPosition] = edge
+export function edgeDirection([fromPosition, toPosition]: Edge): Direction {
   const delta = [
     toPosition[0] - fromPosition[0],
     toPosition[1] - fromPosition[1],
