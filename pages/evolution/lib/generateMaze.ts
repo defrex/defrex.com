@@ -20,14 +20,14 @@ export function generateMaze(
   const maxSteps = gridWidth * gridHeight * 20
   let currentStep = 0
   let position: Position = [0, 0]
-  let endPosition: Position | null = null
+  // let endPosition: Position | null = null
   let nextEdges = new EdgeSet(gridHeight, gridWidth)
   const positionHistory: string[] = []
 
   stepper: while (true) {
     currentStep++
     if (currentStep > maxSteps) {
-      endPosition = position
+      // endPosition = position
       console.log(`Hit maxSteps ${maxSteps}`, {
         position,
         currentStep,
@@ -62,7 +62,7 @@ export function generateMaze(
         }
       }
 
-      endPosition = position
+      // endPosition = position
       break stepper
     }
 
