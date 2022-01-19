@@ -1,11 +1,10 @@
 import { colorValues } from '../../../lib/colors'
-import { edgeDirection, Position } from './grid'
+import { Edge, edgeDirection, Position } from './grid'
 
 export function paintEdge(
   context: CanvasRenderingContext2D,
   nodeSize: number,
-  fromPosition: Position,
-  toPosition: Position,
+  [fromPosition, toPosition]: Edge,
 ) {
   const direction = edgeDirection([fromPosition, toPosition])
   const fromX = fromPosition[0] * nodeSize
@@ -34,8 +33,7 @@ export function paintEdge(
 export function clearEdge(
   context: CanvasRenderingContext2D,
   nodeSize: number,
-  fromPosition: Position,
-  toPosition: Position,
+  [fromPosition, toPosition]: Edge,
 ) {
   const direction = edgeDirection([fromPosition, toPosition])
   const fromX = fromPosition[0] * nodeSize

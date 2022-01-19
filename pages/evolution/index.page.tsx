@@ -8,7 +8,15 @@ import { Text } from '../../components/Text'
 import { colorValues } from '../../lib/colors'
 import { usePrevious } from '../../lib/usePrevious'
 import { clearEdge, clearNode, paintEdge, paintNode } from './lib/canvasGrid'
-import { Direction, EdgeSet, move, Position } from './lib/grid'
+import {
+  Direction,
+  EdgeSet,
+  isValidDestination,
+  keyPosition,
+  move,
+  Position,
+  positionKey,
+} from './lib/grid'
 import styles from './styles.module.scss'
 
 // function getXorFitness(net: Net) {
@@ -28,7 +36,7 @@ export default function Evolution(_props: EvolutionProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [currentPosition, setCurrentPosition] = useState<Position>([0, 0])
   const previousPosition = usePrevious(currentPosition)
-  const [nodeSize] = useState(32)
+  const [nodeSize] = useState(128)
   const [gridWidth, setGridWidth] = useState<number>()
   const [gridHeight, setGridHeight] = useState<number>()
   const [edges, setEdges] = useState<EdgeSet>()
@@ -55,14 +63,6 @@ export default function Evolution(_props: EvolutionProps) {
     const context = canvasRef.current?.getContext('2d')
     if (!context) return
 
-    // Exit Node
-    paintNode(
-      context,
-      nodeSize,
-      [gridWidth - 1, gridHeight - 1],
-      colorValues.green60,
-    )
-
     if (previousPosition) {
       clearNode(context, nodeSize, previousPosition)
     }
@@ -70,14 +70,11 @@ export default function Evolution(_props: EvolutionProps) {
     paintNode(context, nodeSize, currentPosition)
 
     if (edges) {
-      for (const [
-        [fromPosition, toPosition],
-        enabled,
-      ] of edges.getEdgeStates()) {
+      for (const [edge, enabled] of edges.getEdgeStates()) {
         if (enabled) {
-          paintEdge(context, nodeSize, fromPosition, toPosition)
+          paintEdge(context, nodeSize, edge)
         } else {
-          clearEdge(context, nodeSize, fromPosition, toPosition)
+          clearEdge(context, nodeSize, edge)
         }
       }
     }
@@ -109,95 +106,77 @@ export default function Evolution(_props: EvolutionProps) {
 
     context.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height)
 
-    const stepsNeeded: Record<'right' | 'down', number> = {
-      right: gridWidth - 1,
-      down: gridHeight - 1,
-    }
     const maxSteps = gridWidth * gridHeight * 10
     let currentStep = 0
     let position: Position = [0, 0]
+    let exitPosition: Position | null = null
     let nextEdges = new EdgeSet(gridHeight, gridWidth)
-    let positionsVisited = new Set<Position>()
-    const positionHistory: Position[] = []
+    const positionHistory: string[] = []
 
-    while (stepsNeeded.right > 0 || stepsNeeded.down > 0) {
-      positionsVisited.add(position)
-      let nextPosition: Position | null = null
-      const direction = shuffle([
-        'right',
-        'down',
-        // 'left',
-        // 'up',
-      ] as Direction[]).find((direction: Direction) => {
-        const maybeNextPosition = move(position, direction)
-        return (
-          maybeNextPosition[0] >= 0 &&
-          maybeNextPosition[0] <= gridWidth &&
-          maybeNextPosition[1] >= 0 &&
-          maybeNextPosition[1] <= gridHeight &&
-          positionsVisited.has(maybeNextPosition) === false
-        )
-      })
-      if (!direction) {
-        // Use the last position by default
-        position = positionHistory[positionHistory.length - 1]
-
-        // Search for a position with few open edges
-        for (const prevPosition of reverse(positionHistory)) {
-          const edgeMap = edges.edgeMapForNode(prevPosition)
-          if (Object.values(edgeMap).filter((enabled) => enabled).length <= 2) {
-            position = prevPosition
-            break
-          }
-        }
-
-        continue
-      }
-
-      const [step, stepChange] =
-        direction === 'right'
-          ? ['right' as const, -1]
-          : direction === 'left'
-          ? ['right' as const, 1]
-          : direction === 'down'
-          ? ['down' as const, -1]
-          : direction === 'up'
-          ? ['down' as const, 1]
-          : ['right' as const, -1]
-      if (
-        direction &&
-        stepsNeeded[step] + stepChange >= 0 &&
-        stepsNeeded[step] + stepChange < gridWidth &&
-        positionsVisited.has(move(position, direction)) === false
-      ) {
-        nextPosition = move(position, direction)
-        stepsNeeded[step] += stepChange
-      }
-
-      paintNode(context, nodeSize, position, colorValues.blue60)
-      if (nextPosition) {
-        console.log(`moving ${direction}`, [position, nextPosition], false)
-        nextEdges = nextEdges.setEdgeEnabled([position, nextPosition], false)
-        positionHistory.push(position)
-        position = nextPosition
-      } else if (
-        position[0] === gridWidth - 1 &&
-        position[1] === gridHeight - 1
-      ) {
-        console.log('exited!', { position, currentStep })
-      }
-
+    stepper: while (true) {
       currentStep++
       if (currentStep > maxSteps) {
-        console.warn(`failed to exit by ${maxSteps} steps`, {
+        exitPosition = position
+        console.log(`Hit maxSteps ${maxSteps}`, {
           position,
           currentStep,
         })
-        break
+        break stepper
       }
+
+      const direction = shuffle([
+        'right',
+        'down',
+        'left',
+        'up',
+      ] as Direction[]).find((direction: Direction) =>
+        isValidDestination(
+          gridHeight,
+          gridWidth,
+          move(position, direction),
+          positionHistory,
+        ),
+      )
+      if (!direction) {
+        // Search for a position with few open edges
+        for (const prevPositionString of reverse(positionHistory)) {
+          const prevPosition = keyPosition(prevPositionString)
+          const edgeMap = edges.edgeMapForNode(prevPosition)
+          const openEdges = Object.values(edgeMap).filter(
+            (enabled) => enabled,
+          ).length
+          console.log(prevPositionString, edgeMap, openEdges)
+          if (openEdges <= 3) {
+            position = prevPosition
+            continue stepper
+          }
+        }
+
+        exitPosition = position
+        break stepper
+      }
+
+      const nextPosition = move(position, direction)
+
+      paintNode(context, nodeSize, position, colorValues.blue60)
+      // console.log(`moving ${direction}`, [position, nextPosition], false)
+      nextEdges = nextEdges.setEdgeEnabled([position, nextPosition], false)
+
+      if (positionHistory.indexOf(positionKey(position)) === -1) {
+        console.log('adding history', positionKey(position))
+        positionHistory.push(positionKey(position))
+      }
+
+      position = nextPosition
     }
 
-    console.log('new edges', nextEdges)
+    if (exitPosition) {
+      console.log('Exit Position', positionKey(exitPosition))
+      paintNode(context, nodeSize, exitPosition, colorValues.green60)
+    } else {
+      console.warn('No exit position found')
+    }
+
     setEdges(nextEdges)
   }, [canvasRef, gridHeight, gridWidth, nodeSize, setEdges, edges, handleReset])
 

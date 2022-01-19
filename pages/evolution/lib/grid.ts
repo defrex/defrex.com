@@ -32,7 +32,7 @@ export class EdgeSet {
             ],
           ] as Edge[]) {
             this.validateEdge(edge)
-            this.edgeStates[this.edgeKey(edge)] = true
+            this.edgeStates[edgeKey(edge)] = true
           }
         }
       }
@@ -43,18 +43,18 @@ export class EdgeSet {
     this.validateEdge(edge)
     enabled = enabled !== undefined ? enabled : !this.getEdgeEnabled(edge)
     const edgeStates = clone(this.edgeStates)
-    edgeStates[this.edgeKey(edge)] = enabled
+    edgeStates[edgeKey(edge)] = enabled
     return new EdgeSet(this.gridHeight, this.gridWidth, edgeStates)
   }
 
   getEdgeEnabled(edge: Edge): boolean {
     this.validateEdge(edge)
-    return this.edgeStates[this.edgeKey(edge)]
+    return this.edgeStates[edgeKey(edge)]
   }
 
   getEdgeStates(): [Edge, boolean][] {
     return Object.entries(this.edgeStates).map(([key, enabled]) => [
-      this.keyEdge(key),
+      keyEdge(key),
       enabled,
     ])
   }
@@ -66,32 +66,18 @@ export class EdgeSet {
       down: false,
       left: false,
     }
-    for (const [edge, enabled] of this.getEdgeStates()) {
+    for (const [[fromPosition, toPosition], enabled] of this.getEdgeStates()) {
       if (
-        (edge[0][0] === node[0] && edge[0][1] === node[1]) ||
-        (edge[1][0] === node[0] && edge[1][1] === node[1])
+        (fromPosition[0] === node[0] && fromPosition[1] === node[1]) ||
+        (toPosition[0] === node[0] && toPosition[1] === node[1])
       ) {
-        edgeMap[edgeDirection(edge)] = enabled
+        edgeMap[edgeDirection([fromPosition, toPosition])] = enabled
       }
     }
     return edgeMap
   }
 
-  private edgeKey(edge: Edge): string {
-    this.validateEdge(edge)
-    const sortedEdge = sortBy(edge, [0, 1])
-    return `${sortedEdge[0][0]},${sortedEdge[0][1]}-${sortedEdge[1][0]},${sortedEdge[1][1]}`
-  }
-
-  private keyEdge(key: string): Edge {
-    const edge = key
-      .split('-')
-      .map((positionString) => positionString.split(',')) as unknown as Edge
-    this.validateEdge(edge)
-    return edge
-  }
-
-  private validateEdge(edge: Edge): void {
+  validateEdge(edge: Edge): void {
     if (
       !(
         isArray(edge) &&
@@ -120,7 +106,7 @@ export class EdgeSet {
 }
 
 export function edgeDirection(edge: Edge): Direction {
-  const [toPosition, fromPosition] = edge
+  const [fromPosition, toPosition] = edge
   const delta = [
     toPosition[0] - fromPosition[0],
     toPosition[1] - fromPosition[1],
@@ -136,11 +122,24 @@ export function edgeDirection(edge: Edge): Direction {
       ? 'up'
       : null
   if (direction === null) {
-    console.error('edgeDirection', { fromPosition, toPosition, delta })
     throw new Error('invalid edge')
   }
-  // console.log('direction', fromPosition, toPosition, delta, direction)
   return direction
+}
+
+export function isValidDestination(
+  gridHeight: number,
+  gridWidth: number,
+  toPosition: Position,
+  outlawPositionKeys: string[] = [],
+): boolean {
+  return (
+    toPosition[0] >= 0 &&
+    toPosition[0] < gridWidth &&
+    toPosition[1] >= 0 &&
+    toPosition[1] < gridHeight &&
+    outlawPositionKeys.indexOf(positionKey(toPosition)) === -1
+  )
 }
 
 export function move(from: Position, direction: Direction): Position {
@@ -155,4 +154,21 @@ export function move(from: Position, direction: Direction): Position {
     return [gridX, gridY - 1]
   }
   throw new Error('invalid direction')
+}
+
+export function positionKey(position: Position): string {
+  return position.join(',')
+}
+
+export function keyPosition(key: string): Position {
+  return key.split(',').map((value) => parseInt(value, 10)) as Position
+}
+
+export function edgeKey(edge: Edge): string {
+  const sortedEdge = sortBy(edge, [0, 1])
+  return [positionKey(sortedEdge[0]), positionKey(sortedEdge[1])].join('-')
+}
+
+export function keyEdge(key: string): Edge {
+  return key.split('-').map(keyPosition) as Edge
 }
