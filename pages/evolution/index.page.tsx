@@ -1,4 +1,3 @@
-import { reverse, shuffle } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/Button'
 import { Inline } from '../../components/Inline'
@@ -8,15 +7,8 @@ import { Text } from '../../components/Text'
 import { colorValues } from '../../lib/colors'
 import { usePrevious } from '../../lib/usePrevious'
 import { clearEdge, clearNode, paintEdge, paintNode } from './lib/canvasGrid'
-import {
-  Direction,
-  EdgeSet,
-  isValidDestination,
-  keyPosition,
-  move,
-  Position,
-  positionKey,
-} from './lib/grid'
+import { generateMaze } from './lib/generateMaze'
+import { Direction, EdgeSet, move, Position } from './lib/grid'
 import styles from './styles.module.scss'
 
 // function getXorFitness(net: Net) {
@@ -80,117 +72,28 @@ export default function Evolution(_props: EvolutionProps) {
       paintNode(context, nodeSize, cursorPosition)
       paintNode(context, nodeSize, exitPosition, colorValues.green60)
     }
-  }, [
-    prevCursorPosition,
-    cursorPosition,
-    nodeSize,
-    edges,
-    gridHeight,
-    gridWidth,
-  ])
+  }, [prevCursorPosition, cursorPosition, edges, setEdges, exitPosition])
 
-  // Reset Grid State
   const handleReset = useCallback(() => {
-    if (!gridHeight || !gridWidth) return
-
-    const context = canvasRef.current?.getContext('2d')
-    if (!context) return
-
-    context.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height)
     setEdges(new EdgeSet(gridHeight, gridWidth))
     setCursorPosition([0, 0])
-  }, [gridHeight, gridWidth, canvasRef])
+  }, [setEdges, setCursorPosition])
 
-  // Generate Maze
   useEffect(() => {
-    if (!generating) return
-    if (!gridHeight || !gridWidth || !edges) return
-    const context = canvasRef.current?.getContext('2d')
-    if (!context) return
+    if (!generating || !edges) return
 
-    context.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height)
+    const { exit: exitPosition, edges: nextEdges } = generateMaze(
+      edges,
+      gridHeight,
+      gridWidth,
+    )
 
-    const maxSteps = gridWidth * gridHeight * 50
-    let currentStep = 0
-    let position: Position = [0, 0]
-    let exitPosition: Position | null = null
-    let nextEdges = new EdgeSet(gridHeight, gridWidth)
-    const positionHistory: string[] = []
-
-    stepper: while (true) {
-      currentStep++
-      if (currentStep > maxSteps) {
-        exitPosition = position
-        console.log(`Hit maxSteps ${maxSteps}`, {
-          position,
-          currentStep,
-        })
-        break stepper
-      }
-
-      const direction = shuffle([
-        'right',
-        'down',
-        'left',
-        'up',
-      ] as Direction[]).find((direction: Direction) =>
-        isValidDestination(
-          gridHeight,
-          gridWidth,
-          move(position, direction),
-          positionHistory,
-        ),
-      )
-      if (!direction) {
-        // Search for a position with few open edges
-        for (const prevPositionString of reverse(positionHistory)) {
-          const prevPosition = keyPosition(prevPositionString)
-          const edgeMap = edges.edgeMapForNode(prevPosition)
-          const openEdges = Object.values(edgeMap).filter(
-            (enabled) => enabled,
-          ).length
-          if (openEdges <= 3) {
-            position = prevPosition
-            continue stepper
-          }
-        }
-
-        exitPosition = position
-        break stepper
-      }
-
-      const nextPosition = move(position, direction)
-
-      // paintNode(context, nodeSize, position, colorValues.blue60)
-      nextEdges = nextEdges.setEdgeEnabled([position, nextPosition], false)
-
-      if (positionHistory.indexOf(positionKey(position)) === -1) {
-        positionHistory.push(positionKey(position))
-      }
-
-      position = nextPosition
-    }
-
-    if (exitPosition) {
-      console.log('Exit position', positionKey(exitPosition))
-      setExitPosition(exitPosition)
-    } else {
-      console.warn('No exit position found')
-    }
-
+    setEdges(new EdgeSet(gridHeight, gridWidth))
+    setCursorPosition([0, 0])
+    setExitPosition(exitPosition)
     setEdges(nextEdges)
     setGenerating(false)
-  }, [
-    canvasRef,
-    gridHeight,
-    gridWidth,
-    nodeSize,
-    setEdges,
-    edges,
-    handleReset,
-    generating,
-    setGenerating,
-  ])
+  }, [setEdges, edges, handleReset, generating, setGenerating])
 
   const handleGenerate = useCallback(() => {
     setGenerating(true)
@@ -199,7 +102,7 @@ export default function Evolution(_props: EvolutionProps) {
   // Move Cursor
   const handleKeyDown = useCallback(
     ({ key }: KeyboardEvent) => {
-      if (!gridHeight || !gridWidth || !edges) return
+      if (!edges) return
 
       const direction: Direction | null =
         key === 'ArrowUp'
@@ -234,7 +137,7 @@ export default function Evolution(_props: EvolutionProps) {
         }
       }
     },
-    [cursorPosition, setCursorPosition, gridHeight, gridWidth, edges, setEdges],
+    [cursorPosition, setCursorPosition, edges, setEdges],
   )
 
   useEffect(() => {
@@ -247,7 +150,6 @@ export default function Evolution(_props: EvolutionProps) {
   return (
     <PageContainer>
       <Stack>
-        <Text value='Evolution' size={24} />
         <Inline>
           {/* <Button onClick={handleStart} text='Start Evolution' /> */}
           <Button onClick={handleReset} text='Reset Board' />
