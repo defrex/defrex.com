@@ -75,7 +75,6 @@ export default function Evolution(_props: EvolutionProps) {
     }
 
     if (selectedAgent) {
-      console.log('painting agent', selectedAgent)
       const path = selectedAgent.path || []
       for (const position of path) {
         paintNode(context, nodeSize, position, colorValues.blue60)
