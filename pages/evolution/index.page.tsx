@@ -5,48 +5,53 @@ import { PageContainer } from '../../components/PageContainer'
 import { Stack } from '../../components/Stack'
 import { Text } from '../../components/Text'
 import { colorValues } from '../../lib/colors'
+import { spacing } from '../../lib/spacing'
 import { usePrevious } from '../../lib/usePrevious'
+import { Agent } from './lib/Agent'
 import { clearEdge, clearNode, paintEdge, paintNode } from './lib/canvasGrid'
+import {
+  Direction,
+  EdgeSet,
+  gridHeight,
+  gridWidth,
+  move,
+  nodeSize,
+  Position,
+  positionKey,
+} from './lib/EdgeSet'
 import { generateMaze } from './lib/generateMaze'
-import { Direction, EdgeSet, move, Position } from './lib/grid'
 import styles from './styles.module.scss'
-
-// function getXorFitness(net: Net) {
-//   return [
-//     getNetworkOutput(net, [0, 0])
-//       .map((result) => Math.abs(1 - result))
-//       .reduce(multiply, 1),
-//     getNetworkOutput(net, [1, 1]).reduce(multiply, 1),
-//     getNetworkOutput(net, [0, 1]).map(Math.abs).reduce(multiply, 1),
-//     getNetworkOutput(net, [1, 0]).map(Math.abs).reduce(multiply, 1),
-//   ].reduce(multiply, 1)
-// }
 
 interface EvolutionProps {}
 
-const nodeSize = 64
-const gridWidth = 768 / nodeSize
-const gridHeight = 512 / nodeSize
+type AgentResult = {
+  agent: Agent
+  path?: Position[]
+  fitness?: number
+}
 
 export default function Evolution(_props: EvolutionProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [cursorPosition, setCursorPosition] = useState<Position>([0, 0])
   const prevCursorPosition = usePrevious(cursorPosition)
-  const [exitPosition, setExitPosition] = useState<Position>([1, 1])
+  const [exitPosition, setExitPosition] = useState<Position>([
+    gridWidth - 1,
+    gridHeight - 1,
+  ])
   const [edges, setEdges] = useState<EdgeSet>()
   const [generating, setGenerating] = useState(false)
+  const [agentResults, setAgentResults] = useState<AgentResult[]>([])
+  const [selectedAgent, setSelectedAgent] = useState<AgentResult>()
 
   // Paint Grid
   useEffect(() => {
-    if (!gridHeight || !gridWidth) return
-
     const context = canvasRef.current?.getContext('2d')
     if (!context) return
 
     context.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height)
 
     if (!edges && gridHeight && gridWidth) {
-      setEdges(new EdgeSet(gridHeight, gridWidth))
+      setEdges(new EdgeSet())
     }
 
     if (prevCursorPosition) {
@@ -72,11 +77,28 @@ export default function Evolution(_props: EvolutionProps) {
       paintNode(context, nodeSize, cursorPosition)
       paintNode(context, nodeSize, exitPosition, colorValues.green60)
     }
-  }, [prevCursorPosition, cursorPosition, edges, setEdges, exitPosition])
+
+    if (selectedAgent) {
+      console.log('painting agent', selectedAgent)
+      const path = selectedAgent.path || []
+      for (const position of path) {
+        paintNode(context, nodeSize, position, colorValues.blue60)
+      }
+    }
+  }, [
+    prevCursorPosition,
+    cursorPosition,
+    edges,
+    setEdges,
+    exitPosition,
+    selectedAgent,
+  ])
 
   const handleReset = useCallback(() => {
-    setEdges(new EdgeSet(gridHeight, gridWidth))
+    setEdges(new EdgeSet())
     setCursorPosition([0, 0])
+    setExitPosition([gridWidth - 1, gridHeight - 1])
+    setAgentResults([])
   }, [setEdges, setCursorPosition])
 
   useEffect(() => {
@@ -88,7 +110,7 @@ export default function Evolution(_props: EvolutionProps) {
       gridWidth,
     )
 
-    setEdges(new EdgeSet(gridHeight, gridWidth))
+    setEdges(new EdgeSet())
     setCursorPosition([0, 0])
     setExitPosition(exitPosition)
     setEdges(nextEdges)
@@ -147,17 +169,43 @@ export default function Evolution(_props: EvolutionProps) {
     }
   }, [handleKeyDown])
 
+  const handleEvolve = useCallback(() => {
+    if (!edges) return
+
+    const agentCount = 2
+    const results: AgentResult[] = []
+    for (let i = 0; i < agentCount; i++) {
+      const result: AgentResult = {
+        agent: new Agent(),
+      }
+      result.path = result.agent.findPath([0, 0], exitPosition, edges)
+      result.fitness = result.agent.fitness(result.path, exitPosition)
+      results.push(result)
+    }
+
+    setAgentResults(results)
+  }, [edges, setAgentResults])
+
+  const handleSelectAgent = useCallback(
+    (agentId: string) => () => {
+      const result = agentResults.find((result) => result.agent.id === agentId)
+      console.log('selecting agent', result)
+      setSelectedAgent(result)
+    },
+    [setSelectedAgent, agentResults],
+  )
+
   return (
     <PageContainer>
-      <Stack>
+      <Stack spacing={spacing.large}>
         <Inline>
-          {/* <Button onClick={handleStart} text='Start Evolution' /> */}
-          <Button onClick={handleReset} text='Reset Board' />
+          <Button onClick={handleReset} text='Reset' />
           {!generating ? (
             <Button onClick={handleGenerate} text='Generate Map' />
           ) : (
             <Text value='Generating..' />
           )}
+          <Button onClick={handleEvolve} text='Start Evolution' />
         </Inline>
         <canvas
           className={styles.canvas}
@@ -165,6 +213,21 @@ export default function Evolution(_props: EvolutionProps) {
           width={gridWidth * nodeSize}
           height={gridHeight * nodeSize}
         />
+        <Stack>
+          {agentResults.map(({ agent, path, fitness }) => (
+            <Stack key={agent.id} spacing={spacing.small}>
+              <Inline expand={1}>
+                <Text value={`Agent ${agent.id}`} size={16} />
+                <Text value={fitness} />
+                <Button
+                  onClick={handleSelectAgent(agent.id)}
+                  text='View on board'
+                />
+              </Inline>
+              <Text value={path?.map(positionKey).join(' > ')} />
+            </Stack>
+          ))}
+        </Stack>
       </Stack>
     </PageContainer>
   )

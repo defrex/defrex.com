@@ -7,7 +7,7 @@ import {
   move,
   Position,
   positionKey,
-} from './grid'
+} from './EdgeSet'
 
 export function generateMaze(
   edges: EdgeSet,
@@ -20,8 +20,8 @@ export function generateMaze(
   const maxSteps = gridWidth * gridHeight * 20
   let currentStep = 0
   let position: Position = [0, 0]
-  // let endPosition: Position | null = null
-  let nextEdges = new EdgeSet(gridHeight, gridWidth)
+  let endPosition: Position | null = null
+  let nextEdges = new EdgeSet()
   const positionHistory: string[] = []
 
   stepper: while (true) {
@@ -41,17 +41,12 @@ export function generateMaze(
       'left',
       'up',
     ] as Direction[]).find((direction: Direction) =>
-      isValidDestination(
-        gridHeight,
-        gridWidth,
-        move(position, direction),
-        positionHistory,
-      ),
+      isValidDestination(move(position, direction), positionHistory),
     )
     if (!direction) {
       // Search for a position with few open edges
-      for (const prevPositionString of reverse(positionHistory)) {
-        const prevPosition = keyPosition(prevPositionString)
+      for (const prevPositionKey of reverse(positionHistory)) {
+        const prevPosition = keyPosition(prevPositionKey)
         const edgeMap = edges.edgeMapForNode(prevPosition)
         const openEdges = Object.values(edgeMap).filter(
           (enabled) => enabled,
@@ -62,7 +57,7 @@ export function generateMaze(
         }
       }
 
-      // endPosition = position
+      endPosition = position
       break stepper
     }
 
@@ -80,7 +75,8 @@ export function generateMaze(
 
   return {
     exit:
-      // endPosition ||
+      endPosition ||
+      keyPosition(positionHistory[positionHistory.length - 1]) ||
       orderBy(
         positionHistory.map(keyPosition),
         (position) => position[0] * position[1],

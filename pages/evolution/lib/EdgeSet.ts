@@ -4,18 +4,14 @@ export type Direction = 'up' | 'right' | 'down' | 'left'
 export type Position = [number, number]
 export type Edge = [Position, Position]
 
+export const nodeSize = 64
+export const gridWidth = 768 / nodeSize
+export const gridHeight = 512 / nodeSize
+
 export class EdgeSet {
-  private gridHeight: number
-  private gridWidth: number
   private edgeStates: { [key: string]: boolean } = {}
 
-  constructor(
-    gridHeight: number,
-    gridWidth: number,
-    edgeStates?: { [key: string]: boolean },
-  ) {
-    this.gridHeight = gridHeight
-    this.gridWidth = gridWidth
+  constructor(edgeStates?: { [key: string]: boolean }) {
     if (edgeStates) {
       this.edgeStates = edgeStates
     } else {
@@ -44,7 +40,7 @@ export class EdgeSet {
     enabled = enabled !== undefined ? enabled : !this.getEdgeEnabled(edge)
     const edgeStates = clone(this.edgeStates)
     edgeStates[edgeKey(edge)] = enabled
-    return new EdgeSet(this.gridHeight, this.gridWidth, edgeStates)
+    return new EdgeSet(edgeStates)
   }
 
   getEdgeEnabled(edge: Edge): boolean {
@@ -63,8 +59,8 @@ export class EdgeSet {
     const edgeMap: Record<Direction, boolean> = {
       up: node[1] === 0 ? true : false,
       left: node[0] === 0 ? true : false,
-      down: node[1] === this.gridHeight ? true : false,
-      right: node[0] === this.gridWidth ? true : false,
+      down: node[1] === gridHeight ? true : false,
+      right: node[0] === gridWidth ? true : false,
     }
     for (const [[fromPosition, toPosition], enabled] of this.getEdgeStates()) {
       if (fromPosition[0] === node[0] && fromPosition[1] === node[1]) {
@@ -77,6 +73,12 @@ export class EdgeSet {
     return edgeMap
   }
 
+  isValidMove(edge: Edge): boolean {
+    const edgeMap = this.edgeMapForNode(edge[0])
+    const direction = edgeDirection(edge)
+    return edgeMap[direction] && isValidDestination(edge[1])
+  }
+
   validateEdge(edge: Edge): void {
     if (
       !(
@@ -85,24 +87,33 @@ export class EdgeSet {
         isArray(edge[0]) &&
         edge[0].length === 2 &&
         edge[0][0] >= 0 &&
-        edge[0][0] <= this.gridWidth &&
+        edge[0][0] <= gridWidth &&
         edge[0][1] >= 0 &&
-        edge[0][1] <= this.gridHeight &&
+        edge[0][1] <= gridHeight &&
         isArray(edge[1]) &&
         edge[1].length === 2 &&
         edge[1][0] >= 0 &&
-        edge[1][0] <= this.gridWidth &&
+        edge[1][0] <= gridWidth &&
         edge[1][1] >= 0 &&
-        edge[1][1] <= this.gridHeight
+        edge[1][1] <= gridHeight
       )
     ) {
       throw new Error(
-        `Invalid edge ${JSON.stringify(edge)} for grid size ${this.gridWidth}x${
-          this.gridHeight
-        }`,
+        `Invalid edge ${JSON.stringify(
+          edge,
+        )} for grid size ${gridWidth}x${gridHeight}`,
       )
     }
   }
+}
+
+export function distance(
+  currentPosition: Position,
+  exitPosition: Position,
+): number {
+  const [x, y] = currentPosition
+  const [gx, gy] = exitPosition
+  return Math.sqrt((x - gx) ** 2 + (y - gy) ** 2)
 }
 
 export function edgeDirection([fromPosition, toPosition]: Edge): Direction {
@@ -127,8 +138,6 @@ export function edgeDirection([fromPosition, toPosition]: Edge): Direction {
 }
 
 export function isValidDestination(
-  gridHeight: number,
-  gridWidth: number,
   toPosition: Position,
   outlawPositionKeys: string[] = [],
 ): boolean {

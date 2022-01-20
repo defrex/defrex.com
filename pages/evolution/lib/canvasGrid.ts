@@ -1,5 +1,5 @@
 import { colorValues } from '../../../lib/colors'
-import { Edge, edgeDirection, Position } from './grid'
+import { Edge, edgeDirection, Position } from './EdgeSet'
 
 export function paintEdge(
   context: CanvasRenderingContext2D,
