@@ -1,10 +1,11 @@
+import { orderBy, range, sample, sortBy, take, without } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/Button'
 import { Inline } from '../../components/Inline'
 import { PageContainer } from '../../components/PageContainer'
 import { Stack } from '../../components/Stack'
 import { Text } from '../../components/Text'
-import { colorValues } from '../../lib/colors'
+import { colors, colorValues } from '../../lib/colors'
 import { spacing } from '../../lib/spacing'
 import { usePrevious } from '../../lib/usePrevious'
 import { Agent } from './lib/Agent'
@@ -17,18 +18,13 @@ import {
   move,
   nodeSize,
   Position,
-  positionKey,
 } from './lib/EdgeSet'
 import { generateMaze } from './lib/generateMaze'
 import styles from './styles.module.scss'
 
 interface EvolutionProps {}
 
-type AgentResult = {
-  agent: Agent
-  path?: Position[]
-  fitness?: number
-}
+const agentCount = 10
 
 export default function Evolution(_props: EvolutionProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -40,8 +36,8 @@ export default function Evolution(_props: EvolutionProps) {
   ])
   const [edges, setEdges] = useState<EdgeSet>()
   const [generating, setGenerating] = useState(false)
-  const [agentResults, setAgentResults] = useState<AgentResult[]>([])
-  const [selectedAgent, setSelectedAgent] = useState<AgentResult>()
+  const [agents, setAgent] = useState<Agent[]>([])
+  const [selectedAgent, setSelectedAgent] = useState<Agent>()
 
   // Paint Grid
   useEffect(() => {
@@ -98,7 +94,7 @@ export default function Evolution(_props: EvolutionProps) {
     setEdges(new EdgeSet())
     setCursorPosition([0, 0])
     setExitPosition([gridWidth - 1, gridHeight - 1])
-    setAgentResults([])
+    setAgent([])
   }, [setEdges, setCursorPosition])
 
   useEffect(() => {
@@ -169,63 +165,108 @@ export default function Evolution(_props: EvolutionProps) {
     }
   }, [handleKeyDown])
 
-  const handleEvolve = useCallback(() => {
+  const handleInitEvolution = useCallback(() => {
     if (!edges) return
 
-    const agentCount = 2
-    const results: AgentResult[] = []
+    const nextAgents: Agent[] = []
     for (let i = 0; i < agentCount; i++) {
-      const result: AgentResult = {
-        agent: new Agent(),
-      }
-      result.path = result.agent.findPath([0, 0], exitPosition, edges)
-      result.fitness = result.agent.fitness(result.path, exitPosition)
-      results.push(result)
+      const agent = new Agent()
+      agent.findPath([0, 0], exitPosition, edges)
+      nextAgents.push(agent)
     }
 
-    setAgentResults(results)
-  }, [edges, setAgentResults])
+    setAgent(nextAgents)
+  }, [edges, setAgent])
+
+  const handleNextGeneration = useCallback(() => {
+    if (!edges) return
+
+    const nextAgents: Agent[] = []
+    const keeperAgents = take(
+      sortBy(agents, ['fitness'], ['asc']),
+      agentCount / 2,
+    )
+
+    keeperAgents.forEach((agent, index) => {
+      const lover =
+        keeperAgents[sample(without(range(0, keeperAgents.length), index))!]
+      const child = lover.breed(agent)
+      child.findPath([0, 0], exitPosition, edges)
+
+      nextAgents.push(keeperAgents[index])
+      nextAgents.push(child)
+    })
+
+    setAgent(nextAgents)
+  }, [edges, setAgent, agents])
 
   const handleSelectAgent = useCallback(
     (agentId: string) => () => {
-      const result = agentResults.find((result) => result.agent.id === agentId)
-      console.log('selecting agent', result)
-      setSelectedAgent(result)
+      setSelectedAgent(agents.find((agent) => agent.id === agentId))
     },
-    [setSelectedAgent, agentResults],
+    [setSelectedAgent, agents],
   )
 
   return (
     <PageContainer>
       <Stack spacing={spacing.large}>
-        <Inline>
-          <Button onClick={handleReset} text='Reset' />
-          {!generating ? (
-            <Button onClick={handleGenerate} text='Generate Map' />
-          ) : (
-            <Text value='Generating..' />
-          )}
-          <Button onClick={handleEvolve} text='Start Evolution' />
-        </Inline>
+        <Stack>
+          <Text value='Map' size={20} />
+          <Inline>
+            <Button onClick={handleReset} text='Reset' />
+            {!generating ? (
+              <Button onClick={handleGenerate} text='Generate' />
+            ) : (
+              <Text value='Generating..' />
+            )}
+          </Inline>
+        </Stack>
         <canvas
           className={styles.canvas}
           ref={canvasRef}
           width={gridWidth * nodeSize}
           height={gridHeight * nodeSize}
         />
-        <Stack>
-          {agentResults.map(({ agent, path, fitness }) => (
-            <Stack key={agent.id} spacing={spacing.small}>
-              <Inline expand={1}>
+        <Stack spacing={spacing.xxlarge}>
+          <Stack>
+            <Text value='Evolve' size={20} />
+            <Inline>
+              <Button onClick={handleInitEvolution} text='Reset' />
+              <Button onClick={handleNextGeneration} text='Next Generation' />
+            </Inline>
+          </Stack>
+          {sortBy(agents, ['fitness'], ['asc']).map((agent) => (
+            <Inline expand={0} key={agent.id}>
+              <Stack>
                 <Text value={`Agent ${agent.id}`} size={16} />
-                <Text value={fitness} />
-                <Button
-                  onClick={handleSelectAgent(agent.id)}
-                  text='View on board'
-                />
-              </Inline>
-              <Text value={path?.map(positionKey).join(' > ')} />
-            </Stack>
+                {agent.fitness !== undefined ? (
+                  <Stack spacing={spacing.small}>
+                    <Text value='Fitness' color={colors.black40} />
+                    <Text value={agent.fitness} />
+                  </Stack>
+                ) : null}
+                {agent.path !== undefined ? (
+                  <Stack spacing={spacing.small}>
+                    <Text value='Path Length' color={colors.black40} />
+                    <Text value={agent.path.length} />
+                  </Stack>
+                ) : null}
+                {agent.path !== undefined ? (
+                  <Stack spacing={spacing.small}>
+                    <Text value='End Position' color={colors.black40} />
+                    <Text
+                      value={`[${agent.path[agent.path.length - 1].join(
+                        ' , ',
+                      )}]`}
+                    />
+                  </Stack>
+                ) : null}
+              </Stack>
+              <Button
+                onClick={handleSelectAgent(agent.id)}
+                text='View on board'
+              />
+            </Inline>
           ))}
         </Stack>
       </Stack>

@@ -1,5 +1,5 @@
-import { uniqueId } from 'lodash'
-import { Layer, Network } from 'synaptic'
+import { cloneDeep, random, sample, uniqueId } from 'lodash'
+import { Neuron } from 'synaptic'
 import {
   Direction,
   distance,
@@ -10,84 +10,181 @@ import {
   Position,
 } from './EdgeSet'
 
-// type GeneNodeId = string
+type GeneNodeId = string
 
-// interface GeneNode {
-//   type: 'input' | 'output' | 'hidden'
-//   id: GeneNodeId
-//   bias: number
-//   squash:
-//     | typeof Neuron.squash.HLIM
-//     | typeof Neuron.squash.LOGISTIC
-//     | typeof Neuron.squash.IDENTITY
-//     | typeof Neuron.squash.ReLU
-//     | typeof Neuron.squash.TANH
-// }
+interface GeneNode {
+  type: 'input' | 'output' | 'hidden'
+  id: GeneNodeId
+  bias: number
+  squash?: Neuron.SquashingFunction
+}
 
-// interface InputGeneNode extends GeneNode {
-//   type: 'input'
-//   squash: typeof Neuron.squash.IDENTITY
-// }
+interface InputGeneNode extends GeneNode {
+  type: 'input'
+  squash: typeof Neuron.squash.IDENTITY
+}
 
-// interface HiddenGeneNode extends GeneNode {
-//   type: 'hidden'
-// }
+interface HiddenGeneNode extends GeneNode {
+  type: 'hidden'
+}
 
-// interface OutputGeneNode extends GeneNode {
-//   type: 'output'
-// }
+interface OutputGeneNode extends GeneNode {
+  type: 'output'
+}
 
-// interface GeneEdge {
-//   fromNodeId: GeneNodeId
-//   toNodeId: GeneNodeId
-//   weight: number
-//   gate?: GeneNodeId
-// }
+interface GeneEdge {
+  fromNodeId: GeneNodeId
+  toNodeId: GeneNodeId
+  weight: number
+  // gate?: GeneNodeId
+}
 
-// type Genome = {
-//   inputs: InputGeneNode[]
-//   nodes: HiddenGeneNode[]
-//   edges: GeneEdge[]
-//   outputs: OutputGeneNode[]
-// }
+type Genome = {
+  inputs: InputGeneNode[]
+  nodes: HiddenGeneNode[]
+  edges: GeneEdge[]
+  outputs: OutputGeneNode[]
+}
 
-// function randInputGene(): InputGeneNode {
-//   return {
-//     type: 'input',
-//     id: uniqueId(),
-//     bias: random(0, 10),
-//     squash: Neuron.squash.IDENTITY,
-//   }
-// }
+interface Phenome {
+  inputNeurons: Neuron[]
+  hiddenNeurons: Neuron[]
+  outputNeurons: Neuron[]
+}
+
+function randSquash(): Neuron.SquashingFunction | undefined {
+  return sample([
+    Neuron.squash.HLIM,
+    Neuron.squash.LOGISTIC,
+    Neuron.squash.ReLU,
+    Neuron.squash.TANH,
+  ])
+}
+
+function randInputNodeGene(): InputGeneNode {
+  return {
+    type: 'input',
+    id: uniqueId(),
+    bias: random(0, 10),
+    squash: Neuron.squash.IDENTITY,
+  }
+}
+
+function randHiddenNodeGene(): HiddenGeneNode {
+  return {
+    type: 'hidden',
+    id: uniqueId(),
+    bias: random(0, 10),
+    squash: randSquash(),
+  }
+}
+
+function randOutputNodeGene(): OutputGeneNode {
+  return {
+    type: 'output',
+    id: uniqueId(),
+    bias: random(0, 10),
+    squash: randSquash(),
+  }
+}
+
+function neuronFromGeneNode(geneNode: GeneNode): Neuron {
+  const neuron = new Neuron()
+  if (geneNode.squash) {
+    neuron.squash = geneNode.squash
+  }
+  neuron.bias = geneNode.bias
+  return neuron
+}
 
 export class Agent {
+  private genome: Genome
+  private phenome: Phenome
+
   public id = uniqueId()
-  private network: Network
-  private inputLayer: Layer
-  private outputLayer: Layer
-  private hiddenLayers: Layer[]
+  public path?: Position[]
+  public fitness?: number
 
-  constructor() {
-    this.inputLayer = new Layer(6)
-    this.hiddenLayers = []
-    this.outputLayer = new Layer(4)
-
-    let prevLayer = this.inputLayer
-    for (const hiddenLayer of this.hiddenLayers) {
-      prevLayer.project(hiddenLayer)
-      prevLayer = hiddenLayer
+  constructor(genome?: Genome) {
+    if (genome) {
+      this.genome = genome
+    } else {
+      const inputs = [randInputNodeGene(), randInputNodeGene()]
+      const outputs = [
+        randOutputNodeGene(),
+        randOutputNodeGene(),
+        randOutputNodeGene(),
+        randOutputNodeGene(),
+      ]
+      let edges: GeneEdge[] = []
+      for (let i = 0; i < inputs.length; i++) {
+        for (let j = 0; j < outputs.length; j++) {
+          edges.push({
+            fromNodeId: inputs[i].id,
+            toNodeId: outputs[j].id,
+            weight: random(-10, 10),
+          })
+        }
+      }
+      this.genome = {
+        inputs,
+        nodes: [],
+        edges,
+        outputs,
+      }
     }
-
-    prevLayer.project(this.outputLayer)
-
-    this.network = new Network({
-      input: this.inputLayer,
-      hidden: this.hiddenLayers,
-      output: this.outputLayer,
-    })
+    this.genomeToPhenome()
   }
 
-  move(currentPosition: Position, edges: EdgeSet): Position {
+  private genomeToPhenome(): void {
+    const neuronsById: Record<GeneNodeId, Neuron> = {}
+    const phenome: Phenome = {
+      inputNeurons: [],
+      hiddenNeurons: [],
+      outputNeurons: [],
+    }
+    for (const node of this.genome.inputs) {
+      const neuron = neuronFromGeneNode(node)
+      neuronsById[node.id] = neuron
+      phenome.inputNeurons.push(neuron)
+    }
+    for (const node of this.genome.nodes) {
+      const neuron = neuronFromGeneNode(node)
+      neuronsById[node.id] = neuron
+      phenome.hiddenNeurons.push(neuron)
+    }
+    for (const node of this.genome.outputs) {
+      const neuron = neuronFromGeneNode(node)
+      neuronsById[node.id] = neuron
+      phenome.outputNeurons.push(neuron)
+    }
+
+    for (const edgeGene of this.genome.edges) {
+      neuronsById[edgeGene.fromNodeId].project(
+        neuronsById[edgeGene.toNodeId],
+        edgeGene.weight,
+      )
+    }
+    this.phenome = phenome
+  }
+
+  private activatePhoenome(inputs: number[]): number[] {
+    for (const i in this.phenome.inputNeurons) {
+      this.phenome.inputNeurons[i].activate(inputs[i])
+    }
+    for (const i in this.phenome.hiddenNeurons) {
+      this.phenome.hiddenNeurons[i].activate()
+    }
+    return this.phenome.outputNeurons.map((neuron) => neuron.activate())
+  }
+
+  breed(lover: Agent): Agent {
+    // TODO: implement crossover
+
+    return new Agent()
+  }
+
+  private move(currentPosition: Position, edges: EdgeSet): Position {
     const edgeMap = edges.edgeMapForNode(currentPosition)
     const inputs = [
       currentPosition[0],
@@ -98,7 +195,7 @@ export class Agent {
       edgeMap.right ? 1 : 0,
     ]
 
-    const outputs = this.network.activate(inputs)
+    const outputs = this.activatePhoenome(inputs)
 
     const maxIndex = outputs.indexOf(Math.max(...outputs))
     const direction: Direction | null =
@@ -129,7 +226,7 @@ export class Agent {
     endPosition: Position,
     edges: EdgeSet,
     maxSteps: number = gridWidth * gridHeight * 2,
-  ): Position[] {
+  ): void {
     const path: Position[] = [startPosition]
 
     let steps = maxSteps
@@ -138,8 +235,7 @@ export class Agent {
       if (steps <= 0) {
         break
       }
-      const position = path[path.length - 1]
-      const nextPosition = this.move(position, edges)
+      const nextPosition = this.move(path[path.length - 1], edges)
       path.push(nextPosition)
 
       if (distance(nextPosition, endPosition) === 0) {
@@ -147,10 +243,7 @@ export class Agent {
       }
     }
 
-    return path
-  }
-
-  fitness(path: Position[], endPosition: Position): number {
-    return distance(path[path.length - 1], endPosition)
+    this.path = path
+    this.fitness = distance(path[path.length - 1], endPosition)
   }
 }
