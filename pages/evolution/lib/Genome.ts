@@ -27,15 +27,6 @@ function randSquash(): Neuron.SquashingFunction | undefined {
   ])
 }
 
-function neuronFromGeneNode(geneNode: GeneNode): Neuron {
-  const neuron = new Neuron()
-  if (geneNode.squash) {
-    neuron.squash = geneNode.squash
-  }
-  neuron.bias = geneNode.bias
-  return neuron
-}
-
 export class Genome {
   public inputSize = 3
   public outputSize = 4
