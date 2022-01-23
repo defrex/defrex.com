@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { colorValues } from '../../../../lib/colors'
-import { BoardState, positionsEqual } from './lib/BoardState'
+import { BoardState } from './lib/BoardState'
 import { paintEdge, paintNode } from './lib/paintBoard'
 import styles from './styles.module.scss'
 
@@ -38,16 +38,17 @@ export function Board({ boardState, height, width }: BoardProps) {
 
     if (boardState.agentPositions) {
       for (const position of boardState.agentPositions) {
-        paintNode(
-          context,
-          boardState.cellSize,
-          position,
-          boardState.topAgentPosition &&
-            positionsEqual(boardState.topAgentPosition, position)
-            ? colorValues.brand
-            : colorValues.blue60,
-        )
+        paintNode(context, boardState.cellSize, position, colorValues.blue60)
       }
+    }
+
+    if (boardState.topAgentPosition) {
+      paintNode(
+        context,
+        boardState.cellSize,
+        boardState.topAgentPosition,
+        colorValues.green40,
+      )
     }
   }, [boardState])
 

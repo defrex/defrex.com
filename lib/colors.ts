@@ -16,6 +16,8 @@ export const colors = {
 
 export const colorValues = {
   brand: '#da87ed',
+  green40: '#3ecb84',
+  green50: '#0dab76',
   green60: '#119956',
   blue60: '#03aacb',
   red60: '#bf2934',
