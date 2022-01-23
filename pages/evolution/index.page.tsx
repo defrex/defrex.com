@@ -254,36 +254,17 @@ export default function Evolution(_props: EvolutionProps) {
                 <VictoryAxis label='Life Span' tickCount={10} />
                 <VictoryAxis label='Agent Count' dependentAxis />
                 <VictoryBar
-                  data={sortBy(
-                    Object.entries(lifeSpans),
-                    ([index, span]) => span,
-                  ).map(([lifeSpan, agentCount]) => ({
-                    lifeSpan,
-                    agentCount,
+                  data={Object.entries(lifeSpans).map(([moves, agents]) => ({
+                    moves: parseInt(moves.toString(), 10),
+                    agents: parseInt(agents.toString(), 10),
                   }))}
-                  x='lifeSpan'
-                  y='agentCount'
+                  x='moves'
+                  y='agents'
+                  sortKey='moves'
                 />
               </VictoryChart>
             ) : null}
           </Stack>
-
-          {/*
-          <pre>
-            {JSON.stringify(
-              {
-                moves,
-                currentGenerationLifeSpans: agents.map((agent) => agent.moves),
-                historicLifeSpanDistribution: lifeSpans,
-              },
-              null,
-              2,
-            )}
-          </pre> */}
-
-          {/* {sortBy(agents, ['moves'], ['desc']).map((agent) => (
-            <AgentInfo agent={agent} key={agent.id} />
-          ))} */}
         </Stack>
       </Stack>
     </PageContainer>
