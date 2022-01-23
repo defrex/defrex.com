@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { colorValues } from '../../../../lib/colors'
-import { BoardState } from './lib/BoardState'
+import { BoardState, positionsEqual } from './lib/BoardState'
 import { paintEdge, paintNode } from './lib/paintBoard'
 import styles from './styles.module.scss'
 
@@ -30,39 +30,6 @@ export function Board({ boardState, height, width }: BoardProps) {
       }
     }
 
-    if (boardState.cursorPosition) {
-      paintNode(context, boardState.cellSize, boardState.cursorPosition)
-    }
-
-    if (boardState.exitPosition) {
-      paintNode(
-        context,
-        boardState.cellSize,
-        boardState.exitPosition,
-        colorValues.green60,
-      )
-    }
-
-    if (
-      boardState.exitPosition &&
-      boardState.cursorPosition &&
-      boardState.exitPosition[0] === boardState.cursorPosition[0] &&
-      boardState.exitPosition[1] === boardState.cursorPosition[1]
-    ) {
-      paintNode(
-        context,
-        boardState.cellSize,
-        boardState.cursorPosition,
-        colorValues.blue60,
-      )
-    }
-
-    if (boardState.selectedPath) {
-      for (const position of boardState.selectedPath) {
-        paintNode(context, boardState.cellSize, position, colorValues.blue60)
-      }
-    }
-
     if (boardState.killPositions) {
       for (const position of boardState.killPositions) {
         paintNode(context, boardState.cellSize, position, colorValues.red60)
@@ -71,7 +38,15 @@ export function Board({ boardState, height, width }: BoardProps) {
 
     if (boardState.agentPositions) {
       for (const position of boardState.agentPositions) {
-        paintNode(context, boardState.cellSize, position, colorValues.blue60)
+        paintNode(
+          context,
+          boardState.cellSize,
+          position,
+          boardState.topAgentPosition &&
+            positionsEqual(boardState.topAgentPosition, position)
+            ? colorValues.brand
+            : colorValues.blue60,
+        )
       }
     }
   }, [boardState])

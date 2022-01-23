@@ -1,42 +1,38 @@
-import { clone, isArray, orderBy, reverse, shuffle, sortBy } from 'lodash'
+import { clone, isArray, sortBy } from 'lodash'
 
 export type Direction = 'up' | 'right' | 'down' | 'left'
 export type Position = [number, number]
 export type Edge = [Position, Position]
 
+interface BoardStateArgs {
+  gridWidth: number
+  gridHeight: number
+  cellSize: number
+  edgeStates?: { [key: string]: boolean }
+  killPositions?: Position[]
+  agentPositions?: Position[]
+  topAgentPosition?: Position
+}
+
 export class BoardState {
   public gridWidth: number
   public gridHeight: number
   public cellSize: number
-  public cursorPosition?: Position
-  public exitPosition?: Position
-  public selectedPath?: Position[]
   public killPositions?: Position[]
   public agentPositions?: Position[]
+  public topAgentPosition?: Position
   private edgeStates: { [key: string]: boolean } = {}
 
-  constructor(
-    gridWidth: number,
-    gridHeight: number,
-    cellSize: number,
-    edgeStates?: { [key: string]: boolean },
-    cursorPosition?: Position,
-    exitPosition?: Position,
-    selectedPath?: Position[],
-    killPositions?: Position[],
-    agentPositions?: Position[],
-  ) {
-    this.gridWidth = gridWidth
-    this.gridHeight = gridHeight
-    this.cellSize = cellSize
-    this.cursorPosition = cursorPosition
-    this.exitPosition = exitPosition
-    this.selectedPath = selectedPath
-    this.killPositions = killPositions
-    this.agentPositions = agentPositions
+  constructor(args: BoardStateArgs) {
+    this.gridWidth = args.gridWidth
+    this.gridHeight = args.gridHeight
+    this.cellSize = args.cellSize
+    this.killPositions = args.killPositions
+    this.agentPositions = args.agentPositions
+    this.topAgentPosition = args.topAgentPosition
 
-    if (edgeStates) {
-      this.edgeStates = edgeStates
+    if (args.edgeStates) {
+      this.edgeStates = args.edgeStates
     } else {
       this.edgeStates = this.getEmptyGridState()
     }
@@ -64,165 +60,45 @@ export class BoardState {
     return edgeStates
   }
 
-  reset(): BoardState {
-    return new BoardState(this.gridWidth, this.gridHeight, this.cellSize)
-  }
-
-  generateMaze(): BoardState {
-    const maxSteps = this.gridWidth * this.gridHeight * 10
-    let currentStep = 0
-    let position: Position = [0, 0]
-    let endPosition: Position | null = null
-    let nextBoardState = new BoardState(
-      this.gridWidth,
-      this.gridHeight,
-      this.cellSize,
-      this.getEmptyGridState(),
-      this.cursorPosition,
-      this.exitPosition,
-      this.selectedPath,
-    )
-
-    const positionHistory: string[] = []
-
-    stepper: while (true) {
-      currentStep++
-      if (currentStep > maxSteps) {
-        // endPosition = position
-        console.log(`Hit maxSteps ${maxSteps}`, {
-          position,
-          currentStep,
-        })
-        break stepper
-      }
-
-      const direction = shuffle([
-        'right',
-        'down',
-        'left',
-        'up',
-      ] as Direction[]).find((direction: Direction) => {
-        const destination = move(position, direction)
-        return (
-          this.isOnBoard(destination) &&
-          positionHistory.indexOf(positionKey(destination)) === -1
-        )
-      })
-
-      if (!direction) {
-        // Search for a position with few open edges
-        for (const prevPositionKey of reverse(positionHistory)) {
-          const prevPosition = keyPosition(prevPositionKey)
-          const edgesEnabled = nextBoardState.getEdgesEnabled(prevPosition)
-          const openEdges = Object.values(edgesEnabled).filter(
-            (enabled) => enabled,
-          ).length
-          if (openEdges <= 3) {
-            position = prevPosition
-            continue stepper
-          }
-        }
-
-        endPosition = position
-        break stepper
-      }
-
-      const nextPosition = move(position, direction)
-
-      // paintNode(context, nodeSize, position, colorValues.blue60)
-      nextBoardState = nextBoardState.setEdgeEnabled(
-        [position, nextPosition],
-        false,
-      )
-
-      if (positionHistory.indexOf(positionKey(position)) === -1) {
-        positionHistory.push(positionKey(position))
-      }
-
-      position = nextPosition
+  private getArgs(): BoardStateArgs {
+    return {
+      gridWidth: this.gridWidth,
+      gridHeight: this.gridHeight,
+      cellSize: this.cellSize,
+      edgeStates: this.edgeStates,
+      killPositions: this.killPositions,
+      agentPositions: this.agentPositions,
+      topAgentPosition: this.topAgentPosition,
     }
-
-    nextBoardState = nextBoardState.setExitPosition(
-      endPosition ||
-        keyPosition(positionHistory[positionHistory.length - 1]) ||
-        orderBy(
-          positionHistory.map(keyPosition),
-          (position) => position[0] * position[1],
-          'desc',
-        )[0],
-    )
-
-    return nextBoardState
   }
 
-  setExitPosition(exitPosition: Position): BoardState {
-    return new BoardState(
-      this.gridWidth,
-      this.gridHeight,
-      this.cellSize,
-      this.edgeStates,
-      this.cursorPosition,
-      exitPosition,
-      this.selectedPath,
-      this.killPositions,
-      this.agentPositions,
-    )
-  }
-
-  setCursorPosition(cursorPosition: Position): BoardState {
-    return new BoardState(
-      this.gridWidth,
-      this.gridHeight,
-      this.cellSize,
-      this.edgeStates,
-      cursorPosition,
-      this.exitPosition,
-      this.selectedPath,
-      this.killPositions,
-      this.agentPositions,
-    )
-  }
-
-  setSelectedPath(selectedPath: Position[]): BoardState {
-    return new BoardState(
-      this.gridWidth,
-      this.gridHeight,
-      this.cellSize,
-      this.edgeStates,
-      this.cursorPosition,
-      this.exitPosition,
-      selectedPath,
-      this.killPositions,
-      this.agentPositions,
-    )
+  reset(): BoardState {
+    return new BoardState({
+      gridWidth: this.gridWidth,
+      gridHeight: this.gridHeight,
+      cellSize: this.cellSize,
+    })
   }
 
   setKillPositions(killPositions: Position[]): BoardState {
-    return new BoardState(
-      this.gridWidth,
-      this.gridHeight,
-      this.cellSize,
-      this.edgeStates,
-      this.cursorPosition,
-      this.exitPosition,
-      this.selectedPath,
+    return new BoardState({
+      ...this.getArgs(),
       killPositions,
-      this.agentPositions,
-    )
+    })
   }
 
   setAgentPositions(agentPositions: Position[]): BoardState {
-    return new BoardState(
-      this.gridWidth,
-      this.gridHeight,
-      this.cellSize,
-      this.edgeStates,
-      this.cursorPosition,
-      this.exitPosition,
-      this.selectedPath,
-      this.killPositions,
+    return new BoardState({
+      ...this.getArgs(),
       agentPositions,
-    )
+    })
+  }
+
+  setTopAgentPosition(topAgentPosition?: Position): BoardState {
+    return new BoardState({
+      ...this.getArgs(),
+      topAgentPosition,
+    })
   }
 
   setEdgeEnabled(edge: Edge, enabled?: boolean): BoardState {
@@ -230,15 +106,11 @@ export class BoardState {
     enabled = enabled !== undefined ? enabled : !this.getEdgeEnabled(edge)
     const edgeStates = clone(this.edgeStates)
     edgeStates[edgeKey(edge)] = enabled
-    return new BoardState(
-      this.gridWidth,
-      this.gridHeight,
-      this.cellSize,
+
+    return new BoardState({
+      ...this.getArgs(),
       edgeStates,
-      this.cursorPosition,
-      this.exitPosition,
-      this.selectedPath,
-    )
+    })
   }
 
   getEdgeEnabled(edge: Edge): boolean {
@@ -313,6 +185,13 @@ export class BoardState {
       )
     }
   }
+}
+
+export function positionsEqual(
+  position1: Position,
+  position2: Position,
+): boolean {
+  return position1[0] === position2[0] && position1[1] === position2[1]
 }
 
 export function distance(

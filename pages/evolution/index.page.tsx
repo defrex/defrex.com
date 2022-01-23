@@ -44,7 +44,7 @@ type State = {
 
 function initState(): State {
   return {
-    boardState: new BoardState(gridWidth, gridHeight, cellSize),
+    boardState: new BoardState({ gridWidth, gridHeight, cellSize }),
     agents: [],
     lifeSpans: {},
     running: false,
@@ -161,9 +161,9 @@ export default function Evolution(_props: EvolutionProps) {
         )
       }
 
-      nextBoardState = nextBoardState.setAgentPositions(
-        nextAgents.map(({ position }) => position),
-      )
+      nextBoardState = nextBoardState
+        .setAgentPositions(nextAgents.map(({ position }) => position))
+        .setTopAgentPosition(nextTopAgent?.position)
 
       if (running) {
         if (speed > 0) {
