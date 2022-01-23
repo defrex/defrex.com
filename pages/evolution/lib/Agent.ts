@@ -69,7 +69,7 @@ export class Agent {
     const inputs = [
       this.position[0],
       this.position[1],
-      threatDistance === Infinity ? -1 : threatDistance,
+      threatDistance === Infinity ? -1 : this.gridWidth - threatDistance,
     ]
 
     const outputs = this.genome.compute(inputs)

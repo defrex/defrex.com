@@ -214,7 +214,7 @@ export class Genome {
   private mutateConnectionWeight(): Genome {
     const nextEdges = cloneDeep(this.edges)
     const nextConnection = { ...sample(nextEdges)! }
-    nextConnection.weight *= random(0, 2)
+    nextConnection.weight *= random(-2, 2)
     return new Genome({
       nodes: cloneDeep(this.nodes),
       edges: nextEdges.map((edge) => {
@@ -232,7 +232,7 @@ export class Genome {
   private mutateNodeBias(): Genome {
     const nextNodes = cloneDeep(this.nodes)
     const nextNode = { ...sample(nextNodes)! }
-    nextNode.bias *= random(0, 2)
+    nextNode.bias *= random(-2, 2)
     return new Genome({
       nodes: nextNodes.map((node) => {
         if (node.id === nextNode.id) {
