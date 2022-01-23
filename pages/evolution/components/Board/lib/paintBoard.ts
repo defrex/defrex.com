@@ -1,17 +1,17 @@
-import { colorValues } from '../../../lib/colors'
-import { Edge, edgeDirection, Position } from './EdgeSet'
+import { colorValues } from '../../../../../lib/colors'
+import { Edge, edgeDirection, Position } from './BoardState'
 
 export function paintEdge(
   context: CanvasRenderingContext2D,
   nodeSize: number,
   [fromPosition, toPosition]: Edge,
+  color: string = colorValues.black40,
 ) {
   const direction = edgeDirection([fromPosition, toPosition])
   const fromX = fromPosition[0] * nodeSize
   const fromY = fromPosition[1] * nodeSize
 
-  // console.log('paintEdge', fromPosition, toPosition, direction)
-  context.strokeStyle = colorValues.black40
+  context.strokeStyle = color
   context.beginPath()
   if (direction === 'right') {
     context.moveTo(fromX + nodeSize, fromY)
