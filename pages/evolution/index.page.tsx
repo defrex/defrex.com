@@ -32,173 +32,155 @@ const canvasHeight = 512
 const gridWidth = canvasWidth / cellSize
 const gridHeight = canvasHeight / cellSize
 
-export default function Evolution(_props: EvolutionProps) {
-  const frameRef = useRef<number>()
-  const [
-    { boardState, agents, lifeSpans, running, speed, moves },
-    setBoardStateAgents,
-  ] = useState<{
-    agents: Agent[]
-    boardState: BoardState
-    lifeSpans: Record<number, number>
-    running: boolean
-    speed: number
-    moves: number
-  }>({
+type State = {
+  agents: Agent[]
+  boardState: BoardState
+  lifeSpans: Record<number, number>
+  running: boolean
+  speed: number
+  moves: number
+}
+
+function initState(): State {
+  return {
     boardState: new BoardState(gridWidth, gridHeight, cellSize),
     agents: [],
     lifeSpans: {},
     running: false,
     speed: 0,
     moves: 0,
-  })
+  }
+}
+
+export default function Evolution(_props: EvolutionProps) {
+  const frameRef = useRef<number>()
+  const [state, setState] = useState<State>(initState())
 
   const handleReset = useCallback(() => {
-    setBoardStateAgents({
-      boardState: boardState.reset(),
-      agents: [],
-      lifeSpans: {},
-      running: false,
-      speed,
-      moves: 0,
-    })
-  }, [setBoardStateAgents, boardState])
+    setState(initState())
+  }, [setState])
 
   const handleStart = useCallback(() => {
-    setBoardStateAgents({
-      boardState,
-      agents,
-      lifeSpans,
-      speed,
+    setState({
+      ...state,
       running: true,
-      moves,
     })
-  }, [setBoardStateAgents, boardState, agents, lifeSpans, moves])
+  }, [setState, state])
 
   const handlePause = useCallback(() => {
-    setBoardStateAgents({
-      boardState,
-      agents,
-      lifeSpans,
-      speed,
+    setState({
+      ...state,
       running: false,
-      moves,
     })
-  }, [setBoardStateAgents, boardState, agents, lifeSpans, moves])
+  }, [setState, state])
 
   const handleSetSpeed = useCallback(
     (speed: number) => () => {
-      setBoardStateAgents({
-        boardState,
-        agents,
-        lifeSpans,
+      setState({
+        ...state,
         speed,
-        running,
-        moves,
       })
     },
-    [setBoardStateAgents, boardState, agents, lifeSpans, moves],
+    [setState, state],
   )
 
   const renderFrame = () => {
-    setBoardStateAgents(
-      ({ boardState, agents, lifeSpans, running, speed, moves }) => {
-        if (moves % 10 === 0) {
-          console.log(
-            `moves ${moves} 👑`,
-            sortBy(agents, ['moves'], ['desc'])[0],
-          )
-        }
+    setState((currentState) => {
+      if (!currentState.running) {
+        frameRef.current = requestAnimationFrame(renderFrame)
+        return currentState
+      }
 
-        const nextKillPositions: Position[] = (boardState.killPositions || [])
-          .map(([x, y]) => [x - 1, y] as Position)
-          .filter(
-            ([x, y]) => x >= 0 && y >= 0 && x < gridWidth && y < gridHeight,
-          )
+      const { boardState, agents, lifeSpans, running, speed, moves } =
+        currentState
+      if (moves % 10 === 0) {
+        console.log(`moves ${moves} 👑`, sortBy(agents, ['moves'], ['desc'])[0])
+      }
 
-        if (sample([true, false])!) {
-          nextKillPositions.push([gridWidth - 1, random(0, gridHeight - 1)])
-        }
+      const nextKillPositions: Position[] = (boardState.killPositions || [])
+        .map(([x, y]) => [x - 1, y] as Position)
+        .filter(([x, y]) => x >= 0 && y >= 0 && x < gridWidth && y < gridHeight)
 
-        let nextBoardState = boardState.setKillPositions(nextKillPositions)
-        let nextAgents = agents || []
-        nextAgents = nextAgents.map((agent) => agent.move(nextBoardState))
+      if (sample([true, false])!) {
+        nextKillPositions.push([gridWidth - 1, random(0, gridHeight - 1)])
+      }
 
-        const { deadAgents, survivingAgents } = groupBy(nextAgents, (agent) =>
-          some(
-            nextBoardState.killPositions,
-            ([x, y]) => agent.position[0] === x && agent.position[1] === y,
-          )
-            ? 'deadAgents'
-            : 'survivingAgents',
+      let nextBoardState = boardState.setKillPositions(nextKillPositions)
+      let nextAgents = agents || []
+      nextAgents = nextAgents.map((agent) => agent.move(nextBoardState))
+
+      const { deadAgents, survivingAgents } = groupBy(nextAgents, (agent) =>
+        some(
+          nextBoardState.killPositions,
+          ([x, y]) => agent.position[0] === x && agent.position[1] === y,
         )
-        nextAgents = survivingAgents || []
+          ? 'deadAgents'
+          : 'survivingAgents',
+      )
+      nextAgents = survivingAgents || []
 
-        const nextLifespans = clone(lifeSpans)
-        if (deadAgents?.length) {
-          for (const killedAgent of deadAgents) {
-            nextLifespans[killedAgent.moves] =
-              (nextLifespans[killedAgent.moves] || 0) + 1
-          }
+      const nextLifespans = clone(lifeSpans)
+      if (deadAgents?.length) {
+        for (const killedAgent of deadAgents) {
+          nextLifespans[killedAgent.moves] =
+            (nextLifespans[killedAgent.moves] || 0) + 1
         }
+      }
 
-        if (nextAgents.length === 0) {
-          nextAgents.push(new Agent(gridWidth, gridHeight))
-        }
+      if (nextAgents.length === 0) {
+        nextAgents.push(new Agent(gridWidth, gridHeight))
+      }
 
-        while (nextAgents.length < agentCount) {
-          const parent = sortBy(
-            [...agents, ...nextAgents],
-            ['moves'],
-            ['desc'],
-          )[0]
-          nextAgents.push(parent.mutate())
-        }
+      while (nextAgents.length < agentCount) {
+        const parent = sortBy(
+          [...agents, ...nextAgents],
+          ['moves'],
+          ['desc'],
+        )[0]
+        nextAgents.push(parent.mutate())
+      }
 
-        if (uniq(nextAgents.map((agent) => agent.id)).length !== agentCount) {
-          throw new Error(
-            `duplicate agent ids ${nextAgents.map((agent) => agent.id)}`,
-          )
-        }
-
-        nextBoardState = nextBoardState.setAgentPositions(
-          nextAgents.map(({ position }) => position),
+      if (uniq(nextAgents.map((agent) => agent.id)).length !== agentCount) {
+        throw new Error(
+          `duplicate agent ids ${nextAgents.map((agent) => agent.id)}`,
         )
+      }
 
-        if (running) {
-          if (speed > 0) {
-            sleep(speed).then(() => {
-              frameRef.current = requestAnimationFrame(renderFrame)
-            })
-          } else {
+      nextBoardState = nextBoardState.setAgentPositions(
+        nextAgents.map(({ position }) => position),
+      )
+
+      if (running) {
+        if (speed > 0) {
+          sleep(speed).then(() => {
             frameRef.current = requestAnimationFrame(renderFrame)
-          }
+          })
+        } else {
+          frameRef.current = requestAnimationFrame(renderFrame)
         }
+      }
 
-        return {
-          boardState: nextBoardState,
-          agents: nextAgents,
-          lifeSpans: nextLifespans,
-          running,
-          speed,
-          moves: moves + 1,
-        }
-      },
-    )
+      return {
+        boardState: nextBoardState,
+        agents: nextAgents,
+        lifeSpans: nextLifespans,
+        running,
+        speed,
+        moves: moves + 1,
+      }
+    })
   }
 
   useEffect(() => {
-    if (running) {
-      frameRef.current = requestAnimationFrame(renderFrame)
-    }
+    frameRef.current = requestAnimationFrame(renderFrame)
     return () => cancelAnimationFrame(frameRef.current!)
-  }, [running])
+  }, [])
 
   return (
     <PageContainer>
       <Stack spacing={spacing.large}>
         <Board
-          boardState={boardState}
+          boardState={state.boardState}
           width={canvasWidth}
           height={canvasHeight}
         />
@@ -208,7 +190,7 @@ export default function Evolution(_props: EvolutionProps) {
             <Text value='Evolve' size={20} />
             <Inline>
               <Button onClick={handleReset} text='Reset' />
-              {running ? (
+              {state.running ? (
                 <Button onClick={handlePause} text='Pause' />
               ) : (
                 <Button onClick={handleStart} text='Play' />
@@ -224,17 +206,17 @@ export default function Evolution(_props: EvolutionProps) {
 
           <Stack spacing={spacing.xsmall}>
             <Text value='Moves' color={colors.black40} />
-            <Text value={moves} />
+            <Text value={state.moves} />
           </Stack>
 
           <Stack spacing={spacing.xsmall}>
             <Text value='Current Generation' color={colors.black40} />
-            {size(agents) > 0 ? (
+            {size(state.agents) > 0 ? (
               <VictoryChart domainPadding={{ x: 20 }} theme={victoryChartTheme}>
                 <VictoryAxis label='Agent Index' />
                 <VictoryAxis label='Life Span' dependentAxis />
                 <VictoryBar
-                  data={agents
+                  data={state.agents
                     .map((agent) => agent.moves)
                     .map((moves, index) => ({
                       index,
@@ -249,15 +231,17 @@ export default function Evolution(_props: EvolutionProps) {
 
           <Stack spacing={spacing.xsmall}>
             <Text value='Historic Life-spans' color={colors.black40} />
-            {size(lifeSpans) > 0 ? (
+            {size(state.lifeSpans) > 0 ? (
               <VictoryChart domainPadding={{ x: 20 }} theme={victoryChartTheme}>
                 <VictoryAxis label='Life Span' tickCount={10} />
                 <VictoryAxis label='Agent Count' dependentAxis />
                 <VictoryBar
-                  data={Object.entries(lifeSpans).map(([moves, agents]) => ({
-                    moves: parseInt(moves.toString(), 10),
-                    agents: parseInt(agents.toString(), 10),
-                  }))}
+                  data={Object.entries(state.lifeSpans).map(
+                    ([moves, agents]) => ({
+                      moves: parseInt(moves.toString(), 10),
+                      agents: parseInt(agents.toString(), 10),
+                    }),
+                  )}
                   x='moves'
                   y='agents'
                   sortKey='moves'
