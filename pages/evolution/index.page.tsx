@@ -265,6 +265,7 @@ export default function Evolution(_props: EvolutionProps) {
             <Inline spacing={spacing.xsmall}>
               {range(0, 10).map((killersPerMove) => (
                 <Button
+                  key={killersPerMove}
                   onClick={handleSetDifficulty(killersPerMove)}
                   text={killersPerMove.toString()}
                   disabled={state.killersPerMove === killersPerMove}
