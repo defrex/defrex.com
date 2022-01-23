@@ -49,12 +49,12 @@ export class Agent {
     }
   }
 
-  mutate(): Agent {
+  mutate(keepPosition = false): Agent {
     return new Agent(
       this.gridWidth,
       this.gridHeight,
       this.genome.mutate(),
-      this.position,
+      keepPosition ? this.position : undefined,
     )
   }
 

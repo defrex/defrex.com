@@ -39,6 +39,7 @@ type State = {
   running: boolean
   speed: number
   moves: number
+  topAgent?: Agent
 }
 
 function initState(): State {
@@ -91,10 +92,20 @@ export default function Evolution(_props: EvolutionProps) {
         return currentState
       }
 
-      const { boardState, agents, lifeSpans, running, speed, moves } =
+      const { boardState, agents, lifeSpans, running, speed, moves, topAgent } =
         currentState
-      if (moves % 10 === 0) {
-        console.log(`moves ${moves} 👑`, sortBy(agents, ['moves'], ['desc'])[0])
+
+      const currentTopAgent: Agent | undefined = sortBy(
+        agents,
+        ['moves'],
+        ['desc'],
+      )[0]
+      const nextTopAgent =
+        topAgent && topAgent.moves >= currentTopAgent.moves
+          ? topAgent
+          : (currentTopAgent as Agent | undefined)
+      if (nextTopAgent && nextTopAgent.id === currentTopAgent.id) {
+        console.log('👑', nextTopAgent.moves, nextTopAgent.genome)
       }
 
       const nextKillPositions: Position[] = (boardState.killPositions || [])
@@ -132,11 +143,9 @@ export default function Evolution(_props: EvolutionProps) {
       }
 
       while (nextAgents.length < agentCount) {
-        const parent = sortBy(
-          [...agents, ...nextAgents],
-          ['moves'],
-          ['desc'],
-        )[0]
+        const parent =
+          nextTopAgent ||
+          sortBy([...agents, ...nextAgents], ['moves'], ['desc'])[0]
         nextAgents.push(parent.mutate())
       }
 
@@ -167,6 +176,7 @@ export default function Evolution(_props: EvolutionProps) {
         running,
         speed,
         moves: moves + 1,
+        topAgent: nextTopAgent,
       }
     })
   }
