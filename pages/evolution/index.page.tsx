@@ -1,12 +1,25 @@
-import { clone, groupBy, random, sample, some, sortBy, uniq } from 'lodash'
+import {
+  clone,
+  groupBy,
+  max,
+  random,
+  sample,
+  size,
+  some,
+  sortBy,
+  uniq,
+} from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { VictoryBar, VictoryChart, VictoryAxis } from 'victory'
 import { Button } from '../../components/Button'
 import { Inline } from '../../components/Inline'
 import { PageContainer } from '../../components/PageContainer'
 import { Stack } from '../../components/Stack'
 import { Text } from '../../components/Text'
+import { colors } from '../../lib/colors'
 import { sleep } from '../../lib/sleep'
 import { spacing } from '../../lib/spacing'
+import { victoryChartTheme } from '../../lib/victoryChartTheme'
 import { Board } from './components/Board'
 import { BoardState, Position } from './components/Board/lib/BoardState'
 import { Agent } from './lib/Agent'
@@ -23,7 +36,7 @@ const gridHeight = canvasHeight / cellSize
 export default function Evolution(_props: EvolutionProps) {
   const frameRef = useRef<number>()
   const [
-    { boardState, agents, lifeSpans, running, speed, generation },
+    { boardState, agents, lifeSpans, running, speed, moves },
     setBoardStateAgents,
   ] = useState<{
     agents: Agent[]
@@ -31,14 +44,14 @@ export default function Evolution(_props: EvolutionProps) {
     lifeSpans: Record<number, number>
     running: boolean
     speed: number
-    generation: number
+    moves: number
   }>({
     boardState: new BoardState(gridWidth, gridHeight, cellSize),
     agents: [],
     lifeSpans: {},
     running: false,
     speed: 0,
-    generation: 0,
+    moves: 0,
   })
 
   const handleReset = useCallback(() => {
@@ -48,7 +61,7 @@ export default function Evolution(_props: EvolutionProps) {
       lifeSpans: {},
       running: false,
       speed,
-      generation: 0,
+      moves: 0,
     })
   }, [setBoardStateAgents, boardState])
 
@@ -59,20 +72,20 @@ export default function Evolution(_props: EvolutionProps) {
       lifeSpans,
       speed,
       running: true,
-      generation,
+      moves,
     })
-  }, [setBoardStateAgents, boardState, agents, lifeSpans, generation])
+  }, [setBoardStateAgents, boardState, agents, lifeSpans, moves])
 
-  const handleStop = useCallback(() => {
+  const handlePause = useCallback(() => {
     setBoardStateAgents({
       boardState,
       agents,
       lifeSpans,
       speed,
       running: false,
-      generation: 0,
+      moves,
     })
-  }, [setBoardStateAgents, boardState, agents, lifeSpans, generation])
+  }, [setBoardStateAgents, boardState, agents, lifeSpans, moves])
 
   const handleSetSpeed = useCallback(
     (speed: number) => () => {
@@ -82,18 +95,18 @@ export default function Evolution(_props: EvolutionProps) {
         lifeSpans,
         speed,
         running,
-        generation: 0,
+        moves,
       })
     },
-    [setBoardStateAgents, boardState, agents, lifeSpans, generation],
+    [setBoardStateAgents, boardState, agents, lifeSpans, moves],
   )
 
   const renderFrame = () => {
     setBoardStateAgents(
-      ({ boardState, agents, lifeSpans, running, speed, generation }) => {
-        if (generation % 10 === 0) {
+      ({ boardState, agents, lifeSpans, running, speed, moves }) => {
+        if (moves % 10 === 0) {
           console.log(
-            `generation ${generation} 👑`,
+            `moves ${moves} 👑`,
             sortBy(agents, ['moves'], ['desc'])[0],
           )
         }
@@ -169,7 +182,7 @@ export default function Evolution(_props: EvolutionProps) {
           lifeSpans: nextLifespans,
           running,
           speed,
-          generation: generation + 1,
+          moves: moves + 1,
         }
       },
     )
@@ -197,7 +210,7 @@ export default function Evolution(_props: EvolutionProps) {
             <Inline>
               <Button onClick={handleReset} text='Reset' />
               {running ? (
-                <Button onClick={handleStop} text='Pause' />
+                <Button onClick={handlePause} text='Pause' />
               ) : (
                 <Button onClick={handleStart} text='Play' />
               )}
@@ -210,21 +223,63 @@ export default function Evolution(_props: EvolutionProps) {
             </Inline>
           </Stack>
 
-          <Inline>
-            <pre>
-              {JSON.stringify(
-                {
-                  generation,
-                  currentGenerationLifeSpans: agents.map(
-                    (agent) => agent.moves,
-                  ),
-                  historicLifeSpanDistribution: lifeSpans,
-                },
-                null,
-                2,
-              )}
-            </pre>
-          </Inline>
+          <Stack spacing={spacing.xsmall}>
+            <Text value='Moves' color={colors.black40} />
+            <Text value={moves} />
+          </Stack>
+
+          <Stack spacing={spacing.xsmall}>
+            <Text value='Current Generation' color={colors.black40} />
+            {size(agents) > 0 ? (
+              <VictoryChart domainPadding={10} theme={victoryChartTheme}>
+                <VictoryAxis label='Agent Index' />
+                <VictoryAxis label='Life Span' dependentAxis />
+                <VictoryBar
+                  data={agents
+                    .map((agent) => agent.moves)
+                    .map((moves, index) => ({
+                      index,
+                      moves,
+                    }))}
+                  x='index'
+                  y='moves'
+                />
+              </VictoryChart>
+            ) : null}
+          </Stack>
+
+          <Stack spacing={spacing.xsmall}>
+            <Text value='Historic Life-spans' color={colors.black40} />
+            {size(lifeSpans) > 0 ? (
+              <VictoryChart domainPadding={10} theme={victoryChartTheme}>
+                <VictoryAxis label='Life Span' tickCount={10} />
+                <VictoryAxis label='Agent Count' dependentAxis />
+                <VictoryBar
+                  data={sortBy(Object.entries(lifeSpans), 0).map(
+                    ([lifeSpan, agentCount]) => ({
+                      lifeSpan,
+                      agentCount,
+                    }),
+                  )}
+                  x='lifeSpan'
+                  y='agentCount'
+                />
+              </VictoryChart>
+            ) : null}
+          </Stack>
+
+          {/*
+          <pre>
+            {JSON.stringify(
+              {
+                moves,
+                currentGenerationLifeSpans: agents.map((agent) => agent.moves),
+                historicLifeSpanDistribution: lifeSpans,
+              },
+              null,
+              2,
+            )}
+          </pre> */}
 
           {/* {sortBy(agents, ['moves'], ['desc']).map((agent) => (
             <AgentInfo agent={agent} key={agent.id} />

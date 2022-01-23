@@ -1,3 +1,4 @@
+import { max, size } from 'lodash'
 import { useMemo } from 'react'
 import { AxisOptions, Chart, UserSerie } from 'react-charts'
 
@@ -12,22 +13,27 @@ type Datum = {
 
 /**
  * NOT IN USE
+ * react-charts not installed
  */
 export default function LifeSpanChart({ lifeSpans }: LifeSpanChartProps) {
   const primaryAxis = useMemo(
     (): AxisOptions<Datum> => ({
+      scaleType: 'linear',
       getValue: (datum) => datum.agents,
+      min: 0,
+      max: max(Object.values(lifeSpans)),
     }),
-    [],
+    [lifeSpans],
   )
 
   const secondaryAxes = useMemo(
-    (): AxisOptions<Datum>[] => [
-      {
-        getValue: (datum) => datum.moves,
-      },
-    ],
-    [],
+    (): AxisOptions<Datum> => ({
+      scaleType: 'linear',
+      getValue: (datum) => datum.moves,
+      min: 0,
+      max: max(Object.keys(lifeSpans).map(parseInt)),
+    }),
+    [lifeSpans],
   )
 
   const data: UserSerie<Datum>[] = useMemo(
@@ -42,14 +48,16 @@ export default function LifeSpanChart({ lifeSpans }: LifeSpanChartProps) {
     ],
     [lifeSpans],
   )
-  console.log('rendering chart')
-  return (
+
+  return size(lifeSpans) > 0 ? (
     <Chart
+      style={{ height: 256 }}
       options={{
         primaryAxis,
-        secondaryAxes,
+        secondaryAxes: [secondaryAxes],
         data,
+        initialHeight: 256,
       }}
     />
-  )
+  ) : null
 }

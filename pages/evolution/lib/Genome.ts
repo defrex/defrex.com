@@ -27,9 +27,16 @@ function randSquash(): Neuron.SquashingFunction | undefined {
   ])
 }
 
+function mutateScalar(value: number, learningRate: number): number {
+  const oldValuePortion = value * (1 - learningRate)
+  const newValuePortion = value * random(-2, 2) * learningRate
+  return oldValuePortion + newValuePortion
+}
+
 export class Genome {
   public inputSize = 3
   public outputSize = 4
+  public learningRate = 0.25
   public nodes: GeneNode[]
   public edges: GeneEdge[]
   public phenome: Phenome
@@ -214,7 +221,10 @@ export class Genome {
   private mutateConnectionWeight(): Genome {
     const nextEdges = cloneDeep(this.edges)
     const nextConnection = { ...sample(nextEdges)! }
-    nextConnection.weight *= random(-2, 2)
+    nextConnection.weight = mutateScalar(
+      nextConnection.weight,
+      this.learningRate,
+    )
     return new Genome({
       nodes: cloneDeep(this.nodes),
       edges: nextEdges.map((edge) => {
@@ -229,10 +239,11 @@ export class Genome {
       }),
     })
   }
+
   private mutateNodeBias(): Genome {
     const nextNodes = cloneDeep(this.nodes)
     const nextNode = { ...sample(nextNodes)! }
-    nextNode.bias *= random(-2, 2)
+    nextNode.bias = mutateScalar(nextNode.bias, this.learningRate)
     return new Genome({
       nodes: nextNodes.map((node) => {
         if (node.id === nextNode.id) {
