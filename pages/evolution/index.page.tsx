@@ -53,6 +53,15 @@ function initState(): State {
   }
 }
 
+function bestAgent(agents: Agent[]): Agent {
+  return agents.reduce((best, agent) => {
+    if (agent.moves > best.moves) {
+      return agent
+    }
+    return best
+  }, agents[0])
+}
+
 export default function Evolution(_props: EvolutionProps) {
   const frameRef = useRef<number>()
   const [state, setState] = useState<State>(initState())
@@ -95,15 +104,12 @@ export default function Evolution(_props: EvolutionProps) {
       const { boardState, agents, lifeSpans, running, speed, moves, topAgent } =
         currentState
 
-      const currentTopAgent: Agent | undefined = sortBy(
-        agents,
-        ['moves'],
-        ['desc'],
-      )[0]
+      const currentTopAgent: Agent | undefined = bestAgent(agents)
       const nextTopAgent =
         topAgent && topAgent.moves >= currentTopAgent.moves
           ? topAgent
           : (currentTopAgent as Agent | undefined)
+
       if (nextTopAgent && nextTopAgent.id === currentTopAgent.id) {
         console.log('👑', nextTopAgent.moves, nextTopAgent.genome)
       }
