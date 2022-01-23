@@ -1,7 +1,6 @@
 import {
   clone,
   groupBy,
-  max,
   random,
   sample,
   size,
@@ -10,7 +9,7 @@ import {
   uniq,
 } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { VictoryBar, VictoryChart, VictoryAxis } from 'victory'
+import { VictoryAxis, VictoryBar, VictoryChart } from 'victory'
 import { Button } from '../../components/Button'
 import { Inline } from '../../components/Inline'
 import { PageContainer } from '../../components/PageContainer'
