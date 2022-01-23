@@ -1,13 +1,4 @@
-import {
-  clone,
-  groupBy,
-  random,
-  sample,
-  size,
-  some,
-  sortBy,
-  uniq,
-} from 'lodash'
+import { clone, groupBy, random, sample, size, some, uniq } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { VictoryAxis, VictoryBar, VictoryChart } from 'victory'
 import { Button } from '../../components/Button'
@@ -45,7 +36,9 @@ type State = {
 function initState(): State {
   return {
     boardState: new BoardState({ gridWidth, gridHeight, cellSize }),
-    agents: [],
+    agents: new Array(agentCount)
+      .fill(0)
+      .map((_, i) => new Agent(gridWidth, gridHeight)),
     lifeSpans: {},
     running: false,
     speed: 0,
@@ -104,13 +97,13 @@ export default function Evolution(_props: EvolutionProps) {
       const { boardState, agents, lifeSpans, running, speed, moves, topAgent } =
         currentState
 
-      const currentTopAgent: Agent | undefined = bestAgent(agents)
+      const currentTopAgent = bestAgent(agents)
       const nextTopAgent =
         topAgent && topAgent.moves >= currentTopAgent.moves
           ? topAgent
-          : (currentTopAgent as Agent | undefined)
+          : currentTopAgent
 
-      if (nextTopAgent && nextTopAgent.id === currentTopAgent.id) {
+      if (nextTopAgent.id === currentTopAgent.id) {
         console.log('👑', nextTopAgent.moves, nextTopAgent.genome)
       }
 
@@ -149,9 +142,7 @@ export default function Evolution(_props: EvolutionProps) {
       }
 
       while (nextAgents.length < agentCount) {
-        const parent =
-          nextTopAgent ||
-          sortBy([...agents, ...nextAgents], ['moves'], ['desc'])[0]
+        const parent = sample([topAgent, currentTopAgent]) || nextAgents[0]
         nextAgents.push(parent.mutate())
       }
 
