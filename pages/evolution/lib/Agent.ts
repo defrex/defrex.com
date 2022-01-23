@@ -48,6 +48,10 @@ export class Agent {
     }
   }
 
+  resetHistory(): Agent {
+    return new Agent(this.gridWidth, this.gridHeight, this.genome)
+  }
+
   mutate(keepPosition = false): Agent {
     return new Agent(
       this.gridWidth,

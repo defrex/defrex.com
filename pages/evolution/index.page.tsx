@@ -1,4 +1,4 @@
-import { clone, groupBy, random, range, sample, size, some } from 'lodash'
+import { clone, groupBy, random, range, size, some } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { VictoryAxis, VictoryBar, VictoryChart } from 'victory'
 import { Button } from '../../components/Button'
@@ -44,7 +44,7 @@ function initState(): State {
     running: false,
     speed: 0,
     moves: 0,
-    killersPerMove: 2,
+    killersPerMove: 3,
   }
 }
 
@@ -102,6 +102,15 @@ export default function Evolution(_props: EvolutionProps) {
   const handleLogTopAgent = useCallback(() => {
     console.log('👑', state.topAgent?.moves, state.topAgent?.genome)
   }, [state])
+
+  const handleSpawnTopAgent = useCallback(() => {
+    if (!state.topAgent) return
+
+    setState({
+      ...state,
+      agents: [...state.agents, state.topAgent.resetHistory()],
+    })
+  }, [state, setState])
 
   const renderFrame = () => {
     setState((currentState) => {
@@ -283,6 +292,7 @@ export default function Evolution(_props: EvolutionProps) {
                 <Text value='Top Agent 👑' color={colors.black40} />
                 <Text value={`${state.topAgent.moves} moves`} />
               </Stack>
+              <Button onClick={handleSpawnTopAgent} text='Spawn' />
               <Button onClick={handleLogTopAgent} text='Log Genome' />
             </Inline>
           ) : null}

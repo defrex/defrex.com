@@ -20,7 +20,6 @@ export class BoardState {
   public cellSize: number
   public killPositions?: Position[]
   public agentPositions?: Position[]
-  public topAgentPosition?: Position
   private edgeStates: { [key: string]: boolean } = {}
 
   constructor(args: BoardStateArgs) {
@@ -29,7 +28,6 @@ export class BoardState {
     this.cellSize = args.cellSize
     this.killPositions = args.killPositions
     this.agentPositions = args.agentPositions
-    this.topAgentPosition = args.topAgentPosition
 
     if (args.edgeStates) {
       this.edgeStates = args.edgeStates
@@ -68,7 +66,6 @@ export class BoardState {
       edgeStates: this.edgeStates,
       killPositions: this.killPositions,
       agentPositions: this.agentPositions,
-      topAgentPosition: this.topAgentPosition,
     }
   }
 

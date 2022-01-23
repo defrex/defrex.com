@@ -41,15 +41,6 @@ export function Board({ boardState, height, width }: BoardProps) {
         paintNode(context, boardState.cellSize, position, colorValues.blue60)
       }
     }
-
-    if (boardState.topAgentPosition) {
-      paintNode(
-        context,
-        boardState.cellSize,
-        boardState.topAgentPosition,
-        colorValues.green40,
-      )
-    }
   }, [boardState])
 
   return (
