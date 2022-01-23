@@ -1,4 +1,4 @@
-import { clone, groupBy, random, sample, size, some, uniq } from 'lodash'
+import { clone, groupBy, random, sample, size, some } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { VictoryAxis, VictoryBar, VictoryChart } from 'victory'
 import { Button } from '../../components/Button'
@@ -31,6 +31,7 @@ type State = {
   speed: number
   moves: number
   topAgent?: Agent
+  killersPerMove: number
 }
 
 function initState(): State {
@@ -43,6 +44,7 @@ function initState(): State {
     running: false,
     speed: 0,
     moves: 0,
+    killersPerMove: 2,
   }
 }
 
@@ -87,6 +89,16 @@ export default function Evolution(_props: EvolutionProps) {
     [setState, state],
   )
 
+  const handleSetDifficulty = useCallback(
+    (killersPerMove: number) => () => {
+      setState({
+        ...state,
+        killersPerMove,
+      })
+    },
+    [setState, state],
+  )
+
   const handleLogTopAgent = useCallback(() => {
     console.log('👑', state.topAgent?.moves, state.topAgent?.genome)
   }, [state])
@@ -98,8 +110,16 @@ export default function Evolution(_props: EvolutionProps) {
         return currentState
       }
 
-      const { boardState, agents, lifeSpans, running, speed, moves, topAgent } =
-        currentState
+      const {
+        boardState,
+        agents,
+        lifeSpans,
+        running,
+        speed,
+        moves,
+        topAgent,
+        killersPerMove,
+      } = currentState
 
       const currentTopAgent = bestAgent(agents)
       const nextTopAgent =
@@ -107,16 +127,16 @@ export default function Evolution(_props: EvolutionProps) {
           ? topAgent
           : currentTopAgent
 
-      // if (nextTopAgent.id === currentTopAgent.id) {
-      //   console.log('👑', nextTopAgent.moves, nextTopAgent.genome)
-      // }
-
       const nextKillPositions: Position[] = (boardState.killPositions || [])
         .map(([x, y]) => [x - 1, y] as Position)
         .filter(([x, y]) => x >= 0 && y >= 0 && x < gridWidth && y < gridHeight)
 
-      if (sample([true, false])!) {
+      if (killersPerMove === 0.5 && sample([true, false])!) {
         nextKillPositions.push([gridWidth - 1, random(0, gridHeight - 1)])
+      } else if (killersPerMove >= 1) {
+        for (let i = 0; i < killersPerMove; i++) {
+          nextKillPositions.push([gridWidth - 1, random(0, gridHeight - 1)])
+        }
       }
 
       let nextBoardState = boardState.setKillPositions(nextKillPositions)
@@ -150,12 +170,6 @@ export default function Evolution(_props: EvolutionProps) {
         nextAgents.push(parent.mutate())
       }
 
-      if (uniq(nextAgents.map((agent) => agent.id)).length !== agentCount) {
-        throw new Error(
-          `duplicate agent ids ${nextAgents.map((agent) => agent.id)}`,
-        )
-      }
-
       nextBoardState = nextBoardState
         .setAgentPositions(nextAgents.map(({ position }) => position))
         .setTopAgentPosition(nextTopAgent?.position)
@@ -178,6 +192,7 @@ export default function Evolution(_props: EvolutionProps) {
         speed,
         moves: moves + 1,
         topAgent: nextTopAgent,
+        killersPerMove,
       }
     })
   }
@@ -201,17 +216,60 @@ export default function Evolution(_props: EvolutionProps) {
             <Text value='Evolve' size={20} />
             <Inline>
               <Button onClick={handleReset} text='Reset' />
-              {state.running ? (
-                <Button onClick={handlePause} text='Pause' />
-              ) : (
-                <Button onClick={handleStart} text='Play' />
-              )}
-
               <Inline spacing={spacing.xsmall}>
-                <Button onClick={handleSetSpeed(0)} text='Fast' />
-                <Button onClick={handleSetSpeed(1000 / 10)} text='Medium' />
-                <Button onClick={handleSetSpeed(1000 / 2)} text='Slow' />
+                <Button
+                  onClick={handlePause}
+                  text='Pause'
+                  disabled={!state.running}
+                />
+                <Button
+                  onClick={handleStart}
+                  text='Play'
+                  disabled={state.running}
+                />
               </Inline>
+            </Inline>
+          </Stack>
+
+          <Stack spacing={spacing.small}>
+            <Text value='Speed' color={colors.black40} />
+            <Inline spacing={spacing.xsmall}>
+              <Button
+                onClick={handleSetSpeed(0)}
+                text='Fast'
+                disabled={state.speed === 0}
+              />
+              <Button
+                onClick={handleSetSpeed(1000 / 10)}
+                disabled={state.speed === 1000 / 10}
+                text='Medium'
+              />
+              <Button
+                onClick={handleSetSpeed(1000 / 2)}
+                disabled={state.speed === 1000 / 2}
+                text='Slow'
+              />
+            </Inline>
+          </Stack>
+
+          <Stack spacing={spacing.small}>
+            <Text value='Difficulty' color={colors.black40} />
+            <Inline spacing={spacing.xsmall}>
+              <Button
+                onClick={handleSetDifficulty(0.5)}
+                text='Easy'
+                disabled={state.killersPerMove === 0.5}
+              />
+              <Button
+                onClick={handleSetDifficulty(1)}
+                disabled={state.killersPerMove === 1}
+                text='Medium'
+              />
+              <Button
+                onClick={handleSetDifficulty(2)}
+                disabled={state.killersPerMove === 2}
+                text='Hard'
+              />
             </Inline>
           </Stack>
 
