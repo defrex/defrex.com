@@ -230,7 +230,7 @@ export default function Evolution(_props: EvolutionProps) {
           <Stack spacing={spacing.xsmall}>
             <Text value='Current Generation' color={colors.black40} />
             {size(agents) > 0 ? (
-              <VictoryChart domainPadding={10} theme={victoryChartTheme}>
+              <VictoryChart domainPadding={{ x: 20 }} theme={victoryChartTheme}>
                 <VictoryAxis label='Agent Index' />
                 <VictoryAxis label='Life Span' dependentAxis />
                 <VictoryBar
@@ -250,16 +250,17 @@ export default function Evolution(_props: EvolutionProps) {
           <Stack spacing={spacing.xsmall}>
             <Text value='Historic Life-spans' color={colors.black40} />
             {size(lifeSpans) > 0 ? (
-              <VictoryChart domainPadding={10} theme={victoryChartTheme}>
+              <VictoryChart domainPadding={{ x: 20 }} theme={victoryChartTheme}>
                 <VictoryAxis label='Life Span' tickCount={10} />
                 <VictoryAxis label='Agent Count' dependentAxis />
                 <VictoryBar
-                  data={sortBy(Object.entries(lifeSpans), 0).map(
-                    ([lifeSpan, agentCount]) => ({
-                      lifeSpan,
-                      agentCount,
-                    }),
-                  )}
+                  data={sortBy(
+                    Object.entries(lifeSpans),
+                    ([index, span]) => span,
+                  ).map(([lifeSpan, agentCount]) => ({
+                    lifeSpan,
+                    agentCount,
+                  }))}
                   x='lifeSpan'
                   y='agentCount'
                 />
