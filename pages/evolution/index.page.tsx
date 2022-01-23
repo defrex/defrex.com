@@ -87,6 +87,10 @@ export default function Evolution(_props: EvolutionProps) {
     [setState, state],
   )
 
+  const handleLogTopAgent = useCallback(() => {
+    console.log('👑', state.topAgent?.moves, state.topAgent?.genome)
+  }, [state])
+
   const renderFrame = () => {
     setState((currentState) => {
       if (!currentState.running) {
@@ -103,9 +107,9 @@ export default function Evolution(_props: EvolutionProps) {
           ? topAgent
           : currentTopAgent
 
-      if (nextTopAgent.id === currentTopAgent.id) {
-        console.log('👑', nextTopAgent.moves, nextTopAgent.genome)
-      }
+      // if (nextTopAgent.id === currentTopAgent.id) {
+      //   console.log('👑', nextTopAgent.moves, nextTopAgent.genome)
+      // }
 
       const nextKillPositions: Position[] = (boardState.killPositions || [])
         .map(([x, y]) => [x - 1, y] as Position)
@@ -211,14 +215,24 @@ export default function Evolution(_props: EvolutionProps) {
             </Inline>
           </Stack>
 
-          <Stack spacing={spacing.xsmall}>
+          <Stack spacing={spacing.small}>
             <Text value='Moves' color={colors.black40} />
             <Text value={state.moves} />
           </Stack>
 
-          <Stack spacing={spacing.xsmall}>
-            <Text value='Current Generation' color={colors.black40} />
-            {size(state.agents) > 0 ? (
+          {state.topAgent ? (
+            <Inline expand={0}>
+              <Stack spacing={spacing.small}>
+                <Text value='Top Agent 👑' color={colors.black40} />
+                <Text value={`${state.topAgent.moves} moves`} />
+              </Stack>
+              <Button onClick={handleLogTopAgent} text='Log Genome' />
+            </Inline>
+          ) : null}
+
+          {size(state.agents) > 0 ? (
+            <Stack spacing={spacing.small}>
+              <Text value='Current Generation' color={colors.black40} />
               <VictoryChart domainPadding={{ x: 20 }} theme={victoryChartTheme}>
                 <VictoryAxis label='Agent Index' />
                 <VictoryAxis label='Life Span' dependentAxis />
@@ -233,12 +247,12 @@ export default function Evolution(_props: EvolutionProps) {
                   y='moves'
                 />
               </VictoryChart>
-            ) : null}
-          </Stack>
+            </Stack>
+          ) : null}
 
-          <Stack spacing={spacing.xsmall}>
-            <Text value='Historic Life-spans' color={colors.black40} />
-            {size(state.lifeSpans) > 0 ? (
+          {size(state.lifeSpans) > 0 ? (
+            <Stack spacing={spacing.small}>
+              <Text value='Historic Life-spans' color={colors.black40} />
               <VictoryChart domainPadding={{ x: 20 }} theme={victoryChartTheme}>
                 <VictoryAxis label='Life Span' tickCount={10} />
                 <VictoryAxis label='Agent Count' dependentAxis />
@@ -254,8 +268,8 @@ export default function Evolution(_props: EvolutionProps) {
                   sortKey='moves'
                 />
               </VictoryChart>
-            ) : null}
-          </Stack>
+            </Stack>
+          ) : null}
         </Stack>
       </Stack>
     </PageContainer>
