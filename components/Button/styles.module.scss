@@ -27,3 +27,7 @@
   background-color: colors.$black60;
   cursor: not-allowed;
 }
+
+.disabled .buttonText {
+  color: colors.$black30;
+}
