@@ -1,4 +1,4 @@
-import { clone, groupBy, random, sample, size, some } from 'lodash'
+import { clone, groupBy, random, range, sample, size, some } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { VictoryAxis, VictoryBar, VictoryChart } from 'victory'
 import { Button } from '../../components/Button'
@@ -131,12 +131,8 @@ export default function Evolution(_props: EvolutionProps) {
         .map(([x, y]) => [x - 1, y] as Position)
         .filter(([x, y]) => x >= 0 && y >= 0 && x < gridWidth && y < gridHeight)
 
-      if (killersPerMove === 0.5 && sample([true, false])!) {
+      for (let i = 0; i < killersPerMove; i++) {
         nextKillPositions.push([gridWidth - 1, random(0, gridHeight - 1)])
-      } else if (killersPerMove >= 1) {
-        for (let i = 0; i < killersPerMove; i++) {
-          nextKillPositions.push([gridWidth - 1, random(0, gridHeight - 1)])
-        }
       }
 
       let nextBoardState = boardState.setKillPositions(nextKillPositions)
@@ -166,7 +162,10 @@ export default function Evolution(_props: EvolutionProps) {
       }
 
       while (nextAgents.length < agentCount) {
-        const parent = sample([topAgent, currentTopAgent]) || nextAgents[0]
+        const parent =
+          currentTopAgent ||
+          // sample([topAgent, currentTopAgent]) ||
+          nextAgents[0]
         nextAgents.push(parent.mutate())
       }
 
@@ -255,21 +254,13 @@ export default function Evolution(_props: EvolutionProps) {
           <Stack spacing={spacing.small}>
             <Text value='Difficulty' color={colors.black40} />
             <Inline spacing={spacing.xsmall}>
-              <Button
-                onClick={handleSetDifficulty(0.5)}
-                text='Easy'
-                disabled={state.killersPerMove === 0.5}
-              />
-              <Button
-                onClick={handleSetDifficulty(1)}
-                disabled={state.killersPerMove === 1}
-                text='Medium'
-              />
-              <Button
-                onClick={handleSetDifficulty(2)}
-                disabled={state.killersPerMove === 2}
-                text='Hard'
-              />
+              {range(0, 10).map((killersPerMove) => (
+                <Button
+                  onClick={handleSetDifficulty(killersPerMove)}
+                  text={killersPerMove.toString()}
+                  disabled={state.killersPerMove === killersPerMove}
+                />
+              ))}
             </Inline>
           </Stack>
 
