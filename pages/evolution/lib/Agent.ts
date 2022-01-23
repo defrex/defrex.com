@@ -2,7 +2,6 @@ import { random, uniqueId } from 'lodash'
 import {
   BoardState,
   Direction,
-  move,
   Position,
 } from '../components/Board/lib/BoardState'
 import { Genome } from './Genome'
@@ -76,10 +75,7 @@ export class Agent {
     const outputDirections: Direction[] = ['up', 'right', 'down', 'left']
     const direction = outputDirections[outputs.indexOf(Math.max(...outputs))]
 
-    const newPosition = move(this.position, direction)
-    const nextPosition = boardState.isValidMove([this.position, newPosition])
-      ? newPosition
-      : this.position
+    const nextPosition = boardState.calculateMove(this.position, direction)
 
     return new Agent(
       this.gridWidth,

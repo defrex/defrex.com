@@ -185,6 +185,29 @@ export class BoardState {
       )
     }
   }
+
+  calculateMove(fromPosition: Position, direction: Direction): Position {
+    const [fromX, fromY] = fromPosition
+    const toPosition: Position | null =
+      direction === 'right'
+        ? [fromX + 1, fromY]
+        : direction === 'down'
+        ? [fromX, fromY + 1]
+        : direction === 'left'
+        ? [fromX - 1, fromY]
+        : direction === 'up'
+        ? [fromX, fromY - 1]
+        : null
+
+    if (!toPosition) {
+      throw new Error('invalid direction')
+    }
+
+    let [toX, toY] = toPosition
+    ;[toX, toY] = [toX % this.gridWidth, toY % this.gridHeight]
+    ;[toX, toY] = [toX < 0 ? 0 : toX, toY < 0 ? this.gridHeight + toY : toY]
+    return [toX, toY]
+  }
 }
 
 export function positionsEqual(
@@ -222,20 +245,6 @@ export function edgeDirection([fromPosition, toPosition]: Edge): Direction {
     throw new Error('invalid edge')
   }
   return direction
-}
-
-export function move(from: Position, direction: Direction): Position {
-  const [gridX, gridY] = from
-  if (direction === 'right') {
-    return [gridX + 1, gridY]
-  } else if (direction === 'down') {
-    return [gridX, gridY + 1]
-  } else if (direction === 'left') {
-    return [gridX - 1, gridY]
-  } else if (direction === 'up') {
-    return [gridX, gridY - 1]
-  }
-  throw new Error('invalid direction')
 }
 
 export function positionKey(position: Position): string {

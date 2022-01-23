@@ -273,6 +273,14 @@ export default function Evolution(_props: EvolutionProps) {
             </Inline>
           </Stack>
 
+          {/* <pre>
+            {JSON.stringify(
+              state.agents.map((agent) => agent.position),
+              null,
+              2,
+            )}
+          </pre> */}
+
           <Stack spacing={spacing.small}>
             <Text value='Moves' color={colors.black40} />
             <Text value={state.moves} />
