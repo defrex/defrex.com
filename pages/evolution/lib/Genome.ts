@@ -1,12 +1,4 @@
-import {
-  cloneDeep,
-  max,
-  random,
-  sample,
-  shuffle,
-  uniqueId,
-  without,
-} from 'lodash'
+import { cloneDeep, random, sample, shuffle, uniqueId, without } from 'lodash'
 import { Neuron } from 'synaptic'
 
 type GeneNodeId = string
