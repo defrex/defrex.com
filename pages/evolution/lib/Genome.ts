@@ -34,7 +34,7 @@ function mutateScalar(value: number, learningRate: number): number {
 }
 
 export class Genome {
-  public inputSize = 3
+  public inputSize = 2
   public outputSize = 4
   public learningRate = 0.25
   public nodes: GeneNode[]
