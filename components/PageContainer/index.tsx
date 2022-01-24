@@ -58,7 +58,7 @@ export function PageContainer({ children, title }: PageContainerProps) {
               </HideIf>
             </Inline>
           </Inset>
-          <Inset>{children}</Inset>
+          {children}
         </Stack>
       </div>
 

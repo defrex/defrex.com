@@ -33,18 +33,30 @@ function mutateScalar(value: number, learningRate: number): number {
   return oldValuePortion + newValuePortion
 }
 
+interface GenomeArgs {
+  nodes?: GeneNode[]
+  edges?: GeneEdge[]
+  inputSize?: number
+  outputSize?: number
+  learningRate?: number
+}
+
 export class Genome {
-  public inputSize = 2
-  public outputSize = 4
-  public learningRate = 0.25
+  public inputSize: number
+  public outputSize: number
+  public learningRate: number
   public nodes: GeneNode[]
   public edges: GeneEdge[]
   public phenome: Phenome
 
-  constructor(geneData?: { nodes: GeneNode[]; edges: GeneEdge[] }) {
-    if (geneData) {
-      this.nodes = cloneDeep(geneData.nodes)
-      this.edges = cloneDeep(geneData.edges)
+  constructor(options: GenomeArgs = {}) {
+    this.inputSize = options.inputSize || 2
+    this.outputSize = options.outputSize || 4
+    this.learningRate = options.learningRate || 0.25
+
+    if (options.nodes && options.edges) {
+      this.nodes = cloneDeep(options.nodes)
+      this.edges = cloneDeep(options.edges)
     } else {
       const inputs = new Array(this.inputSize).fill(undefined).map(
         () =>
@@ -70,7 +82,7 @@ export class Genome {
         for (let outputIndex = 0; outputIndex < outputs.length; outputIndex++) {
           edges.push({
             fromNodeIndex: inputIndex,
-            toNodeIndex: outputIndex,
+            toNodeIndex: inputs.length + outputIndex,
             weight: random(-1, 1),
           })
         }
@@ -94,6 +106,15 @@ export class Genome {
         geneEdge.weight,
       )
     })
+  }
+
+  private getArgs(): GenomeArgs {
+    return {
+      inputSize: this.inputSize,
+      outputSize: this.outputSize,
+      nodes: this.nodes,
+      edges: this.edges,
+    }
   }
 
   compute(inputs: number[]): number[] {
@@ -177,29 +198,39 @@ export class Genome {
       ...adjustedEdges.slice(intermediatedConnectionIndex + 1),
     ]
 
-    return new Genome({ nodes: nextNodes, edges: nextEdges })
-  }
-
-  private addConnection(): Genome {
     return new Genome({
-      nodes: cloneDeep(this.nodes),
-      edges: cloneDeep([
-        ...this.edges,
-        {
-          fromNodeIndex: this.nodes.indexOf(
-            sample(this.nodes.slice(0, -this.outputSize))!,
-          ),
-          toNodeIndex: this.nodes.indexOf(
-            sample(this.nodes.slice(this.inputSize))!,
-          ),
-          weight: 1,
-        },
-      ]),
+      ...this.getArgs(),
+      nodes: nextNodes,
+      edges: nextEdges,
     })
   }
 
+  private addConnection(): Genome {
+    const newConnection = {
+      fromNodeIndex: this.nodes.indexOf(
+        sample(this.nodes.slice(0, -this.outputSize))!,
+      ),
+      toNodeIndex: this.nodes.indexOf(
+        sample(this.nodes.slice(this.inputSize))!,
+      ),
+      weight: 1,
+    }
+    const nextGenome = new Genome({
+      ...this.getArgs(),
+      nodes: cloneDeep(this.nodes),
+      edges: cloneDeep([...this.edges, newConnection]),
+    })
+    console.log('newConnection', {
+      fromType: this.nodes[newConnection.fromNodeIndex].type,
+      toType: this.nodes[newConnection.toNodeIndex].type,
+      nextGenome,
+    })
+
+    return nextGenome
+  }
+
   private removeConnection(): Genome | null {
-    const removableEdge = shuffle(this.edges).find((edge) => {
+    const removableConnection = shuffle(this.edges).find((edge) => {
       const fromEdges = this.edges.filter(
         (edge) => edge.fromNodeIndex === edge.fromNodeIndex,
       ).length
@@ -208,13 +239,20 @@ export class Genome {
       ).length
       return fromEdges > 1 && toEdges > 1
     })
-    if (!removableEdge) {
+    if (!removableConnection) {
       return null
     } else {
-      return new Genome({
+      const nextGenome = new Genome({
+        ...this.getArgs(),
         nodes: cloneDeep(this.nodes),
-        edges: cloneDeep(without(this.edges, removableEdge)),
+        edges: cloneDeep(without(this.edges, removableConnection)),
       })
+      console.log('removeConnection', {
+        fromType: this.nodes[removableConnection.fromNodeIndex].type,
+        toType: this.nodes[removableConnection.toNodeIndex].type,
+        nextGenome,
+      })
+      return nextGenome
     }
   }
 
@@ -226,6 +264,7 @@ export class Genome {
       this.learningRate,
     )
     return new Genome({
+      ...this.getArgs(),
       nodes: cloneDeep(this.nodes),
       edges: nextEdges.map((edge) => {
         if (
@@ -245,6 +284,7 @@ export class Genome {
     const nextNode = { ...sample(nextNodes)! }
     nextNode.bias = mutateScalar(nextNode.bias, this.learningRate)
     return new Genome({
+      ...this.getArgs(),
       nodes: nextNodes.map((node) => {
         if (node.id === nextNode.id) {
           return nextNode
@@ -261,6 +301,7 @@ export class Genome {
     const nextNode = { ...sample(nextNodes)! }
     nextNode.squash = randSquash()
     return new Genome({
+      ...this.getArgs(),
       nodes: nextNodes.map((node) => {
         if (node.id === nextNode.id) {
           return nextNode
@@ -271,87 +312,4 @@ export class Genome {
       edges: cloneDeep(this.edges),
     })
   }
-
-  // crossover(lover: Agent): Agent {
-  //   const [parent1, parent2] = [this, lover]
-  //   if (!parent1.fitness || !parent2.fitness) {
-  //     throw new Error('Cannot breed agents without fitness')
-  //   }
-
-  //   const parent1Size = parent1.genome.nodes.length
-  //   const parent2Size = parent2.genome.nodes.length
-  //   const childSize =
-  //     parent1.fitness > parent2.fitness
-  //       ? parent1Size
-  //       : parent1.fitness < parent2.fitness
-  //       ? parent2Size
-  //       : sample([parent1Size, parent2Size])!
-
-  //   const childNodes = new Array(childSize).fill(undefined).map((_, index) => {
-  //     if (index < childSize - this.outputSize) {
-  //       // Input or Hidden
-  //       if (index > parent1Size - this.outputSize) {
-  //         // Parent 1 is out of Hidden nodes, take Parent 2
-  //         return parent2.genome.nodes[index]
-  //       } else if (index > parent2Size - this.outputSize) {
-  //         // Parent 2 is out of Hidden nodes, take Parent 1
-  //         return parent1.genome.nodes[index]
-  //       } else {
-  //         return sample([
-  //           parent1.genome.nodes[index],
-  //           parent2.genome.nodes[index],
-  //         ])!
-  //       }
-  //     } else {
-  //       // Output
-  //       return sample([
-  //         parent1.genome.nodes[index],
-  //         parent2.genome.nodes[index],
-  //       ])!
-  //     }
-  //   })
-
-  //   const childConnectionSize =
-  //     parent1.fitness > parent2.fitness
-  //       ? parent1.genome.connections.length
-  //       : parent1.fitness < parent2.fitness
-  //       ? parent2.genome.connections.length
-  //       : sample([
-  //           parent1.genome.connections.length,
-  //           parent2.genome.connections.length,
-  //         ])!
-
-  //   const childConnections = new Array(childConnectionSize)
-  //     .fill(undefined)
-  //     .map((_, index) => {
-  //       const parent = sample([parent1, parent2])!
-  //       const connection = { ...parent.genome.connections[index] }
-
-  //       if (parent.genome.nodes.length !== childSize) {
-  //         const difference = childSize - parent.genome.nodes.length
-  //         if (
-  //           connection.fromNodeIndex >=
-  //           parent.genome.nodes.length - this.outputSize
-  //         ) {
-  //           connection.fromNodeIndex = sum([
-  //             connection.fromNodeIndex,
-  //             difference,
-  //           ])
-  //         }
-  //         if (
-  //           connection.toNodeIndex >=
-  //           parent.genome.nodes.length - this.outputSize
-  //         ) {
-  //           connection.toNodeIndex = sum([connection.toNodeIndex, difference])
-  //         }
-  //       }
-
-  //       return connection
-  //     })
-
-  //   return new Agent({
-  //     nodes: childNodes,
-  //     connections: childConnections,
-  //   })
-  // }
 }

@@ -28,7 +28,10 @@ export class Agent {
     if (genome) {
       this.genome = genome
     } else {
-      this.genome = new Genome()
+      this.genome = new Genome({
+        inputSize: 5,
+        outputSize: 3,
+      })
     }
 
     if (position) {
@@ -62,32 +65,50 @@ export class Agent {
   }
 
   move(boardState: BoardState): Agent {
-    const threatDistance = (boardState.killPositions || [])
-      .filter(([x, y]) => x > this.position[0] && y === this.position[1])
-      .reduce(
-        (distance, [x, y]) => Math.min(distance, x - this.position[0]),
-        Infinity,
-      )
-
     const inputs = [
+      this.position[0],
       this.position[1],
-      threatDistance === Infinity ? -1 : this.gridWidth - threatDistance,
+      this.threatDistance(boardState, -1),
+      this.threatDistance(boardState, 0),
+      this.threatDistance(boardState, 1),
     ]
 
     const outputs = this.genome.compute(inputs)
 
-    const outputDirections: Direction[] = ['up', 'right', 'down', 'left']
+    const outputDirections: Direction[] = ['up', 'down', 'right']
     const direction = outputDirections[outputs.indexOf(Math.max(...outputs))]
 
     const nextPosition = boardState.calculateMove(this.position, direction)
+
+    let nextMoves = this.moves
+    if (direction === 'right') {
+      nextMoves++
+    }
 
     return new Agent(
       this.gridWidth,
       this.gridHeight,
       this.genome,
       nextPosition,
-      this.moves + 1,
+      nextMoves,
       this.id,
     )
+  }
+
+  private threatDistance(boardState: BoardState, offset: number): number {
+    let [currentX, currentY] = this.position
+    currentY += offset
+
+    if (currentY < 0) {
+      currentY = this.gridHeight + currentY
+    } else if (currentY >= this.gridHeight) {
+      currentY = currentY % this.gridHeight
+    }
+
+    const threatDistance = (boardState.killPositions || [])
+      .filter(([x, y]) => x > currentX && y === currentY)
+      .reduce((distance, [x, y]) => Math.min(distance, x - currentX), Infinity)
+
+    return threatDistance === Infinity ? -1 : this.gridWidth - threatDistance
   }
 }

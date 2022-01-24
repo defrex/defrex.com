@@ -1,7 +1,8 @@
-import { clone, groupBy, random, range, size, some } from 'lodash'
+import { clone, groupBy, max, random, range, some } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { VictoryAxis, VictoryBar, VictoryChart } from 'victory'
+import { VictoryAxis, VictoryChart, VictoryLine } from 'victory'
 import { Button } from '../../components/Button'
+import { GenomeView } from '../../components/GenomeView'
 import { Inline } from '../../components/Inline'
 import { PageContainer } from '../../components/PageContainer'
 import { Stack } from '../../components/Stack'
@@ -32,6 +33,10 @@ type State = {
   moves: number
   topAgent?: Agent
   killersPerMove: number
+  history: {
+    move: number
+    agentMoves: number[]
+  }[]
 }
 
 function initState(): State {
@@ -44,7 +49,8 @@ function initState(): State {
     running: false,
     speed: 0,
     moves: 0,
-    killersPerMove: 3,
+    killersPerMove: 1,
+    history: [],
   }
 }
 
@@ -59,6 +65,7 @@ function bestAgent(agents: Agent[]): Agent {
 
 export default function Evolution(_props: EvolutionProps) {
   const frameRef = useRef<number>()
+  const [showTopGenome, setShowTopGenome] = useState(false)
   const [state, setState] = useState<State>(initState())
 
   const handleReset = useCallback(() => {
@@ -99,9 +106,12 @@ export default function Evolution(_props: EvolutionProps) {
     [setState, state],
   )
 
-  const handleLogTopAgent = useCallback(() => {
-    console.log('👑', state.topAgent?.moves, state.topAgent?.genome)
-  }, [state])
+  const handleToggleTopGenome = useCallback(() => {
+    if (!showTopGenome) {
+      console.log('👑', state.topAgent?.moves, state.topAgent?.genome)
+    }
+    setShowTopGenome(!showTopGenome)
+  }, [setShowTopGenome, showTopGenome])
 
   const handleSpawnTopAgent = useCallback(() => {
     if (!state.topAgent) return
@@ -128,6 +138,7 @@ export default function Evolution(_props: EvolutionProps) {
         moves,
         topAgent,
         killersPerMove,
+        history,
       } = currentState
 
       const currentTopAgent = bestAgent(agents)
@@ -166,17 +177,27 @@ export default function Evolution(_props: EvolutionProps) {
         }
       }
 
+      nextAgents
+        .filter((agent) => agent.position[0] >= gridWidth - 1)
+        .forEach((agent) => {
+          nextAgents.push(agent.mutate())
+        })
+
       if (nextAgents.length === 0) {
-        nextAgents.push(new Agent(gridWidth, gridHeight))
+        for (let i = 0; i < 10; i++) {
+          nextAgents.push(
+            topAgent?.mutate() || new Agent(gridWidth, gridHeight),
+          )
+        }
       }
 
-      while (nextAgents.length < agentCount) {
-        const parent =
-          currentTopAgent ||
-          // sample([topAgent, currentTopAgent]) ||
-          nextAgents[0]
-        nextAgents.push(parent.mutate())
-      }
+      // while (nextAgents.length < agentCount) {
+      //   const parent =
+      //     currentTopAgent ||
+      //     // sample([topAgent, currentTopAgent]) ||
+      //     nextAgents[0]
+      //   nextAgents.push(parent.mutate())
+      // }
 
       nextBoardState = nextBoardState
         .setAgentPositions(nextAgents.map(({ position }) => position))
@@ -192,6 +213,14 @@ export default function Evolution(_props: EvolutionProps) {
         }
       }
 
+      const nextHistory = [
+        ...history.slice(-500),
+        {
+          move: moves,
+          agentMoves: nextAgents.map(({ moves }) => moves),
+        },
+      ]
+
       return {
         boardState: nextBoardState,
         agents: nextAgents,
@@ -201,6 +230,7 @@ export default function Evolution(_props: EvolutionProps) {
         moves: moves + 1,
         topAgent: nextTopAgent,
         killersPerMove,
+        history: nextHistory,
       }
     })
   }
@@ -288,52 +318,50 @@ export default function Evolution(_props: EvolutionProps) {
           </Stack>
 
           {state.topAgent ? (
-            <Inline expand={0}>
-              <Stack spacing={spacing.small}>
-                <Text value='Top Agent 👑' color={colors.black40} />
-                <Text value={`${state.topAgent.moves} moves`} />
-              </Stack>
-              <Button onClick={handleSpawnTopAgent} text='Spawn' />
-              <Button onClick={handleLogTopAgent} text='Log Genome' />
-            </Inline>
-          ) : null}
-
-          {size(state.agents) > 0 ? (
-            <Stack spacing={spacing.small}>
-              <Text value='Current Generation' color={colors.black40} />
-              <VictoryChart domainPadding={{ x: 20 }} theme={victoryChartTheme}>
-                <VictoryAxis label='Agent Index' />
-                <VictoryAxis label='Life Span' dependentAxis />
-                <VictoryBar
-                  data={state.agents
-                    .map((agent) => agent.moves)
-                    .map((moves, index) => ({
-                      index,
-                      moves,
-                    }))}
-                  x='index'
-                  y='moves'
+            <Stack>
+              <Inline expand={0}>
+                <Stack spacing={spacing.small}>
+                  <Text value='Top Agent 👑' color={colors.black40} />
+                  <Text value={`${state.topAgent.moves} moves`} />
+                </Stack>
+                <Button onClick={handleSpawnTopAgent} text='Spawn' />
+                <Button
+                  onClick={handleToggleTopGenome}
+                  text={showTopGenome ? 'Hide Genome' : 'Show Genome'}
                 />
-              </VictoryChart>
+              </Inline>
+              {showTopGenome ? (
+                <GenomeView genome={state.topAgent.genome} />
+              ) : null}
             </Stack>
           ) : null}
 
-          {size(state.lifeSpans) > 0 ? (
+          {state.history.length > 0 ? (
             <Stack spacing={spacing.small}>
-              <Text value='Historic Life-spans' color={colors.black40} />
-              <VictoryChart domainPadding={{ x: 20 }} theme={victoryChartTheme}>
-                <VictoryAxis label='Life Span' tickCount={10} />
-                <VictoryAxis label='Agent Count' dependentAxis />
-                <VictoryBar
-                  data={Object.entries(state.lifeSpans).map(
-                    ([moves, agents]) => ({
-                      moves: parseInt(moves.toString(), 10),
-                      agents: parseInt(agents.toString(), 10),
-                    }),
-                  )}
-                  x='moves'
-                  y='agents'
-                  sortKey='moves'
+              <Text value='Top Agent Age' color={colors.black40} />
+              <VictoryChart theme={victoryChartTheme} height={200}>
+                <VictoryAxis label='Move' />
+                <VictoryAxis dependentAxis />
+                <VictoryLine
+                  data={state.history.map(({ move, agentMoves }) => ({
+                    move,
+                    max: max(agentMoves),
+                  }))}
+                  x='move'
+                  y='max'
+                />
+              </VictoryChart>
+              <Text value='Agents Alive' color={colors.black40} />
+              <VictoryChart theme={victoryChartTheme} height={200}>
+                <VictoryAxis label='Move' />
+                <VictoryAxis dependentAxis />
+                <VictoryLine
+                  data={state.history.map(({ move, agentMoves }) => ({
+                    move,
+                    size: agentMoves.length,
+                  }))}
+                  x='move'
+                  y='size'
                 />
               </VictoryChart>
             </Stack>
