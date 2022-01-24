@@ -315,9 +315,9 @@ export default function Evolution(_props: EvolutionProps) {
           </Stack>
 
           <Stack spacing={spacing.small}>
-            <Text value='Difficulty' color={colors.black40} />
+            <Text value='Difficulty (spawns/frame)' color={colors.black40} />
             <Inline spacing={spacing.xsmall}>
-              {range(0.5, 5, 0.5).map((killersPerMove) => (
+              {range(0, 3.5, 0.5).map((killersPerMove) => (
                 <Button
                   key={killersPerMove}
                   onClick={handleSetDifficulty(killersPerMove)}
