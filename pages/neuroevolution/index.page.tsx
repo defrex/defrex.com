@@ -42,7 +42,7 @@ function movesColor(moves: number, gridWidth: number): string {
 
 function difficulty(survivors: number): number {
   const proportion = (survivors - minAgents) / (maxAgents - minAgents)
-  return 3 * proportion
+  return 2 * proportion
 }
 
 type State = {
@@ -52,7 +52,7 @@ type State = {
   cellSize: number
   gridHeight: number
   gridWidth: number
-  history: { move: number; agentMoves: number[] }[]
+  history: { move: number; difficulty: number; agentMoves: number[] }[]
   killersPerMove: number
   lifeSpans: Record<number, number>
   moves: number
@@ -297,6 +297,7 @@ export default function Evolution(_props: EvolutionProps) {
         ...history.slice(-500),
         {
           move: moves,
+          difficulty: nextKillersPerMove,
           agentMoves: nextAgents.map(({ moves }) => moves),
         },
       ]
@@ -419,11 +420,6 @@ export default function Evolution(_props: EvolutionProps) {
             )}
           </pre> */}
 
-          <Stack spacing={spacing.small}>
-            <Text value='Moves' color={colors.black40} />
-            <Text value={state.moves} />
-          </Stack>
-
           {state.topAgent ? (
             <Stack>
               <Inline expand={0}>
@@ -483,7 +479,7 @@ export default function Evolution(_props: EvolutionProps) {
 
           {state.history.length > 0 ? (
             <Stack spacing={spacing.small}>
-              <Text value='Agents Alive' color={colors.black40} />
+              <Text value='Population' color={colors.black40} />
               <VictoryChart theme={victoryChartTheme} height={200}>
                 <VictoryAxis label='Move' />
                 <VictoryAxis dependentAxis />
@@ -496,7 +492,20 @@ export default function Evolution(_props: EvolutionProps) {
                   y='size'
                 />
               </VictoryChart>
-              <Text value='Agent Age (Top + Avg)' color={colors.black40} />
+              <Text value='Difficulty' color={colors.black40} />
+              <VictoryChart theme={victoryChartTheme} height={200}>
+                <VictoryAxis label='Move' />
+                <VictoryAxis dependentAxis />
+                <VictoryLine
+                  data={state.history.map(({ move, difficulty }) => ({
+                    move,
+                    difficulty,
+                  }))}
+                  x='move'
+                  y='difficulty'
+                />
+              </VictoryChart>
+              <Text value='Age (Top + Avg)' color={colors.black40} />
               <VictoryChart theme={victoryChartTheme} height={200}>
                 <VictoryAxis label='Move' />
                 <VictoryAxis dependentAxis />
@@ -517,19 +526,6 @@ export default function Evolution(_props: EvolutionProps) {
                   y='avg'
                 />
               </VictoryChart>
-              {/* <Text value='Avg Agent Age' color={colors.black40} />
-              <VictoryChart theme={victoryChartTheme} height={200}>
-                <VictoryAxis label='Move' />
-                <VictoryAxis dependentAxis />
-                <VictoryLine
-                  data={state.history.map(({ move, agentMoves }) => ({
-                    move,
-                    avg: sum(agentMoves) / agentMoves.length,
-                  }))}
-                  x='move'
-                  y='avg'
-                />
-              </VictoryChart> */}
             </Stack>
           ) : null}
         </Stack>
