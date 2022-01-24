@@ -39,7 +39,6 @@ export function clearEdge(
   const fromX = fromPosition[0] * nodeSize
   const fromY = fromPosition[1] * nodeSize
 
-  // console.log('clearEdge', fromPosition, toPosition, direction)
   if (direction === 'right') {
     context.clearRect(fromX - 1 + nodeSize, fromY, 3, nodeSize)
   } else if (direction === 'left') {
@@ -57,9 +56,8 @@ export function paintNode(
   [gridX, gridY]: Position,
   color: string = colorValues.brand,
 ) {
-  // console.log('paintNode', [gridX, gridY])
-  const dotHeight = nodeSize * 0.25
-  const dotWidth = nodeSize * 0.25
+  const dotHeight = nodeSize * 0.5
+  const dotWidth = nodeSize * 0.5
   context.fillStyle = color
   context.fillRect(
     gridX * nodeSize + nodeSize * 0.5 - dotHeight * 0.5,
@@ -74,7 +72,6 @@ export function clearNode(
   nodeSize: number,
   [gridX, gridY]: Position,
 ) {
-  // console.log('clearNode', [gridX, gridY])
   const dotHeight = nodeSize * 0.25
   const dotWidth = nodeSize * 0.25
   context.clearRect(
