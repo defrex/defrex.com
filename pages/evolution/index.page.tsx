@@ -143,7 +143,7 @@ export default function Evolution(_props: EvolutionProps) {
 
       const currentTopAgent = bestAgent(agents)
       const nextTopAgent =
-        topAgent && topAgent.moves >= currentTopAgent.moves
+        topAgent && topAgent.moves > currentTopAgent.moves
           ? topAgent
           : currentTopAgent
 
@@ -180,24 +180,14 @@ export default function Evolution(_props: EvolutionProps) {
       nextAgents
         .filter((agent) => agent.position[0] >= gridWidth - 1)
         .forEach((agent) => {
-          nextAgents.push(agent.mutate())
+          if (nextAgents.length < 100) {
+            nextAgents.push(agent.mutate())
+          }
         })
 
-      if (nextAgents.length === 0) {
-        for (let i = 0; i < 10; i++) {
-          nextAgents.push(
-            topAgent?.mutate() || new Agent(gridWidth, gridHeight),
-          )
-        }
+      while (nextAgents.length < agentCount) {
+        nextAgents.push(topAgent?.mutate() || new Agent(gridWidth, gridHeight))
       }
-
-      // while (nextAgents.length < agentCount) {
-      //   const parent =
-      //     currentTopAgent ||
-      //     // sample([topAgent, currentTopAgent]) ||
-      //     nextAgents[0]
-      //   nextAgents.push(parent.mutate())
-      // }
 
       nextBoardState = nextBoardState
         .setAgentPositions(nextAgents.map(({ position }) => position))

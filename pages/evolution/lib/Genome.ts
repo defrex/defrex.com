@@ -220,12 +220,6 @@ export class Genome {
       nodes: cloneDeep(this.nodes),
       edges: cloneDeep([...this.edges, newConnection]),
     })
-    console.log('newConnection', {
-      fromType: this.nodes[newConnection.fromNodeIndex].type,
-      toType: this.nodes[newConnection.toNodeIndex].type,
-      nextGenome,
-    })
-
     return nextGenome
   }
 
@@ -246,11 +240,6 @@ export class Genome {
         ...this.getArgs(),
         nodes: cloneDeep(this.nodes),
         edges: cloneDeep(without(this.edges, removableConnection)),
-      })
-      console.log('removeConnection', {
-        fromType: this.nodes[removableConnection.fromNodeIndex].type,
-        toType: this.nodes[removableConnection.toNodeIndex].type,
-        nextGenome,
       })
       return nextGenome
     }

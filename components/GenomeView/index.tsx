@@ -23,7 +23,25 @@ export function GenomeView({ genome }: GenomeViewProps) {
   const nodes: NodeData[] = useMemo(() => {
     return genome.nodes.map((node, index) => ({
       id: index.toString(),
-      text: `${node.type}\n${node.bias}`,
+      text: `${
+        index === 0
+          ? 'x'
+          : index === 1
+          ? 'y'
+          : index === 2
+          ? '↱ 🟥'
+          : index === 3
+          ? '→ 🟥'
+          : index === 4
+          ? '↳ 🟥'
+          : genome.nodes.length - index === 1
+          ? '→'
+          : genome.nodes.length - index === 2
+          ? '↓'
+          : genome.nodes.length - index === 3
+          ? '↑'
+          : ''
+      } ${node.type} ${node.bias}`,
     }))
   }, [genome])
 
@@ -41,6 +59,7 @@ export function GenomeView({ genome }: GenomeViewProps) {
   } else {
     return (
       <realflow.Canvas
+        fit={true}
         maxWidth={768}
         maxHeight={512}
         nodes={nodes}
