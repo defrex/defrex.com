@@ -1,4 +1,4 @@
-import { clone, groupBy, max, random, range, some } from 'lodash'
+import { clone, groupBy, max, random, range, some, sum } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { VictoryAxis, VictoryChart, VictoryLine } from 'victory'
 import { Button } from '../../components/Button'
@@ -290,27 +290,18 @@ export default function Evolution(_props: EvolutionProps) {
                   disabled={state.running}
                 />
               </Inline>
-            </Inline>
-          </Stack>
-
-          <Stack spacing={spacing.small}>
-            <Text value='Speed' color={colors.black40} />
-            <Inline spacing={spacing.xsmall}>
-              <Button
-                onClick={handleSetSpeed(0)}
-                text='Fast'
-                disabled={state.speed === 0}
-              />
-              <Button
-                onClick={handleSetSpeed(1000 / 10)}
-                disabled={state.speed === 1000 / 10}
-                text='Medium'
-              />
-              <Button
-                onClick={handleSetSpeed(1000 / 2)}
-                disabled={state.speed === 1000 / 2}
-                text='Slow'
-              />
+              <Inline spacing={spacing.xsmall}>
+                <Button
+                  onClick={handleSetSpeed(0)}
+                  text='Fast'
+                  disabled={state.speed === 0}
+                />
+                <Button
+                  onClick={handleSetSpeed(1000 / 2)}
+                  disabled={state.speed === 1000 / 2}
+                  text='Slow'
+                />
+              </Inline>
             </Inline>
           </Stack>
 
@@ -418,6 +409,19 @@ export default function Evolution(_props: EvolutionProps) {
                   }))}
                   x='move'
                   y='max'
+                />
+              </VictoryChart>
+              <Text value='Avg Agent Age' color={colors.black40} />
+              <VictoryChart theme={victoryChartTheme} height={200}>
+                <VictoryAxis label='Move' />
+                <VictoryAxis dependentAxis />
+                <VictoryLine
+                  data={state.history.map(({ move, agentMoves }) => ({
+                    move,
+                    avg: sum(agentMoves) / agentMoves.length,
+                  }))}
+                  x='move'
+                  y='avg'
                 />
               </VictoryChart>
             </Stack>
