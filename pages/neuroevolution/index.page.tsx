@@ -1,4 +1,4 @@
-import { clone, groupBy, max, random, range, some, sum } from 'lodash'
+import { clone, groupBy, max, random, range, some, sortBy, sum } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { VictoryAxis, VictoryChart, VictoryLine } from 'victory'
 import { Button } from '../../components/Button'
@@ -17,14 +17,19 @@ import { Agent } from './lib/Agent'
 
 interface EvolutionProps {}
 
-const agentCount = 10
-const cellSize = 16
-const canvasWidth = 768
+const minAgents = 10
+const canvasWidth =
+  typeof window === 'undefined'
+    ? 768
+    : window.innerWidth > 768
+    ? 768
+    : window.innerWidth > 512
+    ? 512
+    : 256
 const canvasHeight = 512
-const gridWidth = canvasWidth / cellSize
-const gridHeight = canvasHeight / cellSize
+const defaultCellSize = 16
 
-function movesColor(moves: number): string {
+function movesColor(moves: number, gridWidth: number): string {
   const maxRunColors = 10
   const runs = Math.floor(moves / gridWidth)
   const capRuns = Math.min(runs, maxRunColors)
@@ -47,12 +52,18 @@ type State = {
     move: number
     agentMoves: number[]
   }[]
+  cellSize: number
+  gridWidth: number
+  gridHeight: number
 }
 
 function initState(): State {
+  const cellSize = defaultCellSize
+  const gridWidth = canvasWidth / cellSize
+  const gridHeight = canvasHeight / cellSize
   return {
     boardState: new BoardState({ gridWidth, gridHeight, cellSize }),
-    agents: new Array(agentCount)
+    agents: new Array(minAgents)
       .fill(0)
       .map((_, i) => new Agent(gridWidth, gridHeight)),
     lifeSpans: {},
@@ -61,6 +72,9 @@ function initState(): State {
     moves: 0,
     killersPerMove: 1,
     history: [],
+    cellSize,
+    gridWidth,
+    gridHeight,
   }
 }
 
@@ -117,6 +131,21 @@ export default function Evolution(_props: EvolutionProps) {
     [setState, state],
   )
 
+  const handleCellSize = useCallback(
+    (cellSize: number) => () => {
+      const gridWidth = canvasWidth / cellSize
+      const gridHeight = canvasHeight / cellSize
+      setState({
+        ...state,
+        cellSize,
+        gridWidth,
+        gridHeight,
+        boardState: state.boardState.setGrid(gridWidth, gridHeight, cellSize),
+      })
+    },
+    [setState, state],
+  )
+
   const handleToggleTopGenome = useCallback(() => {
     if (!showTopGenome) {
       console.log('👑', state.topAgent?.moves, state.topAgent?.genome)
@@ -160,6 +189,8 @@ export default function Evolution(_props: EvolutionProps) {
         topAgent,
         killersPerMove,
         history,
+        gridWidth,
+        gridHeight,
       } = currentState
 
       const currentTopAgent = bestAgent(agents)
@@ -173,10 +204,11 @@ export default function Evolution(_props: EvolutionProps) {
         .map(([x, y]) => [x - 1, y] as Position)
         .filter(([x, y]) => x >= 0 && y >= 0 && x < gridWidth && y < gridHeight)
 
-      for (let i = 0; i < killersPerMove; i++) {
+      const partialKillersPerMove = killersPerMove % 1
+      for (let i = 0; i < killersPerMove - partialKillersPerMove; i++) {
         nextKillPositions.push([gridWidth - 1, random(0, gridHeight - 1)])
       }
-      if (killersPerMove % 1 > random(0, 1, true)) {
+      if (partialKillersPerMove > random(0, 1, true)) {
         nextKillPositions.push([gridWidth - 1, random(0, gridHeight - 1)])
       }
 
@@ -208,6 +240,11 @@ export default function Evolution(_props: EvolutionProps) {
         }
       }
 
+      if (nextAgents.length === 100) {
+        // Max agents, kill the weak
+        nextAgents = sortBy(nextAgents, 'moves').slice(-95)
+      }
+
       nextAgents
         .filter((agent) => agent.position[0] >= gridWidth - 1)
         .forEach((agent) => {
@@ -216,13 +253,13 @@ export default function Evolution(_props: EvolutionProps) {
           }
         })
 
-      while (nextAgents.length < agentCount) {
+      while (nextAgents.length < minAgents) {
         nextAgents.push(new Agent(gridWidth, gridHeight))
       }
 
       nextBoardState = nextBoardState.appendPositions(
         nextAgents.map(({ position, moves }) => ({
-          color: movesColor(moves),
+          color: movesColor(moves, gridWidth),
           position,
         })),
       )
@@ -246,6 +283,7 @@ export default function Evolution(_props: EvolutionProps) {
       ]
 
       return {
+        ...currentState,
         boardState: nextBoardState,
         agents: nextAgents,
         lifeSpans: nextLifespans,
@@ -265,8 +303,16 @@ export default function Evolution(_props: EvolutionProps) {
   }, [])
 
   return (
-    <PageContainer>
+    <PageContainer title='Neutoevolution'>
       <Stack spacing={spacing.large}>
+        <Stack spacing={spacing.small}>
+          <Text value='Neuroevolution' size={20} />
+          <Text
+            value='Neural Networks trained via Evolutionary Algorithm'
+            color={colors.black40}
+          />
+        </Stack>
+
         <Board
           boardState={state.boardState}
           width={canvasWidth}
@@ -275,7 +321,6 @@ export default function Evolution(_props: EvolutionProps) {
 
         <Stack spacing={spacing.xlarge}>
           <Stack>
-            <Text value='Evolve' size={20} />
             <Inline>
               <Button onClick={handleReset} text='Reset' />
               <Inline spacing={spacing.xsmall}>
@@ -308,12 +353,30 @@ export default function Evolution(_props: EvolutionProps) {
           <Stack spacing={spacing.small}>
             <Text value='Difficulty (spawns/frame)' color={colors.black40} />
             <Inline spacing={spacing.xsmall}>
-              {range(0, 3.5, 0.5).map((killersPerMove) => (
+              {range(0, 3 + 0.25, 0.25).map((killersPerMove) => (
                 <Button
                   key={killersPerMove}
                   onClick={handleSetDifficulty(killersPerMove)}
                   text={killersPerMove.toString()}
                   disabled={state.killersPerMove === killersPerMove}
+                />
+              ))}
+            </Inline>
+          </Stack>
+
+          <Stack spacing={spacing.small}>
+            <Text value='Board Size' color={colors.black40} />
+            <Inline spacing={spacing.xsmall}>
+              {[
+                ['small', defaultCellSize * 2],
+                ['medium', defaultCellSize],
+                ['large', defaultCellSize / 2],
+              ].map(([sizeName, cellSize]) => (
+                <Button
+                  key={sizeName}
+                  onClick={handleCellSize(cellSize as number)}
+                  text={sizeName as string}
+                  disabled={state.cellSize === cellSize}
                 />
               ))}
             </Inline>
@@ -340,7 +403,10 @@ export default function Evolution(_props: EvolutionProps) {
                   <Inline spacing={spacing.small}>
                     <div
                       style={{
-                        backgroundColor: movesColor(state.topAgent.moves),
+                        backgroundColor: movesColor(
+                          state.topAgent.moves,
+                          state.gridWidth,
+                        ),
                         height: 8,
                         width: 8,
                       }}
@@ -368,7 +434,10 @@ export default function Evolution(_props: EvolutionProps) {
                   <Inline spacing={spacing.small}>
                     <div
                       style={{
-                        backgroundColor: movesColor(sampleAgent.moves),
+                        backgroundColor: movesColor(
+                          sampleAgent.moves,
+                          state.gridWidth,
+                        ),
                         height: 8,
                         width: 8,
                       }}

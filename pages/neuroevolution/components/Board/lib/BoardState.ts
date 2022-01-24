@@ -1,4 +1,4 @@
-import { clone, isArray, sortBy } from 'lodash'
+import { isArray, sortBy } from 'lodash'
 
 export type Direction = 'up' | 'right' | 'down' | 'left'
 export type Position = [number, number]
@@ -8,10 +8,7 @@ interface BoardStateArgs {
   gridWidth: number
   gridHeight: number
   cellSize: number
-  edgeStates?: { [key: string]: boolean }
   positions?: ColorPosition[]
-  // killPositions?: Position[]
-  // agentPositions?: Position[]
 }
 
 interface ColorPosition {
@@ -25,45 +22,12 @@ export class BoardState {
   public gridHeight: number
   public cellSize: number
   public positions: ColorPosition[]
-  private edgeStates: { [key: string]: boolean } = {}
-  // public killPositions?: Position[]
-  // public agentPositions?: Position[]
 
   constructor(args: BoardStateArgs) {
     this.gridWidth = args.gridWidth
     this.gridHeight = args.gridHeight
     this.cellSize = args.cellSize
     this.positions = args.positions || []
-    // this.killPositions = args.killPositions
-    // this.agentPositions = args.agentPositions
-
-    if (args.edgeStates) {
-      this.edgeStates = args.edgeStates
-    } else {
-      this.edgeStates = this.getEmptyGridState()
-    }
-  }
-
-  private getEmptyGridState() {
-    const edgeStates: { [key: string]: boolean } = {}
-    for (let gridX = 0; gridX < this.gridWidth; gridX++) {
-      for (let gridY = 0; gridY < this.gridHeight; gridY++) {
-        for (const edge of [
-          [
-            [gridX, gridY],
-            [gridX + 1, gridY],
-          ],
-          [
-            [gridX, gridY],
-            [gridX, gridY + 1],
-          ],
-        ] as Edge[]) {
-          this.validateEdge(edge)
-          edgeStates[edgeKey(edge)] = false
-        }
-      }
-    }
-    return edgeStates
   }
 
   private getArgs(): BoardStateArgs {
@@ -71,9 +35,6 @@ export class BoardState {
       gridWidth: this.gridWidth,
       gridHeight: this.gridHeight,
       cellSize: this.cellSize,
-      edgeStates: this.edgeStates,
-      // killPositions: this.killPositions,
-      // agentPositions: this.agentPositions,
     }
   }
 
@@ -82,6 +43,15 @@ export class BoardState {
       gridWidth: this.gridWidth,
       gridHeight: this.gridHeight,
       cellSize: this.cellSize,
+    })
+  }
+
+  setGrid(gridWidth: number, gridHeight: number, cellSize: number): BoardState {
+    return new BoardState({
+      ...this.getArgs(),
+      gridWidth: gridWidth,
+      gridHeight: gridHeight,
+      cellSize: cellSize,
     })
   }
 
@@ -105,55 +75,6 @@ export class BoardState {
         .filter(({ type }) => type === positionType)
         .map(({ position }) => position) || []
     )
-  }
-
-  setEdgeEnabled(edge: Edge, enabled?: boolean): BoardState {
-    this.validateEdge(edge)
-    enabled = enabled !== undefined ? enabled : !this.getEdgeEnabled(edge)
-    const edgeStates = clone(this.edgeStates)
-    edgeStates[edgeKey(edge)] = enabled
-
-    return new BoardState({
-      ...this.getArgs(),
-      edgeStates,
-    })
-  }
-
-  getEdgeEnabled(edge: Edge): boolean {
-    this.validateEdge(edge)
-    return this.edgeStates[edgeKey(edge)]
-  }
-
-  getEdgeStates(): [Edge, boolean][] {
-    return Object.entries(this.edgeStates).map(([key, enabled]) => [
-      keyEdge(key),
-      enabled,
-    ])
-  }
-
-  getEdgesEnabled(node: Position): Record<Direction, boolean> {
-    const edgesEnabled: Record<Direction, boolean> = {
-      up: node[1] === 0 ? true : false,
-      left: node[0] === 0 ? true : false,
-      down: node[1] === this.gridHeight ? true : false,
-      right: node[0] === this.gridWidth ? true : false,
-    }
-    for (const [[fromPosition, toPosition], enabled] of this.getEdgeStates()) {
-      if (fromPosition[0] === node[0] && fromPosition[1] === node[1]) {
-        edgesEnabled[edgeDirection([fromPosition, toPosition])] = enabled
-      }
-      if (toPosition[0] === node[0] && toPosition[1] === node[1]) {
-        edgesEnabled[edgeDirection([toPosition, fromPosition])] = enabled
-      }
-    }
-    return edgesEnabled
-  }
-
-  isValidMove(edge: Edge): boolean {
-    const edgesEnabled = this.getEdgesEnabled(edge[0])
-    const direction = edgeDirection(edge)
-    const toIsOnBoard = this.isOnBoard(edge[1])
-    return !edgesEnabled[direction] && toIsOnBoard
   }
 
   isOnBoard(position: Position): boolean {
