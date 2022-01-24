@@ -55,7 +55,7 @@ export class Genome {
   constructor(options: GenomeArgs = {}) {
     this.inputSize = options.inputSize || 2
     this.outputSize = options.outputSize || 4
-    this.learningRate = options.learningRate || 0.25
+    this.learningRate = options.learningRate || 0.5
 
     if (options.nodes && options.edges) {
       this.nodes = cloneDeep(options.nodes)

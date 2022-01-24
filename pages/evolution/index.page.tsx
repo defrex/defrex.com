@@ -1,4 +1,4 @@
-import { clone, groupBy, max, random, range, sample, some } from 'lodash'
+import { clone, groupBy, max, random, range, some } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { VictoryAxis, VictoryChart, VictoryLine } from 'victory'
 import { Button } from '../../components/Button'
@@ -23,6 +23,16 @@ const canvasWidth = 768
 const canvasHeight = 512
 const gridWidth = canvasWidth / cellSize
 const gridHeight = canvasHeight / cellSize
+
+function movesColor(moves: number): string {
+  const maxRunColors = 10
+  const runs = Math.floor(moves / gridWidth)
+  const capRuns = Math.min(runs, maxRunColors)
+  const normalizedRuns = capRuns / maxRunColors
+  const color = `hsl(${Math.round(45 + normalizedRuns * 235)}, 100%, 60%)`
+
+  return color
+}
 
 type State = {
   agents: Agent[]
@@ -166,6 +176,9 @@ export default function Evolution(_props: EvolutionProps) {
       for (let i = 0; i < killersPerMove; i++) {
         nextKillPositions.push([gridWidth - 1, random(0, gridHeight - 1)])
       }
+      if (killersPerMove % 1 > random(0, 1, true)) {
+        nextKillPositions.push([gridWidth - 1, random(0, gridHeight - 1)])
+      }
 
       let nextBoardState = boardState.setPositions(
         nextKillPositions.map((position) => ({
@@ -208,9 +221,9 @@ export default function Evolution(_props: EvolutionProps) {
       }
 
       nextBoardState = nextBoardState.appendPositions(
-        nextAgents.map(({ position }) => ({
+        nextAgents.map(({ position, moves }) => ({
+          color: movesColor(moves),
           position,
-          color: colorValues.blue60,
         })),
       )
 
@@ -304,7 +317,7 @@ export default function Evolution(_props: EvolutionProps) {
           <Stack spacing={spacing.small}>
             <Text value='Difficulty' color={colors.black40} />
             <Inline spacing={spacing.xsmall}>
-              {range(0, 10).map((killersPerMove) => (
+              {range(0.5, 5, 0.5).map((killersPerMove) => (
                 <Button
                   key={killersPerMove}
                   onClick={handleSetDifficulty(killersPerMove)}
@@ -333,7 +346,16 @@ export default function Evolution(_props: EvolutionProps) {
               <Inline expand={0}>
                 <Stack spacing={spacing.small}>
                   <Text value='Top Agent 👑' color={colors.black40} />
-                  <Text value={`${state.topAgent.moves} moves`} />
+                  <Inline spacing={spacing.small}>
+                    <div
+                      style={{
+                        backgroundColor: movesColor(state.topAgent.moves),
+                        height: 8,
+                        width: 8,
+                      }}
+                    />
+                    <Text value={`${state.topAgent.moves} moves`} />
+                  </Inline>
                 </Stack>
                 <Button onClick={handleSpawnTopAgent} text='Spawn' />
                 <Button
@@ -352,7 +374,16 @@ export default function Evolution(_props: EvolutionProps) {
               <Stack spacing={spacing.small}>
                 <Text value='Sample Agent' color={colors.black40} />
                 {sampleAgent ? (
-                  <Text value={`${sampleAgent.moves} moves`} />
+                  <Inline spacing={spacing.small}>
+                    <div
+                      style={{
+                        backgroundColor: movesColor(sampleAgent.moves),
+                        height: 8,
+                        width: 8,
+                      }}
+                    />
+                    <Text value={`${sampleAgent.moves} moves`} />
+                  </Inline>
                 ) : null}
               </Stack>
               <Button onClick={handleSampleAgent} text='Sample' />
