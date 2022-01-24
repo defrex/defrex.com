@@ -351,7 +351,7 @@ export default function Evolution(_props: EvolutionProps) {
                 <Button onClick={handleSpawnTopAgent} text='Spawn' />
                 <Button
                   onClick={handleToggleTopGenome}
-                  text={showTopGenome ? 'Hide Genome' : 'Show Genome'}
+                  text={showTopGenome ? 'Hide Brain' : 'Show Brain'}
                 />
               </Inline>
               {showTopGenome ? (
@@ -398,7 +398,7 @@ export default function Evolution(_props: EvolutionProps) {
                   y='size'
                 />
               </VictoryChart>
-              <Text value='Top Agent Age' color={colors.black40} />
+              <Text value='Agent Age (Top + Avg)' color={colors.black40} />
               <VictoryChart theme={victoryChartTheme} height={200}>
                 <VictoryAxis label='Move' />
                 <VictoryAxis dependentAxis />
@@ -410,8 +410,16 @@ export default function Evolution(_props: EvolutionProps) {
                   x='move'
                   y='max'
                 />
+                <VictoryLine
+                  data={state.history.map(({ move, agentMoves }) => ({
+                    move,
+                    avg: sum(agentMoves) / agentMoves.length,
+                  }))}
+                  x='move'
+                  y='avg'
+                />
               </VictoryChart>
-              <Text value='Avg Agent Age' color={colors.black40} />
+              {/* <Text value='Avg Agent Age' color={colors.black40} />
               <VictoryChart theme={victoryChartTheme} height={200}>
                 <VictoryAxis label='Move' />
                 <VictoryAxis dependentAxis />
@@ -423,7 +431,7 @@ export default function Evolution(_props: EvolutionProps) {
                   x='move'
                   y='avg'
                 />
-              </VictoryChart>
+              </VictoryChart> */}
             </Stack>
           ) : null}
         </Stack>
