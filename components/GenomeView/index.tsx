@@ -9,10 +9,9 @@ interface GenomeViewProps {
 }
 
 export function GenomeView({ genome }: GenomeViewProps) {
-  const [realflow, setRealflow] = useState<
-    | typeof import('/Users/defrex/Code/defrex.com/node_modules/reaflow/dist/index')
-    | null
-  >(null)
+  const [realflow, setRealflow] = useState<typeof import('reaflow') | null>(
+    null,
+  )
 
   useEffect(() => {
     if (realflow) return
