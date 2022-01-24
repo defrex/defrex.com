@@ -8,6 +8,7 @@ import { PageContainer } from '../../components/PageContainer'
 import { Stack } from '../../components/Stack'
 import { Text } from '../../components/Text'
 import { colors, colorValues } from '../../lib/colors'
+import { round } from '../../lib/round'
 import { sleep } from '../../lib/sleep'
 import { spacing } from '../../lib/spacing'
 import { victoryChartTheme } from '../../lib/victoryChartTheme'
@@ -19,6 +20,8 @@ interface EvolutionProps {}
 
 const minAgents = 10
 const maxAgents = 100
+const maxDifficulty = 3
+const defaultCellSize = 16
 const canvasWidth =
   typeof window === 'undefined'
     ? 768
@@ -28,7 +31,6 @@ const canvasWidth =
     ? 512
     : 256
 const canvasHeight = 512
-const defaultCellSize = 16
 
 function movesColor(moves: number, gridWidth: number): string {
   const maxRunColors = 10
@@ -42,7 +44,7 @@ function movesColor(moves: number, gridWidth: number): string {
 
 function difficulty(survivors: number): number {
   const proportion = (survivors - minAgents) / (maxAgents - minAgents)
-  return 2 * proportion
+  return maxDifficulty * proportion
 }
 
 type State = {
@@ -386,23 +388,21 @@ export default function Evolution(_props: EvolutionProps) {
 
           <Stack spacing={spacing.small}>
             <Text value='Difficulty (spawns/frame)' color={colors.black40} />
-            <Inline spacing={spacing.xsmall} expand={0}>
-              <Text
-                value={
-                  Math.round((state.killersPerMove + Number.EPSILON) * 100) /
-                  100
-                }
-              />
+            <Inline spacing={spacing.xsmall}>
               <Button
                 onClick={handleSetDifficulty(null)}
                 text='Auto'
                 disabled={state.autoDifficulty}
               />
-              {range(0, 2 + 0.25, 0.25).map((killersPerMove) => (
+              {range(
+                0,
+                maxDifficulty + maxDifficulty / 5,
+                maxDifficulty / 5,
+              ).map((killersPerMove) => (
                 <Button
                   key={killersPerMove}
                   onClick={handleSetDifficulty(killersPerMove)}
-                  text={killersPerMove.toString()}
+                  text={round(killersPerMove, 2).toString()}
                   disabled={
                     !state.autoDifficulty &&
                     state.killersPerMove === killersPerMove
