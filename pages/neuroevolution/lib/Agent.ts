@@ -7,7 +7,7 @@ import {
 import { Genome } from './Genome'
 
 export class Agent {
-  static inputLabels = ['↱ 🟥', '→ 🟥', '↳ 🟥']
+  static inputLabels = ['↱🟥', '→🟥', '↳🟥']
   static outputLabels = ['🟦→', '🟦↓', '🟦↑']
 
   public id: string
@@ -73,8 +73,6 @@ export class Agent {
 
   move(boardState: BoardState): Agent {
     const inputs = [
-      // this.position[0],
-      // this.position[1],
       this.threatDistance(boardState, -1),
       this.threatDistance(boardState, 0),
       this.threatDistance(boardState, 1),
