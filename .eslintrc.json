@@ -1,5 +1,9 @@
 {
   "rules": {
+    "ecmaFeatures": {
+      "jsx": true,
+      "modules": true
+    },
     "react/react-in-jsx-scope": "off"
   }
 }

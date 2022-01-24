@@ -36,7 +36,7 @@ export function PageContainer({ children, title }: PageContainerProps) {
                   <Stack>
                     <Text value='Aron Jones' size={32} color={colors.black10} />
                     <Text
-                      value='Founder, Philosopher, Friend'
+                      value='Superhumanist'
                       size={16}
                       color={colors.black30}
                     />

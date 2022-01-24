@@ -6,6 +6,7 @@ import React, {
   ReactNode,
   Ref,
 } from 'react'
+import { spacing } from '../../lib/spacing'
 import { Inline } from '../Inline'
 import { Inset } from '../Inset'
 import { Text } from '../Text'
@@ -17,29 +18,26 @@ interface ButtonProps {
   icon?: ReactNode
   onClick?: (event: MouseEvent<HTMLAnchorElement>) => void
   text?: string
-  type?: 'primary' | 'secondary' | 'plain'
+  disabled?: boolean
 }
 
 export const Button = forwardRef(function Button(
-  { text, icon, type = 'primary', element = 'a', href, onClick }: ButtonProps,
+  { text, icon, element = 'a', href, onClick, disabled = false }: ButtonProps,
   ref: Ref<HTMLAnchorElement>,
 ) {
   return createElement(
     element,
     {
-      className: classnames(styles.button, styles[type]),
+      className: classnames(styles.button, disabled ? styles.disabled : null),
       ref,
       href,
       onClick,
     },
-    <Inset>
+    <Inset spacing={spacing.small}>
       <Inline align='center'>
         {icon}
         {text ? (
-          <Text
-            value={text}
-            className={classnames(styles.buttonText, styles[`${type}Text`])}
-          />
+          <Text value={text} className={classnames(styles.buttonText)} />
         ) : null}
       </Inline>
     </Inset>,

@@ -12,8 +12,11 @@
     "react": "~17.0.2",
     "react-dom": "~17.0.2",
     "react-markdown": "~7.1.2",
+    "reaflow": "~4.2.15",
     "sass": "~1.48.0",
-    "tslib": "~2.3.1"
+    "synaptic": "~1.1.4",
+    "tslib": "~2.3.1",
+    "victory": "~36.2.0"
   },
   "devDependencies": {
     "@types/classnames": "~2.3.1",
@@ -21,6 +24,8 @@
     "@types/node": "~17.0.8",
     "@types/react": "~17.0.38",
     "@types/react-transition-group": "~4.4.4",
+    "@types/synaptic": "~1.0.4",
+    "eslint": "~8.7.0",
     "frontmatter-markdown-loader": "~3.6.3",
     "typescript": "~4.5.4"
   }

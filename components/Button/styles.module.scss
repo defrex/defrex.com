@@ -6,33 +6,28 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: spacing.$large;
+  border-radius: spacing.$xsmall;
   text-decoration: none;
   cursor: pointer;
-}
-.button:hover {
-  text-decoration: none;
-}
-.buttonText {
-}
 
-.primary {
   background-color: colors.$brand;
 }
-.primary:hover {
+
+.button:hover {
+  text-decoration: none;
   background-color: darken(colors.$brand, 0.8);
 }
-.primaryText {
-  color: colors.$white;
+
+.buttonText {
+  color: colors.$black90;
 }
 
-.plain {
-  border: 1px solid colors.$black10;
-  background-color: colors.$black90;
+.button.disabled,
+.button.disabled:hover {
+  background-color: colors.$black60;
+  cursor: not-allowed;
 }
-.plain:hover {
-  background-color: colors.$black70;
-}
-.plainText {
-  color: colors.$white;
+
+.disabled .buttonText {
+  color: colors.$black30;
 }

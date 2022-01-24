@@ -6,6 +6,7 @@ import { Post } from '../@types/content'
 import { PageContainer } from '../components/PageContainer'
 import { Stack } from '../components/Stack'
 import { Text } from '../components/Text'
+import { spacing } from '../lib/spacing'
 
 interface IndexProps {
   posts: Post[]
@@ -14,15 +15,26 @@ interface IndexProps {
 export default function Index({ posts }: IndexProps) {
   return (
     <PageContainer>
-      <Stack>
-        <Text value='Articles' size={24} />
-        {orderBy(posts, ['attributes.date'], ['desc']).map((post, index) => (
-          <Link href={`/posts/${post.slug}`} key={index}>
+      <Stack spacing={spacing.xlarge}>
+        <Stack>
+          <Text value='Experiments' size={20} />
+          <Link href='/neuroevolution'>
             <a>
-              <Text value={post.attributes.title} />
+              <Text value='Neuroevolution' />
             </a>
           </Link>
-        ))}
+        </Stack>
+
+        <Stack>
+          <Text value='Articles' size={20} />
+          {orderBy(posts, ['attributes.date'], ['desc']).map((post, index) => (
+            <Link href={`/posts/${post.slug}`} key={index}>
+              <a>
+                <Text value={post.attributes.title} />
+              </a>
+            </Link>
+          ))}
+        </Stack>
       </Stack>
     </PageContainer>
   )
