@@ -122,9 +122,16 @@ export class Agent {
 
     const threatDistance = boardState
       .getPositions('kill')
-      .filter(([x, y]) => x > currentX && y === currentY)
-      .reduce((distance, [x, y]) => Math.min(distance, x - currentX), Infinity)
+      .filter(([x, y]) => y === currentY)
+      .reduce(
+        (distance, [x, y]) =>
+          Math.min(
+            distance,
+            x > currentX ? x - currentX : x + this.gridWidth - currentX,
+          ),
+        this.gridWidth,
+      )
 
-    return threatDistance === Infinity ? -1 : this.gridWidth - threatDistance
+    return threatDistance
   }
 }
