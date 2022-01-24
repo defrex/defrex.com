@@ -9,25 +9,33 @@ interface BoardStateArgs {
   gridHeight: number
   cellSize: number
   edgeStates?: { [key: string]: boolean }
-  killPositions?: Position[]
-  agentPositions?: Position[]
-  topAgentPosition?: Position
+  positions?: ColorPosition[]
+  // killPositions?: Position[]
+  // agentPositions?: Position[]
+}
+
+interface ColorPosition {
+  color: string
+  position: Position
+  type?: string
 }
 
 export class BoardState {
   public gridWidth: number
   public gridHeight: number
   public cellSize: number
-  public killPositions?: Position[]
-  public agentPositions?: Position[]
+  public positions: ColorPosition[]
   private edgeStates: { [key: string]: boolean } = {}
+  // public killPositions?: Position[]
+  // public agentPositions?: Position[]
 
   constructor(args: BoardStateArgs) {
     this.gridWidth = args.gridWidth
     this.gridHeight = args.gridHeight
     this.cellSize = args.cellSize
-    this.killPositions = args.killPositions
-    this.agentPositions = args.agentPositions
+    this.positions = args.positions || []
+    // this.killPositions = args.killPositions
+    // this.agentPositions = args.agentPositions
 
     if (args.edgeStates) {
       this.edgeStates = args.edgeStates
@@ -64,8 +72,8 @@ export class BoardState {
       gridHeight: this.gridHeight,
       cellSize: this.cellSize,
       edgeStates: this.edgeStates,
-      killPositions: this.killPositions,
-      agentPositions: this.agentPositions,
+      // killPositions: this.killPositions,
+      // agentPositions: this.agentPositions,
     }
   }
 
@@ -77,25 +85,26 @@ export class BoardState {
     })
   }
 
-  setKillPositions(killPositions: Position[]): BoardState {
+  setPositions(positions: ColorPosition[]): BoardState {
     return new BoardState({
       ...this.getArgs(),
-      killPositions,
+      positions,
     })
   }
 
-  setAgentPositions(agentPositions: Position[]): BoardState {
+  appendPositions(positions: ColorPosition[]): BoardState {
     return new BoardState({
       ...this.getArgs(),
-      agentPositions,
+      positions: [...this.positions, ...positions],
     })
   }
 
-  setTopAgentPosition(topAgentPosition?: Position): BoardState {
-    return new BoardState({
-      ...this.getArgs(),
-      topAgentPosition,
-    })
+  getPositions(positionType: string): Position[] {
+    return (
+      this.positions
+        .filter(({ type }) => type === positionType)
+        .map(({ position }) => position) || []
+    )
   }
 
   setEdgeEnabled(edge: Edge, enabled?: boolean): BoardState {

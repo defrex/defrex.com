@@ -28,9 +28,12 @@ function randSquash(): Neuron.SquashingFunction | undefined {
 }
 
 function mutateScalar(value: number, learningRate: number): number {
+  const adjuster = random(-2, 2, true)
   const oldValuePortion = value * (1 - learningRate)
-  const newValuePortion = value * random(-2, 2) * learningRate
-  return oldValuePortion + newValuePortion
+  const newValue = value * adjuster
+  const newValuePortion = newValue * learningRate
+  const nextValue = oldValuePortion + newValuePortion
+  return nextValue
 }
 
 interface GenomeArgs {
@@ -140,9 +143,9 @@ export class Genome {
   mutate(): Genome {
     const mutation = sample([
       'addNode' as const,
-      'addConnection' as const,
-      'removeConnection' as const,
-      'mutateConnectionWeight' as const,
+      'addEdge' as const,
+      'removeEdge' as const,
+      'mutateEdgeWeight' as const,
       'mutateNodeBias' as const,
       'mutateNodeSquash' as const,
     ])!
@@ -170,13 +173,11 @@ export class Genome {
     ]
 
     const newNodeIndex = nextNodes.indexOf(newNode)
-    const intermediatedConnectionIndex = random(0, this.edges.length - 1)
-    const intermediatedConnection = cloneDeep(
-      this.edges[intermediatedConnectionIndex],
-    )
-    const oldToIndex = intermediatedConnection.toNodeIndex
-    intermediatedConnection.toNodeIndex = newNodeIndex
-    const newConnection: GeneEdge = {
+    const intermediatedEdgeIndex = random(0, this.edges.length - 1)
+    const intermediatedEdge = cloneDeep(this.edges[intermediatedEdgeIndex])
+    const oldToIndex = intermediatedEdge.toNodeIndex
+    intermediatedEdge.toNodeIndex = newNodeIndex
+    const newEdge: GeneEdge = {
       fromNodeIndex: newNodeIndex,
       toNodeIndex: oldToIndex,
       weight: 1,
@@ -192,10 +193,10 @@ export class Genome {
       return newEdge
     })
     const nextEdges: GeneEdge[] = [
-      ...adjustedEdges.slice(0, intermediatedConnectionIndex),
-      intermediatedConnection,
-      newConnection,
-      ...adjustedEdges.slice(intermediatedConnectionIndex + 1),
+      ...adjustedEdges.slice(0, intermediatedEdgeIndex),
+      intermediatedEdge,
+      newEdge,
+      ...adjustedEdges.slice(intermediatedEdgeIndex + 1),
     ]
 
     return new Genome({
@@ -205,8 +206,8 @@ export class Genome {
     })
   }
 
-  private addConnection(): Genome {
-    const newConnection = {
+  private addEdge(): Genome {
+    const newEdge = {
       fromNodeIndex: this.nodes.indexOf(
         sample(this.nodes.slice(0, -this.outputSize))!,
       ),
@@ -218,13 +219,13 @@ export class Genome {
     const nextGenome = new Genome({
       ...this.getArgs(),
       nodes: cloneDeep(this.nodes),
-      edges: cloneDeep([...this.edges, newConnection]),
+      edges: cloneDeep([...this.edges, newEdge]),
     })
     return nextGenome
   }
 
-  private removeConnection(): Genome | null {
-    const removableConnection = shuffle(this.edges).find((edge) => {
+  private removeEdge(): Genome | null {
+    const removableEdge = shuffle(this.edges).find((edge) => {
       const fromEdges = this.edges.filter(
         (edge) => edge.fromNodeIndex === edge.fromNodeIndex,
       ).length
@@ -233,34 +234,31 @@ export class Genome {
       ).length
       return fromEdges > 1 && toEdges > 1
     })
-    if (!removableConnection) {
+    if (!removableEdge) {
       return null
     } else {
       const nextGenome = new Genome({
         ...this.getArgs(),
         nodes: cloneDeep(this.nodes),
-        edges: cloneDeep(without(this.edges, removableConnection)),
+        edges: cloneDeep(without(this.edges, removableEdge)),
       })
       return nextGenome
     }
   }
 
-  private mutateConnectionWeight(): Genome {
+  private mutateEdgeWeight(): Genome {
     const nextEdges = cloneDeep(this.edges)
-    const nextConnection = { ...sample(nextEdges)! }
-    nextConnection.weight = mutateScalar(
-      nextConnection.weight,
-      this.learningRate,
-    )
+    const nextEdge = { ...sample(nextEdges)! }
+    nextEdge.weight = mutateScalar(nextEdge.weight, this.learningRate)
     return new Genome({
       ...this.getArgs(),
       nodes: cloneDeep(this.nodes),
       edges: nextEdges.map((edge) => {
         if (
-          edge.fromNodeIndex === nextConnection.fromNodeIndex &&
-          edge.toNodeIndex === nextConnection.toNodeIndex
+          edge.fromNodeIndex === nextEdge.fromNodeIndex &&
+          edge.toNodeIndex === nextEdge.toNodeIndex
         ) {
-          return nextConnection
+          return nextEdge
         } else {
           return edge
         }
@@ -270,7 +268,7 @@ export class Genome {
 
   private mutateNodeBias(): Genome {
     const nextNodes = cloneDeep(this.nodes)
-    const nextNode = { ...sample(nextNodes)! }
+    const nextNode = { ...sample(nextNodes.slice(this.inputSize))! }
     nextNode.bias = mutateScalar(nextNode.bias, this.learningRate)
     return new Genome({
       ...this.getArgs(),

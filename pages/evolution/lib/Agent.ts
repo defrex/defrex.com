@@ -7,6 +7,9 @@ import {
 import { Genome } from './Genome'
 
 export class Agent {
+  static inputLabels = ['↱ 🟥', '→ 🟥', '↳ 🟥']
+  static outputLabels = ['🟦→', '🟦↓', '🟦↑']
+
   public id: string
   public genome: Genome
   public position: Position
@@ -29,8 +32,8 @@ export class Agent {
       this.genome = genome
     } else {
       this.genome = new Genome({
-        inputSize: 5,
-        outputSize: 3,
+        inputSize: Agent.inputLabels.length,
+        outputSize: Agent.outputLabels.length,
       })
     }
 
@@ -66,14 +69,22 @@ export class Agent {
 
   move(boardState: BoardState): Agent {
     const inputs = [
-      this.position[0],
-      this.position[1],
+      // this.position[0],
+      // this.position[1],
       this.threatDistance(boardState, -1),
       this.threatDistance(boardState, 0),
       this.threatDistance(boardState, 1),
     ]
 
+    if (inputs.length !== Agent.inputLabels.length) {
+      throw new Error('Unexpected input length')
+    }
+
     const outputs = this.genome.compute(inputs)
+
+    if (outputs.length !== Agent.outputLabels.length) {
+      throw new Error('Unexpected output length')
+    }
 
     const outputDirections: Direction[] = ['up', 'down', 'right']
     const direction = outputDirections[outputs.indexOf(Math.max(...outputs))]
@@ -105,7 +116,8 @@ export class Agent {
       currentY = currentY % this.gridHeight
     }
 
-    const threatDistance = (boardState.killPositions || [])
+    const threatDistance = boardState
+      .getPositions('kill')
       .filter(([x, y]) => x > currentX && y === currentY)
       .reduce((distance, [x, y]) => Math.min(distance, x - currentX), Infinity)
 

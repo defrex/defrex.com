@@ -3,7 +3,7 @@
 @use "../../lib/screens";
 
 .container {
-  max-width: screens.$smallMax;
+  max-width: screens.$smallMax + (spacing.$medium * 2);
   margin: auto;
 }
 

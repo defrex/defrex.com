@@ -30,15 +30,9 @@ export function Board({ boardState, height, width }: BoardProps) {
       }
     }
 
-    if (boardState.killPositions) {
-      for (const position of boardState.killPositions) {
-        paintNode(context, boardState.cellSize, position, colorValues.red60)
-      }
-    }
-
-    if (boardState.agentPositions) {
-      for (const position of boardState.agentPositions) {
-        paintNode(context, boardState.cellSize, position, colorValues.blue60)
+    if (boardState.positions) {
+      for (const { position, color } of boardState.positions) {
+        paintNode(context, boardState.cellSize, position, color)
       }
     }
   }, [boardState])

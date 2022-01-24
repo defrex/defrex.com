@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { EdgeData, NodeData } from 'reaflow'
 import { colorValues } from '../../lib/colors'
+import { Agent } from '../../pages/evolution/lib/Agent'
 import { Genome } from '../../pages/evolution/lib/Genome'
 
 interface GenomeViewProps {
@@ -24,22 +25,10 @@ export function GenomeView({ genome }: GenomeViewProps) {
     return genome.nodes.map((node, index) => ({
       id: index.toString(),
       text: `${
-        index === 0
-          ? 'x'
-          : index === 1
-          ? 'y'
-          : index === 2
-          ? '↱ 🟥'
-          : index === 3
-          ? '→ 🟥'
-          : index === 4
-          ? '↳ 🟥'
-          : genome.nodes.length - index === 1
-          ? '→'
-          : genome.nodes.length - index === 2
-          ? '↓'
-          : genome.nodes.length - index === 3
-          ? '↑'
+        index < Agent.inputLabels.length
+          ? Agent.inputLabels[index]
+          : genome.nodes.length - index <= Agent.outputLabels.length
+          ? Agent.outputLabels[genome.nodes.length - index - 1]
           : ''
       } ${node.type} ${node.bias}`,
     }))
@@ -50,7 +39,7 @@ export function GenomeView({ genome }: GenomeViewProps) {
       id: index.toString(),
       from: edge.fromNodeIndex.toString(),
       to: edge.toNodeIndex.toString(),
-      text: edge.weight,
+      text: edge.weight.toString(),
     }))
   }, [genome])
 
