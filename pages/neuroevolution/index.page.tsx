@@ -20,7 +20,7 @@ interface EvolutionProps {}
 const minAgents = 10
 const canvasWidth =
   typeof window === 'undefined'
-    ? 768
+    ? 512
     : window.innerWidth > 768
     ? 768
     : window.innerWidth > 512
