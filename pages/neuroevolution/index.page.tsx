@@ -18,6 +18,7 @@ import { Agent } from './lib/Agent'
 interface EvolutionProps {}
 
 const minAgents = 10
+const maxAgents = 100
 const canvasWidth =
   typeof window === 'undefined'
     ? 768
@@ -39,22 +40,25 @@ function movesColor(moves: number, gridWidth: number): string {
   return color
 }
 
+function difficulty(survivors: number): number {
+  const proportion = (survivors - minAgents) / (maxAgents - minAgents)
+  return 3 * proportion
+}
+
 type State = {
   agents: Agent[]
+  autoDifficulty: boolean
   boardState: BoardState
+  cellSize: number
+  gridHeight: number
+  gridWidth: number
+  history: { move: number; agentMoves: number[] }[]
+  killersPerMove: number
   lifeSpans: Record<number, number>
+  moves: number
   running: boolean
   speed: number
-  moves: number
   topAgent?: Agent
-  killersPerMove: number
-  history: {
-    move: number
-    agentMoves: number[]
-  }[]
-  cellSize: number
-  gridWidth: number
-  gridHeight: number
 }
 
 function initState(): State {
@@ -62,10 +66,11 @@ function initState(): State {
   const gridWidth = canvasWidth / cellSize
   const gridHeight = canvasHeight / cellSize
   return {
-    boardState: new BoardState({ gridWidth, gridHeight, cellSize }),
     agents: new Array(minAgents)
       .fill(0)
       .map((_, i) => new Agent(gridWidth, gridHeight)),
+    autoDifficulty: true,
+    boardState: new BoardState({ gridWidth, gridHeight, cellSize }),
     lifeSpans: {},
     running: false,
     speed: 0,
@@ -122,11 +127,19 @@ export default function Evolution(_props: EvolutionProps) {
   )
 
   const handleSetDifficulty = useCallback(
-    (killersPerMove: number) => () => {
-      setState({
-        ...state,
-        killersPerMove,
-      })
+    (killersPerMove: number | null) => () => {
+      if (killersPerMove) {
+        setState({
+          ...state,
+          killersPerMove,
+          autoDifficulty: false,
+        })
+      } else {
+        setState({
+          ...state,
+          autoDifficulty: true,
+        })
+      }
     },
     [setState, state],
   )
@@ -180,17 +193,18 @@ export default function Evolution(_props: EvolutionProps) {
       }
 
       const {
-        boardState,
         agents,
+        autoDifficulty,
+        boardState,
+        gridHeight,
+        gridWidth,
+        history,
+        killersPerMove,
         lifeSpans,
+        moves,
         running,
         speed,
-        moves,
         topAgent,
-        killersPerMove,
-        history,
-        gridWidth,
-        gridHeight,
       } = currentState
 
       const currentTopAgent = bestAgent(agents)
@@ -238,6 +252,11 @@ export default function Evolution(_props: EvolutionProps) {
           nextLifespans[killedAgent.moves] =
             (nextLifespans[killedAgent.moves] || 0) + 1
         }
+      }
+
+      let nextKillersPerMove = killersPerMove
+      if (autoDifficulty) {
+        nextKillersPerMove = difficulty(survivingAgents.length)
       }
 
       if (nextAgents.length === 100) {
@@ -291,7 +310,7 @@ export default function Evolution(_props: EvolutionProps) {
         speed,
         moves: moves + 1,
         topAgent: nextTopAgent,
-        killersPerMove,
+        killersPerMove: nextKillersPerMove,
         history: nextHistory,
       }
     })
@@ -347,36 +366,46 @@ export default function Evolution(_props: EvolutionProps) {
                   text='Slow'
                 />
               </Inline>
+              <Inline spacing={spacing.xsmall}>
+                {[
+                  ['small', defaultCellSize * 2],
+                  ['medium', defaultCellSize],
+                  ['large', defaultCellSize / 2],
+                ].map(([sizeName, cellSize]) => (
+                  <Button
+                    key={sizeName}
+                    onClick={handleCellSize(cellSize as number)}
+                    text={sizeName as string}
+                    disabled={state.cellSize === cellSize}
+                  />
+                ))}
+              </Inline>
             </Inline>
           </Stack>
 
           <Stack spacing={spacing.small}>
             <Text value='Difficulty (spawns/frame)' color={colors.black40} />
-            <Inline spacing={spacing.xsmall}>
-              {range(0, 3 + 0.25, 0.25).map((killersPerMove) => (
+            <Inline spacing={spacing.xsmall} expand={0}>
+              <Text
+                value={
+                  Math.round((state.killersPerMove + Number.EPSILON) * 100) /
+                  100
+                }
+              />
+              <Button
+                onClick={handleSetDifficulty(null)}
+                text='Auto'
+                disabled={state.autoDifficulty}
+              />
+              {range(0, 2 + 0.25, 0.25).map((killersPerMove) => (
                 <Button
                   key={killersPerMove}
                   onClick={handleSetDifficulty(killersPerMove)}
                   text={killersPerMove.toString()}
-                  disabled={state.killersPerMove === killersPerMove}
-                />
-              ))}
-            </Inline>
-          </Stack>
-
-          <Stack spacing={spacing.small}>
-            <Text value='Board Size' color={colors.black40} />
-            <Inline spacing={spacing.xsmall}>
-              {[
-                ['small', defaultCellSize * 2],
-                ['medium', defaultCellSize],
-                ['large', defaultCellSize / 2],
-              ].map(([sizeName, cellSize]) => (
-                <Button
-                  key={sizeName}
-                  onClick={handleCellSize(cellSize as number)}
-                  text={sizeName as string}
-                  disabled={state.cellSize === cellSize}
+                  disabled={
+                    !state.autoDifficulty &&
+                    state.killersPerMove === killersPerMove
+                  }
                 />
               ))}
             </Inline>
