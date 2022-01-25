@@ -9,16 +9,17 @@ import {
 } from 'lodash'
 import { Neuron } from 'synaptic'
 
-type GeneNodeId = string
+type GeneId = string
 
 interface GeneNode {
   type: 'input' | 'output' | 'hidden'
-  id: GeneNodeId
+  id: GeneId
   bias: number
   squash?: Neuron.SquashingFunction
 }
 
 interface GeneEdge {
+  id: GeneId
   fromNodeIndex: number
   toNodeIndex: number
   weight: number
@@ -94,6 +95,7 @@ export class Genome {
       for (let inputIndex = 0; inputIndex < inputs.length; inputIndex++) {
         for (let outputIndex = 0; outputIndex < outputs.length; outputIndex++) {
           edges.push({
+            id: uniqueId(),
             fromNodeIndex: inputIndex,
             toNodeIndex: inputs.length + outputIndex,
             weight: random(-1, 1),
@@ -281,6 +283,7 @@ export class Genome {
     nextEdges[intermediatedEdgeIndex] = intermediatedEdge
 
     const newEdge: GeneEdge = {
+      id: uniqueId(),
       fromNodeIndex: newNodeIndex,
       toNodeIndex: oldToIndex,
       weight: 1,
@@ -318,7 +321,8 @@ export class Genome {
   }
 
   private addEdge(): Genome {
-    const newEdge = {
+    const newEdge: GeneEdge = {
+      id: uniqueId(),
       fromNodeIndex: this.nodes.indexOf(
         sample([...this.inputNodes(), ...this.hiddenNodes()])!,
       ),
@@ -356,6 +360,7 @@ export class Genome {
     for (const toIndex of toNodeIndexes) {
       for (const fromIndex of fromNodeIndexes) {
         nextEdges.push({
+          id: uniqueId(),
           fromNodeIndex: fromIndex,
           toNodeIndex: toIndex,
           weight: 1,
@@ -411,10 +416,14 @@ export class Genome {
   private removeEdge(): Genome | null {
     const removableEdge = shuffle(this.edges).find((candidateEdge) => {
       const fromEdges = this.edges.filter(
-        (edge) => edge.fromNodeIndex === candidateEdge.fromNodeIndex,
+        (edge) =>
+          edge.fromNodeIndex === candidateEdge.fromNodeIndex &&
+          edge.toNodeIndex !== candidateEdge.toNodeIndex,
       ).length
       const toEdges = this.edges.filter(
-        (edge) => edge.toNodeIndex === candidateEdge.toNodeIndex,
+        (edge) =>
+          edge.toNodeIndex === candidateEdge.toNodeIndex &&
+          edge.fromNodeIndex !== candidateEdge.fromNodeIndex,
       ).length
       return fromEdges > 1 && toEdges > 1
     })

@@ -58,6 +58,7 @@ type State = {
     move: number
     difficulty: number
     agentMoves: number[]
+    agentLineage: number[]
     time: number
   }[]
   historyRollup: { move: number; difficulty: number }[]
@@ -78,7 +79,7 @@ function initState(): State {
   return {
     agents: new Array(minAgents)
       .fill(0)
-      .map((_, i) => new Agent(gridWidth, gridHeight)),
+      .map((_, i) => new Agent({ gridWidth, gridHeight })),
     boardState: new BoardState({ gridWidth, gridHeight, cellSize }),
     cellSize,
     gridHeight,
@@ -109,6 +110,11 @@ export default function Evolution(_props: EvolutionProps) {
   const frameRef = useRef<number>()
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
   const [showHowItWorks, setShowHowItWorks] = useState(false)
+  const [metricsVisible, setMetricsVisible] = useState({
+    population: true,
+    lineage: true,
+    difficulty: true,
+  })
   const [state, setState] = useState<State>(initState())
 
   const handleReset = useCallback(() => {
@@ -137,6 +143,16 @@ export default function Evolution(_props: EvolutionProps) {
       })
     },
     [setState, state],
+  )
+
+  const handleToggleMetric = useCallback(
+    (metric: 'population' | 'lineage' | 'difficulty') => () => {
+      setMetricsVisible({
+        ...metricsVisible,
+        [metric]: !metricsVisible[metric],
+      })
+    },
+    [metricsVisible, setMetricsVisible],
   )
 
   const handleCellSize = useCallback(
@@ -277,7 +293,7 @@ export default function Evolution(_props: EvolutionProps) {
         })
 
       while (nextAgents.length < minAgents) {
-        nextAgents.push(new Agent(gridWidth, gridHeight))
+        nextAgents.push(new Agent({ gridWidth, gridHeight }))
       }
 
       nextBoardState = nextBoardState.appendPositions(
@@ -303,6 +319,7 @@ export default function Evolution(_props: EvolutionProps) {
           move,
           difficulty: nextKillersPerMove,
           agentMoves: nextAgents.map(({ moves }) => moves),
+          agentLineage: nextAgents.map(({ lineage }) => lineage),
           time: Date.now(),
         },
       ]
@@ -431,7 +448,12 @@ export default function Evolution(_props: EvolutionProps) {
 
           {/* <pre>
             {JSON.stringify(
-              state.agents.map((agent) => agent.position),
+              sortBy(state.agents, (agent) => agent.lineage, 'desc').map(
+                (agent, index) => ({
+                  index,
+                  lineage: agent.lineage,
+                }),
+              ),
               null,
               2,
             )}
@@ -495,12 +517,18 @@ export default function Evolution(_props: EvolutionProps) {
             </Stack>
           ) : null}
 
-          {state.history.length > 0 ? (
-            <Stack spacing={spacing.small}>
+          <Stack spacing={spacing.small}>
+            <Inline expand={0}>
               <Text
                 value={`Population (Max ${maxAgents})`}
                 color={colors.black40}
               />
+              <Button
+                onClick={handleToggleMetric('population')}
+                text={metricsVisible.population ? 'Hide' : 'Show'}
+              />
+            </Inline>
+            {metricsVisible.population && state.history.length > 0 ? (
               <VictoryChart theme={victoryChartTheme} height={200}>
                 <VictoryLine
                   data={state.history.map(({ move, agentMoves }) => ({
@@ -511,15 +539,43 @@ export default function Evolution(_props: EvolutionProps) {
                   y='size'
                 />
               </VictoryChart>
-            </Stack>
-          ) : null}
+            ) : null}
+          </Stack>
 
-          {state.historyRollup.length > 0 ? (
-            <Stack spacing={spacing.small}>
+          <Stack spacing={spacing.small}>
+            <Inline expand={0}>
+              <Text value={`Lineage (Avg Length)`} color={colors.black40} />
+              <Button
+                onClick={handleToggleMetric('lineage')}
+                text={metricsVisible.lineage ? 'Hide' : 'Show'}
+              />
+            </Inline>
+            {metricsVisible.lineage && state.history.length > 0 ? (
+              <VictoryChart theme={victoryChartTheme} height={200}>
+                <VictoryLine
+                  data={state.history.map(({ move, agentLineage }) => ({
+                    move,
+                    lineage: round(sum(agentLineage) / agentLineage.length),
+                  }))}
+                  x='move'
+                  y='lineage'
+                />
+              </VictoryChart>
+            ) : null}
+          </Stack>
+
+          <Stack spacing={spacing.small}>
+            <Inline expand={0}>
               <Text
                 value={`Difficulty (Max ${state.killersPerMoveMax})`}
                 color={colors.black40}
               />
+              <Button
+                onClick={handleToggleMetric('difficulty')}
+                text={metricsVisible.difficulty ? 'Hide' : 'Show'}
+              />
+            </Inline>
+            {metricsVisible.difficulty && state.historyRollup.length > 0 ? (
               <VictoryChart theme={victoryChartTheme} height={200}>
                 <VictoryLine
                   data={state.historyRollup}
@@ -527,8 +583,28 @@ export default function Evolution(_props: EvolutionProps) {
                   y='difficulty'
                 />
               </VictoryChart>
+            ) : null}
+          </Stack>
+
+          {/* {state.agents.length > 0 ? (
+            <Stack spacing={spacing.small}>
+              <Text value={`Lineage`} color={colors.black40} />
+              <VictoryChart theme={victoryChartTheme} height={200}>
+                <VictoryBar
+                  data={sortBy(
+                    state.agents,
+                    (agent) => agent.lineage,
+                    'desc',
+                  ).map((agent, index) => ({
+                    index,
+                    lineage: agent.lineage,
+                  }))}
+                  x='index'
+                  y='lineage'
+                />
+              </VictoryChart>
             </Stack>
-          ) : null}
+          ) : null} */}
         </Stack>
       </Stack>
     </PageContainer>

@@ -6,6 +6,16 @@ import {
 } from '../components/Board/lib/BoardState'
 import { Genome } from './Genome'
 
+interface AgentArgs {
+  genome?: Genome
+  gridHeight: number
+  gridWidth: number
+  id?: string
+  lineage?: number
+  moves?: number
+  position?: Position
+}
+
 export class Agent {
   static inputLabels = ['↱🟥', '→🟥', '↳🟥']
   static outputLabels = ['🟦→', '🟦↓', '🟦↑']
@@ -14,22 +24,16 @@ export class Agent {
   public genome: Genome
   public position: Position
   public moves: number = 0
+  public lineage: number = 0
   private gridWidth: number
   private gridHeight: number
 
-  constructor(
-    gridWidth: number,
-    gridHeight: number,
-    genome?: Genome,
-    position?: Position,
-    moves?: number,
-    id?: string,
-  ) {
-    this.gridWidth = gridWidth
-    this.gridHeight = gridHeight
+  constructor(args: AgentArgs) {
+    this.gridWidth = args.gridWidth
+    this.gridHeight = args.gridHeight
 
-    if (genome) {
-      this.genome = genome
+    if (args.genome) {
+      this.genome = args.genome
     } else {
       this.genome = new Genome({
         inputSize: Agent.inputLabels.length,
@@ -37,34 +41,55 @@ export class Agent {
       })
     }
 
-    if (position) {
-      this.position = position
+    if (args.position) {
+      this.position = args.position
     } else {
       this.position = [0, random(0, this.gridHeight - 1)]
     }
 
-    if (id) {
-      this.id = id
+    if (args.id) {
+      this.id = args.id
     } else {
       this.id = uniqueId()
     }
 
-    if (moves) {
-      this.moves = moves
+    if (args.moves) {
+      this.moves = args.moves
+    }
+
+    if (args.lineage) {
+      this.lineage = args.lineage
+    }
+  }
+
+  private getArgs(): AgentArgs {
+    return {
+      genome: this.genome,
+      gridHeight: this.gridHeight,
+      gridWidth: this.gridWidth,
+      id: this.id,
+      lineage: this.lineage,
+      moves: this.moves,
+      position: this.position,
     }
   }
 
   resetHistory(): Agent {
-    return new Agent(this.gridWidth, this.gridHeight, this.genome)
+    return new Agent({
+      gridWidth: this.gridWidth,
+      gridHeight: this.gridHeight,
+      genome: this.genome,
+    })
   }
 
   mutate(keepPosition = false): Agent {
-    return new Agent(
-      this.gridWidth,
-      this.gridHeight,
-      this.genome.mutate(),
-      keepPosition ? this.position : undefined,
-    )
+    return new Agent({
+      ...this.getArgs(),
+      genome: this.genome.mutate(),
+      position: keepPosition ? this.position : undefined,
+      moves: 0,
+      lineage: this.lineage + 1,
+    })
   }
 
   move(boardState: BoardState): Agent {
@@ -94,14 +119,11 @@ export class Agent {
       nextMoves++
     }
 
-    return new Agent(
-      this.gridWidth,
-      this.gridHeight,
-      this.genome,
-      nextPosition,
-      nextMoves,
-      this.id,
-    )
+    return new Agent({
+      ...this.getArgs(),
+      position: nextPosition,
+      moves: nextMoves,
+    })
   }
 
   private threatDistance(boardState: BoardState, offset: number): number {
