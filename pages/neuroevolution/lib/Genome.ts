@@ -1,4 +1,12 @@
-import { cloneDeep, random, sample, shuffle, uniqueId, without } from 'lodash'
+import {
+  cloneDeep,
+  random,
+  sample,
+  shuffle,
+  uniq,
+  uniqueId,
+  without,
+} from 'lodash'
 import { Neuron } from 'synaptic'
 
 type GeneNodeId = string
@@ -60,8 +68,8 @@ export class Genome {
     this.learningRate = options.learningRate || defaultLearningRate
 
     if (options.nodes && options.edges) {
-      this.nodes = cloneDeep(options.nodes)
-      this.edges = cloneDeep(options.edges)
+      this.nodes = options.nodes
+      this.edges = options.edges
     } else {
       const inputs = new Array(this.inputSize).fill(undefined).map(
         () =>
@@ -134,6 +142,60 @@ export class Genome {
     return this.nodes.slice(-this.outputSize)
   }
 
+  private validate(): boolean {
+    for (const edge of this.edges) {
+      if (
+        edge.fromNodeIndex > this.nodes.length - this.outputSize ||
+        edge.fromNodeIndex < 0
+      ) {
+        console.error(
+          `Edge fromNodeIndex ${edge.fromNodeIndex} is out of bounds`,
+          this,
+        )
+        return false
+      }
+      if (
+        edge.toNodeIndex < this.inputSize ||
+        edge.toNodeIndex > this.nodes.length - 1
+      ) {
+        console.error(
+          `Edge toNodeIndex ${edge.toNodeIndex} is out of bounds`,
+          this,
+        )
+        return false
+      }
+    }
+
+    for (let inputIndex = 0; inputIndex < this.inputSize; inputIndex++) {
+      const edges = this.edges.filter(
+        (edge) => edge.fromNodeIndex === inputIndex,
+      )
+      if (edges.length === 0) {
+        console.error(
+          `Input node ${inputIndex} has no edges connected to it`,
+          this,
+        )
+        return false
+      }
+    }
+
+    for (let outputNumber = 0; outputNumber < this.outputSize; outputNumber++) {
+      const outputIndex = this.nodes.length - 1 - outputNumber
+      const edges = this.edges.filter(
+        (edge) => edge.toNodeIndex === outputIndex,
+      )
+      if (edges.length === 0) {
+        console.error(
+          `Output node ${outputIndex} has no edges connected to it`,
+          this,
+        )
+        return false
+      }
+    }
+
+    return true
+  }
+
   compute(inputs: number[]): number[] {
     if (inputs.length !== this.inputSize) {
       throw new Error(`Expected ${this.inputSize} inputs, got ${inputs.length}`)
@@ -167,9 +229,16 @@ export class Genome {
 
     try {
       const nextGenome = this[mutation]()
+
       if (!nextGenome) {
         return this.mutate()
       } else {
+        if (!nextGenome.validate()) {
+          console.log(mutation, 'failed validation', {
+            prevGenome: this,
+            nextGenome,
+          })
+        }
         return nextGenome
       }
     } catch (error) {
@@ -186,25 +255,15 @@ export class Genome {
       bias: 1,
       squash: randSquash(),
     }
-    let nextNodes: GeneNode[] = cloneDeep(this.nodes)
-    nextNodes = [
-      ...this.inputNodes(),
-      ...this.hiddenNodes(),
+    const nextNodes = [
+      ...this.inputNodes().map(cloneDeep),
+      ...this.hiddenNodes().map(cloneDeep),
       newNode,
-      ...this.outputNodes(),
+      ...this.outputNodes().map(cloneDeep),
     ]
-
     const newNodeIndex = nextNodes.indexOf(newNode)
-    const intermediatedEdgeIndex = random(0, this.edges.length - 1)
-    const intermediatedEdge = cloneDeep(this.edges[intermediatedEdgeIndex])
-    const oldToIndex = intermediatedEdge.toNodeIndex
-    intermediatedEdge.toNodeIndex = newNodeIndex
-    const newEdge: GeneEdge = {
-      fromNodeIndex: newNodeIndex,
-      toNodeIndex: oldToIndex,
-      weight: 1,
-    }
-    const adjustedEdges = this.edges.map((edge) => {
+
+    let nextEdges = cloneDeep(this.edges).map((edge) => {
       const newEdge = cloneDeep(edge)
       if (edge.fromNodeIndex >= newNodeIndex) {
         newEdge.fromNodeIndex += 1
@@ -214,18 +273,48 @@ export class Genome {
       }
       return newEdge
     })
-    const nextEdges: GeneEdge[] = [
-      ...adjustedEdges.slice(0, intermediatedEdgeIndex),
-      intermediatedEdge,
-      newEdge,
-      ...adjustedEdges.slice(intermediatedEdgeIndex + 1),
-    ]
 
-    return new Genome({
-      ...this.getArgs(),
-      nodes: nextNodes,
-      edges: nextEdges,
-    })
+    const intermediatedEdgeIndex = random(0, nextEdges.length - 1)
+    const intermediatedEdge = nextEdges[intermediatedEdgeIndex]
+    const oldToIndex = intermediatedEdge.toNodeIndex
+    intermediatedEdge.toNodeIndex = newNodeIndex
+    nextEdges[intermediatedEdgeIndex] = intermediatedEdge
+
+    const newEdge: GeneEdge = {
+      fromNodeIndex: newNodeIndex,
+      toNodeIndex: oldToIndex,
+      weight: 1,
+    }
+    nextEdges.push(newEdge)
+
+    try {
+      const nextGenome = new Genome({
+        ...this.getArgs(),
+        nodes: nextNodes,
+        edges: nextEdges,
+      })
+
+      // if (!nextGenome.validate()) {
+      //   console.log('addNode failed validation')
+      //   console.log({
+      //     this: this,
+      //     nodes: nextNodes,
+      //     edges: nextEdges,
+      //     newNode,
+      //     intermediatedEdge,
+      //     newEdge,
+      //   })
+      // }
+
+      return nextGenome
+    } catch (error) {
+      console.log({
+        this: this,
+        nodes: nextNodes,
+        edges: nextEdges,
+      })
+      throw error
+    }
   }
 
   private addEdge(): Genome {
@@ -260,44 +349,55 @@ export class Genome {
       (edge) => edge.fromNodeIndex === removableNodeIndex,
     )
 
-    const fromNodeIndexes = toEdges.map((edge) => edge.fromNodeIndex)
-    const toNodeIndexes = fromEdges.map((edge) => edge.toNodeIndex)
+    let nextEdges = cloneDeep(without(this.edges, ...toEdges, ...fromEdges))
 
-    const nextEdges = this.edges
-      .filter(
-        (edge) =>
-          toEdges.indexOf(edge) === -1 && fromEdges.indexOf(edge) === -1,
-      )
-      .map(cloneDeep)
-      .map((edge) => {
-        if (edge.fromNodeIndex >= removableNodeIndex) {
-          edge.fromNodeIndex -= 1
-        }
-        if (edge.toNodeIndex >= removableNodeIndex) {
-          edge.toNodeIndex -= 1
-        }
-        return edge
-      })
-
+    const fromNodeIndexes = uniq(toEdges.map((edge) => edge.fromNodeIndex))
+    const toNodeIndexes = uniq(fromEdges.map((edge) => edge.toNodeIndex))
     for (const toIndex of toNodeIndexes) {
       for (const fromIndex of fromNodeIndexes) {
         nextEdges.push({
-          fromNodeIndex:
-            fromIndex >= removableNodeIndex ? fromIndex - 1 : fromIndex,
-          toNodeIndex: toIndex >= removableNodeIndex ? toIndex - 1 : toIndex,
+          fromNodeIndex: fromIndex,
+          toNodeIndex: toIndex,
           weight: 1,
         })
       }
     }
 
-    const nextNodes = cloneDeep(without(this.nodes, removableNode))
+    // Adjust indexes after removed node
+    nextEdges = nextEdges.map((edge) => {
+      if (edge.fromNodeIndex > removableNodeIndex) {
+        edge.fromNodeIndex -= 1
+      }
+      if (edge.toNodeIndex > removableNodeIndex) {
+        edge.toNodeIndex -= 1
+      }
+      return edge
+    })
+
+    const nextNodes = this.nodes.reduce((nodes, node) => {
+      if (node.id !== removableNode.id) {
+        nodes.push(cloneDeep(node))
+      }
+      return nodes
+    }, [] as GeneNode[])
 
     try {
-      return new Genome({
+      const nextGenome = new Genome({
         ...this.getArgs(),
         nodes: nextNodes,
         edges: nextEdges,
       })
+
+      // if (!nextGenome.validate()) {
+      //   console.log('removeNode failed validation')
+      //   console.log({
+      //     this: this,
+      //     nodes: nextNodes,
+      //     edges: nextEdges,
+      //   })
+      // }
+
+      return nextGenome
     } catch (error) {
       console.log({
         removableNode,

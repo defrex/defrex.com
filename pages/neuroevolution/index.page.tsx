@@ -1,4 +1,4 @@
-import { clone, groupBy, random, some, sortBy, sum } from 'lodash'
+import { clone, groupBy, random, round, some, sortBy, sum } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { VictoryChart, VictoryLine } from 'victory'
 import { Button } from '../../components/Button'
@@ -22,6 +22,7 @@ const minAgents = 10
 const maxAgents = 100
 const defaultDifficulty = 5
 const defaultCellSize = 16
+const historyRollupGranularity = 500
 const canvasWidth =
   typeof window === 'undefined'
     ? 768
@@ -31,7 +32,6 @@ const canvasWidth =
     ? 512
     : 256
 const canvasHeight = 512
-const historyRollupGranularity = 200
 
 function movesColor(moves: number, gridWidth: number): string {
   const maxRunColors = 10
@@ -54,7 +54,12 @@ type State = {
   cellSize: number
   gridHeight: number
   gridWidth: number
-  history: { move: number; difficulty: number; agentMoves: number[] }[]
+  history: {
+    move: number
+    difficulty: number
+    agentMoves: number[]
+    time: number
+  }[]
   historyRollup: { move: number; difficulty: number }[]
   killersPerMove: number
   killersPerMoveMax: number
@@ -298,6 +303,7 @@ export default function Evolution(_props: EvolutionProps) {
           move,
           difficulty: nextKillersPerMove,
           agentMoves: nextAgents.map(({ moves }) => moves),
+          time: Date.now(),
         },
       ]
 
@@ -366,7 +372,7 @@ export default function Evolution(_props: EvolutionProps) {
 
         <Stack spacing={spacing.xlarge}>
           <Stack>
-            <Inline>
+            <Inline expand={-1}>
               <Button onClick={handleReset} text='Reset' />
               <Inline spacing={spacing.xsmall}>
                 <Button
@@ -406,6 +412,20 @@ export default function Evolution(_props: EvolutionProps) {
                   />
                 ))}
               </Inline>
+
+              {state.history.length > 2 ? (
+                <Inline align='right'>
+                  <Text
+                    value={`${round(
+                      1 /
+                        ((state.history[state.history.length - 1].time -
+                          state.history[state.history.length - 2].time) /
+                          1000),
+                    )}fps`}
+                    color={colors.black40}
+                  />
+                </Inline>
+              ) : null}
             </Inline>
           </Stack>
 

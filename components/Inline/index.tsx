@@ -46,7 +46,11 @@ export function Inline({
         index + 1 < realChildren.length
           ? styles[`inline-item-${spacing}${debug ? '-debug' : ''}`]
           : null,
-        expand === 'all' || expand === index ? styles['expanded-item'] : null,
+        expand === 'all' ||
+          expand === index ||
+          (expand && expand < 0 && realChildren.length + expand === index)
+          ? styles['expanded-item']
+          : null,
         shrink === index ? styles['shrunk-item'] : null,
         styles[classNameForScreenConditions('vertical-item', verticalIf)],
       )
