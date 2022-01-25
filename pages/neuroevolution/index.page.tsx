@@ -1,6 +1,6 @@
 import { clone, groupBy, random, some, sortBy, sum } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { VictoryAxis, VictoryChart, VictoryLine } from 'victory'
+import { VictoryChart, VictoryLine } from 'victory'
 import { Button } from '../../components/Button'
 import { Inline } from '../../components/Inline'
 import { PageContainer } from '../../components/PageContainer'
