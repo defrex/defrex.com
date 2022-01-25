@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { EdgeData, NodeData } from 'reaflow'
-import { colorValues } from '../../lib/colors'
-import { Agent } from '../../pages/neuroevolution/lib/Agent'
-import { Genome } from '../../pages/neuroevolution/lib/Genome'
+import { colorValues } from '../../../../lib/colors'
+import { Agent } from '../../lib/Agent'
+import { Genome } from '../../lib/Genome'
 
 interface GenomeViewProps {
   genome: Genome

@@ -36,9 +36,9 @@ export class Agent {
         outputSize: Agent.outputLabels.length,
       })
 
-      for (let i = 0; i < random(0, 10); i++) {
-        this.genome = this.genome.mutate()
-      }
+      // for (let i = 0; i < random(0, 10); i++) {
+      //   this.genome = this.genome.mutate()
+      // }
     }
 
     if (position) {

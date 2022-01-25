@@ -17,9 +17,10 @@ const colorScale = [
 // *
 // * Typography
 // *
-const sansSerif = "'Gill Sans', 'Seravek', 'Trebuchet MS', sans-serif"
+const sansSerif =
+  "'Open Sans', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif"
 const letterSpacing = 'normal'
-const fontSize = 14
+const fontSize = 10
 // *
 // * Layout
 // *

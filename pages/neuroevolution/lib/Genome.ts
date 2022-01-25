@@ -36,6 +36,8 @@ function mutateScalar(value: number, learningRate: number): number {
   return nextValue
 }
 
+export const defaultLearningRate = 0.5
+
 interface GenomeArgs {
   nodes?: GeneNode[]
   edges?: GeneEdge[]
@@ -55,7 +57,7 @@ export class Genome {
   constructor(options: GenomeArgs = {}) {
     this.inputSize = options.inputSize || 2
     this.outputSize = options.outputSize || 4
-    this.learningRate = options.learningRate || 0.5
+    this.learningRate = options.learningRate || defaultLearningRate
 
     if (options.nodes && options.edges) {
       this.nodes = cloneDeep(options.nodes)

@@ -2,7 +2,6 @@ import { clone, groupBy, random, some, sortBy, sum } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { VictoryAxis, VictoryChart, VictoryLine } from 'victory'
 import { Button } from '../../components/Button'
-import { GenomeView } from '../../components/GenomeView'
 import { Inline } from '../../components/Inline'
 import { PageContainer } from '../../components/PageContainer'
 import { Stack } from '../../components/Stack'
@@ -13,6 +12,8 @@ import { spacing } from '../../lib/spacing'
 import { victoryChartTheme } from '../../lib/victoryChartTheme'
 import { Board } from './components/Board'
 import { BoardState, Position } from './components/Board/lib/BoardState'
+import { GenomeView } from './components/GenomeView'
+import HowItWorks from './components/HowItWorks'
 import { Agent } from './lib/Agent'
 
 interface EvolutionProps {}
@@ -100,6 +101,7 @@ function bestAgent(agents: Agent[]): Agent {
 export default function Evolution(_props: EvolutionProps) {
   const frameRef = useRef<number>()
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
+  const [showHowItWorks, setShowHowItWorks] = useState(false)
   const [state, setState] = useState<State>(initState())
 
   const handleReset = useCallback(() => {
@@ -153,6 +155,7 @@ export default function Evolution(_props: EvolutionProps) {
       sampleAgents: [
         ...state.sampleAgents,
         { move: state.move, agent: nextSampleAgent },
+        // { move: 0, agent: new Agent(state.gridWidth, state.gridHeight) },
       ],
     })
   }, [setState, state])
@@ -171,6 +174,10 @@ export default function Evolution(_props: EvolutionProps) {
   const handleToggleAutoSample = useCallback(() => {
     setState({ ...state, autoSample: !state.autoSample })
   }, [setState, state])
+
+  const handleToggleHowItWorks = useCallback(() => {
+    setShowHowItWorks(!showHowItWorks)
+  }, [setShowHowItWorks, showHowItWorks])
 
   const renderFrame = () => {
     setState((currentState) => {
@@ -327,13 +334,21 @@ export default function Evolution(_props: EvolutionProps) {
   return (
     <PageContainer title='Neutoevolution'>
       <Stack spacing={spacing.large}>
-        <Stack spacing={spacing.small}>
-          <Text value='Neuroevolution' size={20} />
-          <Text
-            value='Neural Networks trained via Evolutionary Algorithm'
-            color={colors.black40}
+        <Inline expand={0}>
+          <Stack spacing={spacing.small}>
+            <Text value='Neuroevolution' size={20} />
+            <Text
+              value='Neural Networks trained via Evolutionary Algorithm'
+              color={colors.black40}
+            />
+          </Stack>
+          <Button
+            onClick={handleToggleHowItWorks}
+            text={showHowItWorks ? 'Hide' : 'How It Works'}
           />
-        </Stack>
+        </Inline>
+
+        {showHowItWorks ? <HowItWorks /> : null}
 
         <Board
           boardState={state.boardState}
