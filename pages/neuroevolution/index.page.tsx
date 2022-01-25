@@ -19,7 +19,7 @@ interface EvolutionProps {}
 
 const minAgents = 10
 const maxAgents = 100
-const maxDifficulty = 3
+const maxDifficulty = 5
 const defaultCellSize = 16
 const canvasWidth =
   typeof window === 'undefined'
@@ -30,7 +30,7 @@ const canvasWidth =
     ? 512
     : 256
 const canvasHeight = 512
-const historyRollupGranularity = 100
+const historyRollupGranularity = 200
 
 function movesColor(moves: number, gridWidth: number): string {
   const maxRunColors = 10
@@ -287,7 +287,7 @@ export default function Evolution(_props: EvolutionProps) {
       ]
 
       let nextHistoryRollup = historyRollup
-      if (move > 0 && move % historyRollupGranularity === 0) {
+      if (move % historyRollupGranularity === 0) {
         nextHistoryRollup = [
           ...nextHistoryRollup,
           {
@@ -454,7 +454,10 @@ export default function Evolution(_props: EvolutionProps) {
 
           {state.history.length > 0 ? (
             <Stack spacing={spacing.small}>
-              <Text value='Population' color={colors.black40} />
+              <Text
+                value={`Population (Max ${maxAgents})`}
+                color={colors.black40}
+              />
               <VictoryChart theme={victoryChartTheme} height={200}>
                 <VictoryAxis label='Move' />
                 <VictoryAxis dependentAxis />
@@ -472,7 +475,10 @@ export default function Evolution(_props: EvolutionProps) {
 
           {state.historyRollup.length > 0 ? (
             <Stack spacing={spacing.small}>
-              <Text value='Historic Difficulty' color={colors.black40} />
+              <Text
+                value={`Difficulty (Max ${maxDifficulty})`}
+                color={colors.black40}
+              />
               <VictoryChart theme={victoryChartTheme} height={200}>
                 <VictoryAxis label='Move' />
                 <VictoryAxis dependentAxis />
