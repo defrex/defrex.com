@@ -20,7 +20,7 @@ interface EvolutionProps {}
 
 const minAgents = 10
 const maxAgents = 100
-const maxDifficulty = 5
+const defaultDifficulty = 5
 const defaultCellSize = 16
 const canvasWidth =
   typeof window === 'undefined'
@@ -43,7 +43,7 @@ function movesColor(moves: number, gridWidth: number): string {
   return color
 }
 
-function difficulty(survivors: number): number {
+function difficulty(survivors: number, maxDifficulty: number): number {
   const proportion = (survivors - minAgents) / (maxAgents - minAgents)
   return maxDifficulty * proportion
 }
@@ -57,6 +57,7 @@ type State = {
   history: { move: number; difficulty: number; agentMoves: number[] }[]
   historyRollup: { move: number; difficulty: number }[]
   killersPerMove: number
+  killersPerMoveMax: number
   lifeSpans: Record<number, number>
   move: number
   running: boolean
@@ -80,6 +81,7 @@ function initState(): State {
     history: [],
     historyRollup: [],
     killersPerMove: 1,
+    killersPerMoveMax: defaultDifficulty,
     lifeSpans: {},
     move: 0,
     running: false,
@@ -142,6 +144,8 @@ export default function Evolution(_props: EvolutionProps) {
         gridWidth,
         gridHeight,
         boardState: state.boardState.setGrid(gridWidth, gridHeight, cellSize),
+        killersPerMoveMax:
+          defaultDifficulty * (1 / (cellSize / defaultCellSize)),
       })
     },
     [setState, state],
@@ -194,6 +198,7 @@ export default function Evolution(_props: EvolutionProps) {
         history,
         historyRollup,
         killersPerMove,
+        killersPerMoveMax,
         lifeSpans,
         move,
         running,
@@ -248,7 +253,10 @@ export default function Evolution(_props: EvolutionProps) {
         }
       }
 
-      let nextKillersPerMove = difficulty(survivingAgents.length)
+      let nextKillersPerMove = difficulty(
+        survivingAgents.length,
+        killersPerMoveMax,
+      )
 
       if (nextAgents.length === maxAgents) {
         // Max agents, kill the weak
@@ -491,7 +499,7 @@ export default function Evolution(_props: EvolutionProps) {
           {state.historyRollup.length > 0 ? (
             <Stack spacing={spacing.small}>
               <Text
-                value={`Difficulty (Max ${maxDifficulty})`}
+                value={`Difficulty (Max ${state.killersPerMoveMax})`}
                 color={colors.black40}
               />
               <VictoryChart theme={victoryChartTheme} height={200}>

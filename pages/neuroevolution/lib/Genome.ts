@@ -122,6 +122,18 @@ export class Genome {
     }
   }
 
+  private inputNodes(): GeneNode[] {
+    return this.nodes.slice(0, this.inputSize)
+  }
+
+  private hiddenNodes(): GeneNode[] {
+    return this.nodes.slice(this.inputSize, -this.outputSize)
+  }
+
+  private outputNodes(): GeneNode[] {
+    return this.nodes.slice(-this.outputSize)
+  }
+
   compute(inputs: number[]): number[] {
     if (inputs.length !== this.inputSize) {
       throw new Error(`Expected ${this.inputSize} inputs, got ${inputs.length}`)
@@ -146,6 +158,7 @@ export class Genome {
     const mutation = sample([
       'addNode' as const,
       'addEdge' as const,
+      'removeNode' as const,
       'removeEdge' as const,
       'mutateEdgeWeight' as const,
       'mutateNodeBias' as const,
@@ -169,9 +182,10 @@ export class Genome {
     }
     let nextNodes: GeneNode[] = cloneDeep(this.nodes)
     nextNodes = [
-      ...nextNodes.slice(0, -this.outputSize),
+      ...this.inputNodes(),
+      ...this.hiddenNodes(),
       newNode,
-      ...nextNodes.slice(-this.outputSize),
+      ...this.outputNodes(),
     ]
 
     const newNodeIndex = nextNodes.indexOf(newNode)
@@ -206,6 +220,57 @@ export class Genome {
       nodes: nextNodes,
       edges: nextEdges,
     })
+  }
+
+  private removeNode(): Genome | null {
+    const removableNode = sample(this.hiddenNodes())!
+    const removableNodeIndex = this.nodes.indexOf(removableNode)
+    const toEdges = this.edges.filter(
+      (edge) => edge.toNodeIndex === removableNodeIndex,
+    )
+    const fromEdges = this.edges.filter(
+      (edge) => edge.fromNodeIndex === removableNodeIndex,
+    )
+
+    const fromNodeIndexes = toEdges.map((edge) => edge.fromNodeIndex)
+    const toNodeIndexes = fromEdges.map((edge) => edge.toNodeIndex)
+
+    const nextEdges = this.edges
+      .filter(
+        (edge) =>
+          toEdges.indexOf(edge) === -1 && fromEdges.indexOf(edge) === -1,
+      )
+      .map(cloneDeep)
+      .map((edge) => {
+        if (edge.fromNodeIndex >= removableNodeIndex) {
+          edge.fromNodeIndex -= 1
+        }
+        if (edge.toNodeIndex >= removableNodeIndex) {
+          edge.toNodeIndex -= 1
+        }
+        return edge
+      })
+
+    for (const toIndex of toNodeIndexes) {
+      for (const fromIndex of fromNodeIndexes) {
+        nextEdges.push({
+          fromNodeIndex: fromIndex,
+          toNodeIndex: toIndex,
+          weight: 1,
+        })
+      }
+    }
+
+    if (!removableNode) {
+      return null
+    } else {
+      const nextGenome = new Genome({
+        ...this.getArgs(),
+        nodes: cloneDeep(without(this.nodes, removableNode)),
+        edges: nextEdges,
+      })
+      return nextGenome
+    }
   }
 
   private addEdge(): Genome {

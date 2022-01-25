@@ -30,7 +30,7 @@ export default function HowItWorks(_props: HowItWorksProps) {
           When a 🟦 reaches the right edge, it circles back to the left edge
           and spawns a new child 🟦, which is the same as it's parent, but for
           a single mutation. The 🟥 spawn rate is directly proportional to the
-          population size, the the more the 🟦 win, the harder it gets.
+          population size, so the more the 🟦 win, the harder it gets.
         `}
       />
 
@@ -112,6 +112,15 @@ export default function HowItWorks(_props: HowItWorksProps) {
           size={14}
           color={colors.black30}
           value='Select two random nodes and add an edge with weight 1.'
+        />
+      </Stack>
+
+      <Stack spacing={spacing.small}>
+        <Text value='Remove Node' size={14} />
+        <Text
+          size={14}
+          color={colors.black30}
+          value={`Find and remove a hidden node, connecting all it's inbound edges to all it's outbound edges.`}
         />
       </Stack>
 
