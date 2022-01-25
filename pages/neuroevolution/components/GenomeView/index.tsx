@@ -1,3 +1,4 @@
+import { round } from 'lodash'
 import { useEffect, useMemo, useState } from 'react'
 import { EdgeData, NodeData } from 'reaflow'
 import { colorValues } from '../../../../lib/colors'
@@ -31,7 +32,7 @@ export function GenomeView({ genome }: GenomeViewProps) {
           : node.type === 'hidden'
           ? ''
           : node.type
-      } ${node.bias}`,
+      } ${round(node.bias, 2)}`,
     }))
   }, [genome])
 
@@ -40,7 +41,7 @@ export function GenomeView({ genome }: GenomeViewProps) {
       id: index.toString(),
       from: edge.fromNodeIndex.toString(),
       to: edge.toNodeIndex.toString(),
-      text: edge.weight.toString(),
+      text: round(edge.weight, 2).toString(),
     }))
   }, [genome])
 
@@ -54,6 +55,8 @@ export function GenomeView({ genome }: GenomeViewProps) {
         // maxHeight={768}
         nodes={nodes}
         edges={edges}
+        disabled={true}
+        animated={false}
         node={
           <realflow.Node
             style={{

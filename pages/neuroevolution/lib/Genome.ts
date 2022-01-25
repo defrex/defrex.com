@@ -228,6 +228,24 @@ export class Genome {
     })
   }
 
+  private addEdge(): Genome {
+    const newEdge = {
+      fromNodeIndex: this.nodes.indexOf(
+        sample([...this.inputNodes(), ...this.hiddenNodes()])!,
+      ),
+      toNodeIndex: this.nodes.indexOf(
+        sample([...this.hiddenNodes(), ...this.outputNodes()])!,
+      ),
+      weight: 1,
+    }
+    const nextGenome = new Genome({
+      ...this.getArgs(),
+      nodes: cloneDeep(this.nodes),
+      edges: cloneDeep([...this.edges, newEdge]),
+    })
+    return nextGenome
+  }
+
   private removeNode(): Genome | null {
     const removableNode = sample(this.hiddenNodes())
     if (!removableNode) {
@@ -290,31 +308,13 @@ export class Genome {
     }
   }
 
-  private addEdge(): Genome {
-    const newEdge = {
-      fromNodeIndex: this.nodes.indexOf(
-        sample([...this.inputNodes(), ...this.hiddenNodes()])!,
-      ),
-      toNodeIndex: this.nodes.indexOf(
-        sample([...this.hiddenNodes(), ...this.outputNodes()])!,
-      ),
-      weight: 1,
-    }
-    const nextGenome = new Genome({
-      ...this.getArgs(),
-      nodes: cloneDeep(this.nodes),
-      edges: cloneDeep([...this.edges, newEdge]),
-    })
-    return nextGenome
-  }
-
   private removeEdge(): Genome | null {
-    const removableEdge = shuffle(this.edges).find((edge) => {
+    const removableEdge = shuffle(this.edges).find((candidateEdge) => {
       const fromEdges = this.edges.filter(
-        (edge) => edge.fromNodeIndex === edge.fromNodeIndex,
+        (edge) => edge.fromNodeIndex === candidateEdge.fromNodeIndex,
       ).length
       const toEdges = this.edges.filter(
-        (edge) => edge.toNodeIndex === edge.toNodeIndex,
+        (edge) => edge.toNodeIndex === candidateEdge.toNodeIndex,
       ).length
       return fromEdges > 1 && toEdges > 1
     })
