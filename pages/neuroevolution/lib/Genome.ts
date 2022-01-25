@@ -68,7 +68,7 @@ export class Genome {
           ({
             type: 'input',
             id: uniqueId(),
-            bias: random(-1, 1),
+            bias: 1,
             squash: Neuron.squash.IDENTITY,
           } as GeneNode),
       )
@@ -77,7 +77,7 @@ export class Genome {
           ({
             type: 'output',
             id: uniqueId(),
-            bias: random(-1, 1),
+            bias: 1,
             squash: randSquash(),
           } as GeneNode),
       )
@@ -165,11 +165,17 @@ export class Genome {
       'mutateNodeSquash' as const,
     ])!
 
-    const nextGenome = this[mutation]()
-    if (!nextGenome) {
+    try {
+      const nextGenome = this[mutation]()
+      if (!nextGenome) {
+        return this.mutate()
+      } else {
+        return nextGenome
+      }
+    } catch (error) {
+      console.log({ mutation, genome: this })
+      console.error(error)
       return this.mutate()
-    } else {
-      return nextGenome
     }
   }
 
@@ -223,7 +229,11 @@ export class Genome {
   }
 
   private removeNode(): Genome | null {
-    const removableNode = sample(this.hiddenNodes())!
+    const removableNode = sample(this.hiddenNodes())
+    if (!removableNode) {
+      return null
+    }
+
     const removableNodeIndex = this.nodes.indexOf(removableNode)
     const toEdges = this.edges.filter(
       (edge) => edge.toNodeIndex === removableNodeIndex,
@@ -254,32 +264,39 @@ export class Genome {
     for (const toIndex of toNodeIndexes) {
       for (const fromIndex of fromNodeIndexes) {
         nextEdges.push({
-          fromNodeIndex: fromIndex,
-          toNodeIndex: toIndex,
+          fromNodeIndex:
+            fromIndex >= removableNodeIndex ? fromIndex - 1 : fromIndex,
+          toNodeIndex: toIndex >= removableNodeIndex ? toIndex - 1 : toIndex,
           weight: 1,
         })
       }
     }
 
-    if (!removableNode) {
-      return null
-    } else {
-      const nextGenome = new Genome({
+    const nextNodes = cloneDeep(without(this.nodes, removableNode))
+
+    try {
+      return new Genome({
         ...this.getArgs(),
-        nodes: cloneDeep(without(this.nodes, removableNode)),
+        nodes: nextNodes,
         edges: nextEdges,
       })
-      return nextGenome
+    } catch (error) {
+      console.log({
+        removableNode,
+        nodes: nextNodes,
+        edges: nextEdges,
+      })
+      throw error
     }
   }
 
   private addEdge(): Genome {
     const newEdge = {
       fromNodeIndex: this.nodes.indexOf(
-        sample(this.nodes.slice(0, -this.outputSize))!,
+        sample([...this.inputNodes(), ...this.hiddenNodes()])!,
       ),
       toNodeIndex: this.nodes.indexOf(
-        sample(this.nodes.slice(this.inputSize))!,
+        sample([...this.hiddenNodes(), ...this.outputNodes()])!,
       ),
       weight: 1,
     }
@@ -335,7 +352,9 @@ export class Genome {
 
   private mutateNodeBias(): Genome {
     const nextNodes = cloneDeep(this.nodes)
-    const nextNode = { ...sample(nextNodes.slice(this.inputSize))! }
+    const nextNode = {
+      ...sample([...this.hiddenNodes(), ...this.outputNodes()])!,
+    }
     nextNode.bias = mutateScalar(nextNode.bias, this.learningRate)
     return new Genome({
       ...this.getArgs(),
@@ -352,7 +371,9 @@ export class Genome {
 
   private mutateNodeSquash(): Genome {
     const nextNodes = cloneDeep(this.nodes)
-    const nextNode = { ...sample(nextNodes)! }
+    const nextNode = {
+      ...sample([...this.hiddenNodes(), ...this.outputNodes()])!,
+    }
     nextNode.squash = randSquash()
     return new Genome({
       ...this.getArgs(),

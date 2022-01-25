@@ -27,7 +27,7 @@ const fontSize = 10
 const baseProps = {
   width: 450,
   height: 300,
-  padding: 50,
+  padding: { left: 30, bottom: 30 },
   colorScale,
 }
 // *

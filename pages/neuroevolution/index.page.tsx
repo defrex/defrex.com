@@ -482,8 +482,6 @@ export default function Evolution(_props: EvolutionProps) {
                 color={colors.black40}
               />
               <VictoryChart theme={victoryChartTheme} height={200}>
-                <VictoryAxis label='Move' />
-                <VictoryAxis dependentAxis />
                 <VictoryLine
                   data={state.history.map(({ move, agentMoves }) => ({
                     move,
@@ -503,8 +501,6 @@ export default function Evolution(_props: EvolutionProps) {
                 color={colors.black40}
               />
               <VictoryChart theme={victoryChartTheme} height={200}>
-                <VictoryAxis label='Move' />
-                <VictoryAxis dependentAxis />
                 <VictoryLine
                   data={state.historyRollup}
                   x='move'
