@@ -1,4 +1,4 @@
-import { clone, groupBy, max, random, range, some, sortBy, sum } from 'lodash'
+import { clone, groupBy, random, some, sortBy, sum } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { VictoryAxis, VictoryChart, VictoryLine } from 'victory'
 import { Button } from '../../components/Button'
@@ -8,7 +8,6 @@ import { PageContainer } from '../../components/PageContainer'
 import { Stack } from '../../components/Stack'
 import { Text } from '../../components/Text'
 import { colors, colorValues } from '../../lib/colors'
-import { round } from '../../lib/round'
 import { sleep } from '../../lib/sleep'
 import { spacing } from '../../lib/spacing'
 import { victoryChartTheme } from '../../lib/victoryChartTheme'
@@ -31,6 +30,7 @@ const canvasWidth =
     ? 512
     : 256
 const canvasHeight = 512
+const historyRollupGranularity = 100
 
 function movesColor(moves: number, gridWidth: number): string {
   const maxRunColors = 10
@@ -49,18 +49,19 @@ function difficulty(survivors: number): number {
 
 type State = {
   agents: Agent[]
-  autoDifficulty: boolean
   boardState: BoardState
   cellSize: number
   gridHeight: number
   gridWidth: number
   history: { move: number; difficulty: number; agentMoves: number[] }[]
+  historyRollup: { move: number; difficulty: number }[]
   killersPerMove: number
   lifeSpans: Record<number, number>
-  moves: number
+  move: number
   running: boolean
   speed: number
-  topAgent?: Agent
+  sampleAgents: { move: number; agent: Agent }[]
+  autoSample: boolean
 }
 
 function initState(): State {
@@ -71,17 +72,19 @@ function initState(): State {
     agents: new Array(minAgents)
       .fill(0)
       .map((_, i) => new Agent(gridWidth, gridHeight)),
-    autoDifficulty: true,
     boardState: new BoardState({ gridWidth, gridHeight, cellSize }),
+    cellSize,
+    gridHeight,
+    gridWidth,
+    history: [],
+    historyRollup: [],
+    killersPerMove: 1,
     lifeSpans: {},
+    move: 0,
     running: false,
     speed: 0,
-    moves: 0,
-    killersPerMove: 1,
-    history: [],
-    cellSize,
-    gridWidth,
-    gridHeight,
+    sampleAgents: [],
+    autoSample: false,
   }
 }
 
@@ -96,8 +99,7 @@ function bestAgent(agents: Agent[]): Agent {
 
 export default function Evolution(_props: EvolutionProps) {
   const frameRef = useRef<number>()
-  const [showTopGenome, setShowTopGenome] = useState(false)
-  const [sampleAgent, setSampleAgent] = useState<Agent | null>(null)
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
   const [state, setState] = useState<State>(initState())
 
   const handleReset = useCallback(() => {
@@ -128,24 +130,6 @@ export default function Evolution(_props: EvolutionProps) {
     [setState, state],
   )
 
-  const handleSetDifficulty = useCallback(
-    (killersPerMove: number | null) => () => {
-      if (killersPerMove) {
-        setState({
-          ...state,
-          killersPerMove,
-          autoDifficulty: false,
-        })
-      } else {
-        setState({
-          ...state,
-          autoDifficulty: true,
-        })
-      }
-    },
-    [setState, state],
-  )
-
   const handleCellSize = useCallback(
     (cellSize: number) => () => {
       const gridWidth = canvasWidth / cellSize
@@ -161,31 +145,32 @@ export default function Evolution(_props: EvolutionProps) {
     [setState, state],
   )
 
-  const handleToggleTopGenome = useCallback(() => {
-    if (!showTopGenome) {
-      console.log('👑', state.topAgent?.moves, state.topAgent?.genome)
-    }
-    setShowTopGenome(!showTopGenome)
-  }, [setShowTopGenome, showTopGenome])
-
   const handleSampleAgent = useCallback(() => {
     const nextSampleAgent = bestAgent(state.agents)
     console.log('Sample', nextSampleAgent.moves, nextSampleAgent.genome)
-    setSampleAgent(nextSampleAgent)
-  }, [setSampleAgent, state])
-
-  const handleClearSampleAgent = useCallback(() => {
-    setSampleAgent(null)
-  }, [setSampleAgent, state])
-
-  const handleSpawnTopAgent = useCallback(() => {
-    if (!state.topAgent) return
-
     setState({
       ...state,
-      agents: [...state.agents, state.topAgent.resetHistory()],
+      sampleAgents: [
+        ...state.sampleAgents,
+        { move: state.move, agent: nextSampleAgent },
+      ],
     })
-  }, [state, setState])
+  }, [setState, state])
+
+  const handleSelectAgent = useCallback(
+    (agent: Agent) => () => {
+      setSelectedAgent(agent)
+    },
+    [setSelectedAgent],
+  )
+
+  const handleClearSelectedAgent = useCallback(() => {
+    setSelectedAgent(null)
+  }, [setSelectedAgent])
+
+  const handleToggleAutoSample = useCallback(() => {
+    setState({ ...state, autoSample: !state.autoSample })
+  }, [setState, state])
 
   const renderFrame = () => {
     setState((currentState) => {
@@ -196,24 +181,24 @@ export default function Evolution(_props: EvolutionProps) {
 
       const {
         agents,
-        autoDifficulty,
         boardState,
         gridHeight,
         gridWidth,
         history,
+        historyRollup,
         killersPerMove,
         lifeSpans,
-        moves,
+        move,
         running,
         speed,
-        topAgent,
+        sampleAgents,
+        autoSample,
       } = currentState
 
-      const currentTopAgent = bestAgent(agents)
-      const nextTopAgent =
-        topAgent && topAgent.moves > currentTopAgent.moves
-          ? topAgent
-          : currentTopAgent
+      const nextSampleAgents =
+        move > 0 && move % 500 === 0 && autoSample
+          ? [...sampleAgents, { move, agent: bestAgent(agents) }]
+          : sampleAgents
 
       const killPositions = boardState.getPositions('kill')
       const nextKillPositions: Position[] = killPositions
@@ -256,12 +241,9 @@ export default function Evolution(_props: EvolutionProps) {
         }
       }
 
-      let nextKillersPerMove = killersPerMove
-      if (autoDifficulty) {
-        nextKillersPerMove = difficulty(survivingAgents.length)
-      }
+      let nextKillersPerMove = difficulty(survivingAgents.length)
 
-      if (nextAgents.length === 100) {
+      if (nextAgents.length === maxAgents) {
         // Max agents, kill the weak
         nextAgents = sortBy(nextAgents, 'moves').slice(-95)
       }
@@ -298,11 +280,27 @@ export default function Evolution(_props: EvolutionProps) {
       const nextHistory = [
         ...history.slice(-500),
         {
-          move: moves,
+          move,
           difficulty: nextKillersPerMove,
           agentMoves: nextAgents.map(({ moves }) => moves),
         },
       ]
+
+      let nextHistoryRollup = historyRollup
+      if (move > 0 && move % historyRollupGranularity === 0) {
+        nextHistoryRollup = [
+          ...nextHistoryRollup,
+          {
+            move,
+            difficulty:
+              sum(
+                history
+                  .slice(-historyRollupGranularity)
+                  .map(({ difficulty }) => difficulty),
+              ) / historyRollupGranularity,
+          },
+        ]
+      }
 
       return {
         ...currentState,
@@ -311,10 +309,12 @@ export default function Evolution(_props: EvolutionProps) {
         lifeSpans: nextLifespans,
         running,
         speed,
-        moves: moves + 1,
-        topAgent: nextTopAgent,
+        move: move + 1,
+        sampleAgents: nextSampleAgents,
         killersPerMove: nextKillersPerMove,
         history: nextHistory,
+        historyRollup: nextHistoryRollup,
+        autoSample,
       }
     })
   }
@@ -386,32 +386,6 @@ export default function Evolution(_props: EvolutionProps) {
             </Inline>
           </Stack>
 
-          <Stack spacing={spacing.small}>
-            <Text value='Difficulty (spawns/frame)' color={colors.black40} />
-            <Inline spacing={spacing.xsmall}>
-              <Button
-                onClick={handleSetDifficulty(null)}
-                text='Auto'
-                disabled={state.autoDifficulty}
-              />
-              {range(
-                0,
-                maxDifficulty + maxDifficulty / 5,
-                maxDifficulty / 5,
-              ).map((killersPerMove) => (
-                <Button
-                  key={killersPerMove}
-                  onClick={handleSetDifficulty(killersPerMove)}
-                  text={round(killersPerMove, 2).toString()}
-                  disabled={
-                    !state.autoDifficulty &&
-                    state.killersPerMove === killersPerMove
-                  }
-                />
-              ))}
-            </Inline>
-          </Stack>
-
           {/* <pre>
             {JSON.stringify(
               state.agents.map((agent) => agent.position),
@@ -420,62 +394,63 @@ export default function Evolution(_props: EvolutionProps) {
             )}
           </pre> */}
 
-          {state.topAgent ? (
+          <Stack>
+            <Inline expand={0}>
+              <Text value='Sample Agents' color={colors.black40} />
+              <Button
+                onClick={handleToggleAutoSample}
+                text={`${state.autoSample ? '☑' : '☐'} Auto Sample`}
+              />
+              <Button onClick={handleSampleAgent} text='Sample' />
+            </Inline>
+            {state.sampleAgents.map(({ move, agent }) => (
+              <Stack key={agent.id}>
+                <Inline expand={0}>
+                  <Stack spacing={spacing.small}>
+                    <Inline spacing={spacing.small}>
+                      <Text value={`${move}`} />
+                      <div
+                        style={{
+                          backgroundColor: movesColor(
+                            agent.moves,
+                            state.gridWidth,
+                          ),
+                          height: state.cellSize * 0.5,
+                          width: state.cellSize * 0.5,
+                        }}
+                      />
+                    </Inline>
+                  </Stack>
+                  <Button onClick={handleSelectAgent(agent)} text='Select' />
+                </Inline>
+              </Stack>
+            ))}
+          </Stack>
+
+          {selectedAgent ? (
             <Stack>
               <Inline expand={0}>
                 <Stack spacing={spacing.small}>
-                  <Text value='Top Agent 👑' color={colors.black40} />
+                  <Text value='Selected Agent' color={colors.black40} />
                   <Inline spacing={spacing.small}>
                     <div
                       style={{
                         backgroundColor: movesColor(
-                          state.topAgent.moves,
+                          selectedAgent.moves,
                           state.gridWidth,
                         ),
                         height: 8,
                         width: 8,
                       }}
                     />
-                    <Text value={`${state.topAgent.moves} moves`} />
+                    <Text value={`${selectedAgent.moves} moves`} />
                   </Inline>
                 </Stack>
-                <Button onClick={handleSpawnTopAgent} text='Spawn' />
-                <Button
-                  onClick={handleToggleTopGenome}
-                  text={showTopGenome ? 'Hide Brain' : 'Show Brain'}
-                />
+                <Button onClick={handleClearSelectedAgent} text='Clear' />
               </Inline>
-              {showTopGenome ? (
-                <GenomeView genome={state.topAgent.genome} />
-              ) : null}
+              <GenomeView genome={selectedAgent.genome} />
             </Stack>
           ) : null}
-
-          <Stack>
-            <Inline expand={0}>
-              <Stack spacing={spacing.small}>
-                <Text value='Sample Agent' color={colors.black40} />
-                {sampleAgent ? (
-                  <Inline spacing={spacing.small}>
-                    <div
-                      style={{
-                        backgroundColor: movesColor(
-                          sampleAgent.moves,
-                          state.gridWidth,
-                        ),
-                        height: 8,
-                        width: 8,
-                      }}
-                    />
-                    <Text value={`${sampleAgent.moves} moves`} />
-                  </Inline>
-                ) : null}
-              </Stack>
-              <Button onClick={handleSampleAgent} text='Sample' />
-              <Button onClick={handleClearSampleAgent} text='Clear' />
-            </Inline>
-            {sampleAgent ? <GenomeView genome={sampleAgent.genome} /> : null}
-          </Stack>
 
           {state.history.length > 0 ? (
             <Stack spacing={spacing.small}>
@@ -492,38 +467,19 @@ export default function Evolution(_props: EvolutionProps) {
                   y='size'
                 />
               </VictoryChart>
-              <Text value='Difficulty' color={colors.black40} />
+            </Stack>
+          ) : null}
+
+          {state.historyRollup.length > 0 ? (
+            <Stack spacing={spacing.small}>
+              <Text value='Historic Difficulty' color={colors.black40} />
               <VictoryChart theme={victoryChartTheme} height={200}>
                 <VictoryAxis label='Move' />
                 <VictoryAxis dependentAxis />
                 <VictoryLine
-                  data={state.history.map(({ move, difficulty }) => ({
-                    move,
-                    difficulty,
-                  }))}
+                  data={state.historyRollup}
                   x='move'
                   y='difficulty'
-                />
-              </VictoryChart>
-              <Text value='Age (Top + Avg)' color={colors.black40} />
-              <VictoryChart theme={victoryChartTheme} height={200}>
-                <VictoryAxis label='Move' />
-                <VictoryAxis dependentAxis />
-                <VictoryLine
-                  data={state.history.map(({ move, agentMoves }) => ({
-                    move,
-                    max: max(agentMoves),
-                  }))}
-                  x='move'
-                  y='max'
-                />
-                <VictoryLine
-                  data={state.history.map(({ move, agentMoves }) => ({
-                    move,
-                    avg: sum(agentMoves) / agentMoves.length,
-                  }))}
-                  x='move'
-                  y='avg'
                 />
               </VictoryChart>
             </Stack>

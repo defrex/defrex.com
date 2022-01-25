@@ -28,8 +28,10 @@ export function GenomeView({ genome }: GenomeViewProps) {
           ? Agent.inputLabels[index]
           : genome.nodes.length - index <= Agent.outputLabels.length
           ? Agent.outputLabels[genome.nodes.length - index - 1]
-          : ''
-      } ${node.type} ${node.bias}`,
+          : node.type === 'hidden'
+          ? ''
+          : node.type
+      } ${node.bias}`,
     }))
   }, [genome])
 
@@ -48,8 +50,8 @@ export function GenomeView({ genome }: GenomeViewProps) {
     return (
       <realflow.Canvas
         fit={true}
-        maxWidth={768}
-        maxHeight={512}
+        // maxWidth={768}
+        // maxHeight={768}
         nodes={nodes}
         edges={edges}
         node={
