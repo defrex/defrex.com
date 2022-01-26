@@ -11,7 +11,7 @@ interface BoardStateArgs {
   positions?: ColorPosition[]
 }
 
-interface ColorPosition {
+export interface ColorPosition {
   color: string
   position: Position
   type?: string
@@ -69,7 +69,7 @@ export class BoardState {
     })
   }
 
-  getPositions(positionType: string): Position[] {
+  getPositions(positionType?: string): Position[] {
     return (
       this.positions
         .filter(({ type }) => type === positionType)

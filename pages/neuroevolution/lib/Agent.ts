@@ -28,12 +28,19 @@ export class Agent {
   public moves: number = 0
   public lineage: number = 0
   public direction: Direction = 'right'
-  public threatType: string = 'kill'
+  public threatType: string
 
   private gridWidth: number
   private gridHeight: number
 
-  constructor({ genome, position, id, direction, ...args }: AgentArgs) {
+  constructor({
+    genome,
+    position,
+    id,
+    direction,
+    threatType,
+    ...args
+  }: AgentArgs) {
     assign(this, args)
 
     if (genome) {
@@ -42,15 +49,20 @@ export class Agent {
       this.genome = new Genome({
         inputSize: Agent.inputLabels.length,
         outputSize: Agent.outputLabels.length,
-        initOutputOn: 2, // ensure they move forward
+        initOutputBias: 2, // ensure they move forward
       })
     }
 
     if (direction) {
       this.direction = direction
     } else {
-      // this.direction = 'left'
       this.direction = sample(['left', 'right'])!
+    }
+
+    if (threatType) {
+      this.threatType = threatType
+    } else {
+      this.threatType = this.direction === 'right' ? 'left' : 'right'
     }
 
     if (position) {

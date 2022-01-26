@@ -53,7 +53,7 @@ interface GenomeArgs {
   inputSize?: number
   outputSize?: number
   learningRate?: number
-  initOutputOn?: number
+  initOutputBias?: number
 }
 
 export class Genome {
@@ -92,8 +92,8 @@ export class Genome {
           } as GeneNode),
       )
 
-      if (args.initOutputOn) {
-        outputs[args.initOutputOn].bias = 2
+      if (args.initOutputBias) {
+        outputs[args.initOutputBias].bias = 1
       }
 
       let edges: GeneEdge[] = []
