@@ -15,6 +15,7 @@ import { BoardState, Position } from './components/Board/lib/BoardState'
 import { GenomeView } from './components/GenomeView'
 import HowItWorks from './components/HowItWorks'
 import { Agent } from './lib/Agent'
+import styles from './styles.module.scss'
 
 interface EvolutionProps {}
 
@@ -23,6 +24,8 @@ const maxAgents = 100
 const defaultDifficulty = 5
 const defaultCellSize = 16
 const historyRollupGranularity = 500
+const autoSampleEvery = 1000
+
 const canvasWidth =
   typeof window === 'undefined'
     ? 768
@@ -111,8 +114,8 @@ export default function Evolution(_props: EvolutionProps) {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
   const [showHowItWorks, setShowHowItWorks] = useState(false)
   const [metricsVisible, setMetricsVisible] = useState({
-    population: true,
-    lineage: true,
+    population: false,
+    lineage: false,
     difficulty: true,
   })
   const [state, setState] = useState<State>(initState())
@@ -229,7 +232,7 @@ export default function Evolution(_props: EvolutionProps) {
       } = currentState
 
       const nextSampleAgents =
-        move > 0 && move % 500 === 0 && autoSample
+        move > 0 && move % autoSampleEvery === 0 && autoSample
           ? [...sampleAgents, { move, agent: bestAgent(agents) }]
           : sampleAgents
 
@@ -468,12 +471,28 @@ export default function Evolution(_props: EvolutionProps) {
               />
               <Button onClick={handleSampleAgent} text='Sample' />
             </Inline>
-            {state.sampleAgents.map(({ move, agent }) => (
-              <Stack key={agent.id}>
-                <Inline expand={0}>
-                  <Stack spacing={spacing.small}>
-                    <Inline spacing={spacing.small}>
+            <table className={styles.sampleAgents}>
+              <thead>
+                <tr>
+                  <th>
+                    <Text value='Sampled At' color={colors.black40} />
+                  </th>
+                  <th></th>
+                  <th>
+                    <Text value='Moves' color={colors.black40} />
+                  </th>
+                  <th>
+                    <Text value='Parents' color={colors.black40} />
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {state.sampleAgents.map(({ move, agent }) => (
+                  <tr key={agent.id}>
+                    <td>
                       <Text value={`${move}`} />
+                    </td>
+                    <td>
                       <div
                         style={{
                           backgroundColor: movesColor(
@@ -484,12 +503,44 @@ export default function Evolution(_props: EvolutionProps) {
                           width: state.cellSize * 0.5,
                         }}
                       />
+                    </td>
+                    <td>
+                      <Text value={`${agent.moves}`} />
+                    </td>
+                    <td>
+                      <Text value={`${agent.lineage}`} />
+                    </td>
+                    <td>
+                      <Button onClick={handleSelectAgent(agent)} text='View' />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {/* {state.sampleAgents.map(({ move, agent }) => (
+              <Stack key={agent.id}>
+                <Inline expand={0}>
+                  <Stack spacing={spacing.small}>
+                    <Text value={`From move ${move}`} />
+                    <Inline spacing={spacing.small}>
+                      <div
+                        style={{
+                          backgroundColor: movesColor(
+                            agent.moves,
+                            state.gridWidth,
+                          ),
+                          height: state.cellSize * 0.5,
+                          width: state.cellSize * 0.5,
+                        }}
+                      />
+                      <Text value={`${agent.moves} moves`} />
+                      <Text value={`${agent.lineage} parents`} />
                     </Inline>
                   </Stack>
-                  <Button onClick={handleSelectAgent(agent)} text='Select' />
+                  <Button onClick={handleSelectAgent(agent)} text='View' />
                 </Inline>
               </Stack>
-            ))}
+            ))} */}
           </Stack>
 
           {selectedAgent ? (
@@ -497,7 +548,7 @@ export default function Evolution(_props: EvolutionProps) {
               <Inline expand={0}>
                 <Stack spacing={spacing.small}>
                   <Text value='Selected Agent' color={colors.black40} />
-                  <Inline spacing={spacing.small}>
+                  <Inline spacing={spacing.medium}>
                     <div
                       style={{
                         backgroundColor: movesColor(
@@ -509,6 +560,7 @@ export default function Evolution(_props: EvolutionProps) {
                       }}
                     />
                     <Text value={`${selectedAgent.moves} moves`} />
+                    <Text value={`${selectedAgent.lineage} parents`} />
                   </Inline>
                 </Stack>
                 <Button onClick={handleClearSelectedAgent} text='Clear' />
@@ -585,26 +637,6 @@ export default function Evolution(_props: EvolutionProps) {
               </VictoryChart>
             ) : null}
           </Stack>
-
-          {/* {state.agents.length > 0 ? (
-            <Stack spacing={spacing.small}>
-              <Text value={`Lineage`} color={colors.black40} />
-              <VictoryChart theme={victoryChartTheme} height={200}>
-                <VictoryBar
-                  data={sortBy(
-                    state.agents,
-                    (agent) => agent.lineage,
-                    'desc',
-                  ).map((agent, index) => ({
-                    index,
-                    lineage: agent.lineage,
-                  }))}
-                  x='index'
-                  y='lineage'
-                />
-              </VictoryChart>
-            </Stack>
-          ) : null} */}
         </Stack>
       </Stack>
     </PageContainer>

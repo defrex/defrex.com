@@ -223,9 +223,17 @@ export class Genome {
       'addNode' as const,
       'addEdge' as const,
       'removeNode' as const,
+      'removeNode' as const,
+      'removeEdge' as const,
       'removeEdge' as const,
       'mutateEdgeWeight' as const,
+      'mutateEdgeWeight' as const,
+      'mutateEdgeWeight' as const,
       'mutateNodeBias' as const,
+      'mutateNodeBias' as const,
+      'mutateNodeBias' as const,
+      'mutateNodeSquash' as const,
+      'mutateNodeSquash' as const,
       'mutateNodeSquash' as const,
     ])!
 
