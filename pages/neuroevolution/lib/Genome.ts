@@ -103,8 +103,8 @@ export class Genome {
             id: uniqueId(),
             fromNodeIndex: inputIndex,
             toNodeIndex: inputs.length + outputIndex,
-            weight: 1,
-            // weight: random(-1, 1),
+            // weight: 1,
+            weight: random(-1, 1),
           })
         }
       }

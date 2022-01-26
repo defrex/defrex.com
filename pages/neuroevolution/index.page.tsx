@@ -1,4 +1,4 @@
-import { groupBy, random, round, some, sum } from 'lodash'
+import { groupBy, random, range, round, some, sum } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { VictoryChart, VictoryLine } from 'victory'
 import { Button } from '../../components/Button'
@@ -94,18 +94,25 @@ function agentPositionColors(
   }))
 }
 
-function initState(mode: RunMode = 'killer'): State {
+function initAgent(
+  gridWidth: number,
+  gridHeight: number,
+  mode: RunMode = 'killer',
+): Agent {
+  return new Agent({
+    gridWidth,
+    gridHeight,
+    direction: mode === 'killer' ? 'right' : undefined,
+    threatType: mode === 'killer' ? 'kill' : undefined,
+  })
+}
+
+function initState(mode: RunMode = 'competition'): State {
   const cellSize = defaultCellSize
   const gridWidth = canvasWidth / cellSize
   const gridHeight = canvasHeight / cellSize
-  const agents = new Array(minAgents).fill(0).map(
-    (_, i) =>
-      new Agent({
-        gridWidth,
-        gridHeight,
-        direction: mode === 'killer' ? 'right' : undefined,
-        threatType: mode === 'killer' ? 'kill' : undefined,
-      }),
+  const agents = range(0, minAgents).map(() =>
+    initAgent(gridWidth, gridHeight, mode),
   )
   return {
     agents,
@@ -320,21 +327,49 @@ export default function Evolution(_props: EvolutionProps) {
             : 'survivingAgents',
         ))
       } else {
-        const leftKillPositions = nextAgents
-          .filter((agent) => agent.direction === 'left')
-          .map((agent) => agent.position)
-        const rightKillPositions = nextAgents
-          .filter((agent) => agent.direction === 'right')
-          .map((agent) => agent.position)
+        const leftKillers = nextAgents.filter(
+          (agent) => agent.direction === 'left',
+        )
+        const rightKillers = nextAgents.filter(
+          (agent) => agent.direction === 'right',
+        )
 
-        ;({ survivingAgents } = groupBy(nextAgents, (agent) =>
-          some(
-            agent.direction === 'left' ? rightKillPositions : leftKillPositions,
-            ([x, y]) => agent.position[0] === x && agent.position[1] === y,
-          )
-            ? 'deadAgents'
-            : 'survivingAgents',
-        ))
+        const deadAgents: Agent[] = []
+
+        for (const agent of nextAgents) {
+          const killerAgents =
+            agent.direction === 'left' ? rightKillers : leftKillers
+          let dead = false
+          for (const killerAgent of killerAgents) {
+            dead = agent.fight(killerAgent)
+            if (dead) {
+              survivingAgents.push(killerAgent.mutate())
+              break
+            }
+          }
+          if (!dead) {
+            survivingAgents.push(agent)
+          } else {
+            deadAgents.push(agent)
+          }
+        }
+
+        if (deadAgents.length === 0) {
+          survivingAgents.push(initAgent(gridWidth, gridHeight, runMode))
+        }
+
+        // if (deadAgents.length) {
+        //   console.log('Dead', deadAgents)
+        // }
+
+        // ;({ survivingAgents } = groupBy(nextAgents, (agent) =>
+        //   some(
+        //     agent.direction === 'left' ? rightKillers : leftKillers,
+        //     (killerAgent) => agent.fight(killerAgent),
+        //   )
+        //     ? 'deadAgents'
+        //     : 'survivingAgents',
+        // ))
       }
 
       nextAgents = survivingAgents || []
@@ -349,25 +384,19 @@ export default function Evolution(_props: EvolutionProps) {
         killersPerMoveMax,
       )
 
-      for (const agent of nextAgents) {
-        if (
-          nextAgents.length < maxAgents &&
-          ((agent.direction === 'right' &&
-            agent.position[0] === gridWidth - 1) ||
-            (agent.direction === 'left' && agent.position[0] === 0))
-        ) {
-          nextAgents.push(agent.mutate())
-        }
-      }
+      // for (const agent of nextAgents) {
+      //   if (
+      //     nextAgents.length < maxAgents &&
+      //     ((agent.direction === 'right' &&
+      //       agent.position[0] === gridWidth - 1) ||
+      //       (agent.direction === 'left' && agent.position[0] === 0))
+      //   ) {
+      //     nextAgents.push(agent.mutate())
+      //   }
+      // }
 
       while (nextAgents.length < minAgents) {
-        nextAgents.push(
-          new Agent({
-            gridWidth,
-            gridHeight,
-            direction: 'right',
-          }),
-        )
+        nextAgents.push(initAgent(gridWidth, gridHeight, runMode))
       }
 
       const nextBoardState = boardState.setPositions(nextPositions)

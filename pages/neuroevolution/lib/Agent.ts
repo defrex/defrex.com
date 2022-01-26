@@ -114,6 +114,18 @@ export class Agent {
     })
   }
 
+  fight(otherAgent: Agent): boolean {
+    const isConflict =
+      this.position[0] === otherAgent.position[0] &&
+      this.position[1] === otherAgent.position[1]
+
+    if (!isConflict) {
+      return false
+    } else {
+      return this.moves < otherAgent.moves
+    }
+  }
+
   move(boardState: BoardState): Agent {
     const inputs = [
       this.threatDistance(boardState, -1),
