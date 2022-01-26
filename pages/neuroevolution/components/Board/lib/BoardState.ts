@@ -132,7 +132,10 @@ export class BoardState {
 
     let [toX, toY] = toPosition
     ;[toX, toY] = [toX % this.gridWidth, toY % this.gridHeight]
-    ;[toX, toY] = [toX < 0 ? 0 : toX, toY < 0 ? this.gridHeight + toY : toY]
+    ;[toX, toY] = [
+      toX < 0 ? this.gridWidth + toX : toX,
+      toY < 0 ? this.gridHeight + toY : toY,
+    ]
     return [toX, toY]
   }
 }

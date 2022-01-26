@@ -53,6 +53,7 @@ interface GenomeArgs {
   inputSize?: number
   outputSize?: number
   learningRate?: number
+  initOutputOn?: number
 }
 
 export class Genome {
@@ -63,14 +64,14 @@ export class Genome {
   public edges: GeneEdge[]
   public phenome: Phenome
 
-  constructor(options: GenomeArgs = {}) {
-    this.inputSize = options.inputSize || 2
-    this.outputSize = options.outputSize || 4
-    this.learningRate = options.learningRate || defaultLearningRate
+  constructor(args: GenomeArgs = {}) {
+    this.inputSize = args.inputSize || 2
+    this.outputSize = args.outputSize || 4
+    this.learningRate = args.learningRate || defaultLearningRate
 
-    if (options.nodes && options.edges) {
-      this.nodes = options.nodes
-      this.edges = options.edges
+    if (args.nodes && args.edges) {
+      this.nodes = args.nodes
+      this.edges = args.edges
     } else {
       const inputs = new Array(this.inputSize).fill(undefined).map(
         () =>
@@ -90,6 +91,10 @@ export class Genome {
             squash: randSquash(),
           } as GeneNode),
       )
+
+      if (args.initOutputOn) {
+        outputs[args.initOutputOn].bias = 2
+      }
 
       let edges: GeneEdge[] = []
       for (let inputIndex = 0; inputIndex < inputs.length; inputIndex++) {

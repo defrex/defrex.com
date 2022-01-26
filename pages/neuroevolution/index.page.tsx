@@ -1,4 +1,4 @@
-import { clone, groupBy, random, round, some, sortBy, sum } from 'lodash'
+import { clone, groupBy, round, some, sortBy, sum } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { VictoryChart, VictoryLine } from 'victory'
 import { Button } from '../../components/Button'
@@ -6,12 +6,12 @@ import { Inline } from '../../components/Inline'
 import { PageContainer } from '../../components/PageContainer'
 import { Stack } from '../../components/Stack'
 import { Text } from '../../components/Text'
-import { colors, colorValues } from '../../lib/colors'
+import { colors } from '../../lib/colors'
 import { sleep } from '../../lib/sleep'
 import { spacing } from '../../lib/spacing'
 import { victoryChartTheme } from '../../lib/victoryChartTheme'
 import { Board } from './components/Board'
-import { BoardState, Position } from './components/Board/lib/BoardState'
+import { BoardState } from './components/Board/lib/BoardState'
 import { GenomeView } from './components/GenomeView'
 import HowItWorks from './components/HowItWorks'
 import { Agent } from './lib/Agent'
@@ -53,6 +53,7 @@ function difficulty(survivors: number, maxDifficulty: number): number {
 
 type State = {
   agents: Agent[]
+  autoSample: boolean
   boardState: BoardState
   cellSize: number
   gridHeight: number
@@ -60,19 +61,20 @@ type State = {
   history: {
     move: number
     difficulty: number
+    leftAgents: number
+    rightAgents: number
     agentMoves: number[]
     agentLineage: number[]
     time: number
   }[]
   historyRollup: { move: number; difficulty: number }[]
+  running: 'killer' | 'competition' | null
   killersPerMove: number
   killersPerMoveMax: number
   lifeSpans: Record<number, number>
   move: number
-  running: boolean
-  speed: number
   sampleAgents: { move: number; agent: Agent }[]
-  autoSample: boolean
+  speed: number
 }
 
 function initState(): State {
@@ -83,20 +85,20 @@ function initState(): State {
     agents: new Array(minAgents)
       .fill(0)
       .map((_, i) => new Agent({ gridWidth, gridHeight })),
+    autoSample: false,
     boardState: new BoardState({ gridWidth, gridHeight, cellSize }),
     cellSize,
     gridHeight,
     gridWidth,
     history: [],
     historyRollup: [],
+    running: null,
     killersPerMove: 1,
     killersPerMoveMax: defaultDifficulty,
     lifeSpans: {},
     move: 0,
-    running: false,
-    speed: 0,
     sampleAgents: [],
-    autoSample: false,
+    speed: 0,
   }
 }
 
@@ -127,14 +129,14 @@ export default function Evolution(_props: EvolutionProps) {
   const handleStart = useCallback(() => {
     setState({
       ...state,
-      running: true,
+      running: 'competition',
     })
   }, [setState, state])
 
   const handlePause = useCallback(() => {
     setState({
       ...state,
-      running: false,
+      running: null,
     })
   }, [setState, state])
 
@@ -216,19 +218,18 @@ export default function Evolution(_props: EvolutionProps) {
 
       const {
         agents,
+        autoSample,
         boardState,
         gridHeight,
         gridWidth,
         history,
         historyRollup,
-        killersPerMove,
+        running,
         killersPerMoveMax,
         lifeSpans,
         move,
-        running,
-        speed,
         sampleAgents,
-        autoSample,
+        speed,
       } = currentState
 
       const nextSampleAgents =
@@ -236,33 +237,52 @@ export default function Evolution(_props: EvolutionProps) {
           ? [...sampleAgents, { move, agent: bestAgent(agents) }]
           : sampleAgents
 
-      const killPositions = boardState.getPositions('kill')
-      const nextKillPositions: Position[] = killPositions
-        .map(([x, y]) => [x - 1, y] as Position)
-        .filter(([x, y]) => x >= 0 && y >= 0 && x < gridWidth && y < gridHeight)
-
-      const partialKillersPerMove = killersPerMove % 1
-      for (let i = 0; i < killersPerMove - partialKillersPerMove; i++) {
-        nextKillPositions.push([gridWidth - 1, random(0, gridHeight - 1)])
-      }
-      if (partialKillersPerMove > random(0, 1, true)) {
-        nextKillPositions.push([gridWidth - 1, random(0, gridHeight - 1)])
-      }
-
-      let nextBoardState = boardState.setPositions(
-        nextKillPositions.map((position) => ({
-          type: 'kill',
-          color: colorValues.red60,
-          position,
-        })),
-      )
+      let nextBoardState = boardState
       let nextAgents = agents || []
       nextAgents = nextAgents.map((agent) => agent.move(nextBoardState))
 
+      // for (const [agentDirection, killType] of [
+      //   ['left', 'right'],
+      //   ['right', 'left'],
+      // ]) {
+
+      // const killPositions = boardState.getPositions('kill')
+      // const nextKillPositions: Position[] = killPositions
+      //   .map(([x, y]) => [x - 1, y] as Position)
+      //   .filter(
+      //     ([x, y]) => x >= 0 && y >= 0 && x < gridWidth && y < gridHeight,
+      //   )
+
+      // const partialKillersPerMove = killersPerMove % 1
+      // for (let i = 0; i < killersPerMove - partialKillersPerMove; i++) {
+      //   nextKillPositions.push([gridWidth - 1, random(0, gridHeight - 1)])
+      // }
+      // if (partialKillersPerMove > random(0, 1, true)) {
+      //   nextKillPositions.push([gridWidth - 1, random(0, gridHeight - 1)])
+      // }
+
+      // let nextBoardState = boardState.setPositions(
+      //   nextKillPositions.map((position) => ({
+      //     type: 'kill',
+      //     color: colorValues.red60,
+      //     position,
+      //   })),
+      // )
+
+      const leftKillPositions = boardState.getPositions('right')
+      const rightKillPositions = boardState.getPositions('right')
+
       const { deadAgents, survivingAgents } = groupBy(nextAgents, (agent) =>
-        some(
-          killPositions,
-          ([x, y]) => agent.position[0] === x && agent.position[1] === y,
+        (
+          agent.direction === 'left'
+            ? some(
+                leftKillPositions,
+                ([x, y]) => agent.position[0] === x && agent.position[1] === y,
+              )
+            : some(
+                rightKillPositions,
+                ([x, y]) => agent.position[0] === x && agent.position[1] === y,
+              )
         )
           ? 'deadAgents'
           : 'survivingAgents',
@@ -288,7 +308,11 @@ export default function Evolution(_props: EvolutionProps) {
       }
 
       nextAgents
-        .filter((agent) => agent.position[0] >= gridWidth - 1)
+        .filter((agent) =>
+          agent.direction === 'left'
+            ? agent.position[0] >= gridWidth - 1
+            : agent.position[0] <= 0,
+        )
         .forEach((agent) => {
           if (nextAgents.length < 100) {
             nextAgents.push(agent.mutate())
@@ -296,10 +320,15 @@ export default function Evolution(_props: EvolutionProps) {
         })
 
       while (nextAgents.length < minAgents) {
-        nextAgents.push(new Agent({ gridWidth, gridHeight }))
+        nextAgents.push(
+          new Agent({
+            gridWidth,
+            gridHeight,
+          }),
+        )
       }
 
-      nextBoardState = nextBoardState.appendPositions(
+      nextBoardState = nextBoardState.setPositions(
         nextAgents.map(({ position, moves }) => ({
           color: movesColor(moves, gridWidth),
           position,
@@ -323,6 +352,10 @@ export default function Evolution(_props: EvolutionProps) {
           difficulty: nextKillersPerMove,
           agentMoves: nextAgents.map(({ moves }) => moves),
           agentLineage: nextAgents.map(({ lineage }) => lineage),
+          leftAgents: nextAgents.filter((agent) => agent.direction === 'left')
+            .length,
+          rightAgents: nextAgents.filter((agent) => agent.direction === 'right')
+            .length,
           time: Date.now(),
         },
       ]
@@ -398,12 +431,12 @@ export default function Evolution(_props: EvolutionProps) {
                 <Button
                   onClick={handlePause}
                   text='Pause'
-                  disabled={!state.running}
+                  disabled={state.running === null}
                 />
                 <Button
                   onClick={handleStart}
                   text='Play'
-                  disabled={state.running}
+                  disabled={state.running !== null}
                 />
               </Inline>
               <Inline spacing={spacing.xsmall}>
@@ -517,30 +550,6 @@ export default function Evolution(_props: EvolutionProps) {
                 ))}
               </tbody>
             </table>
-            {/* {state.sampleAgents.map(({ move, agent }) => (
-              <Stack key={agent.id}>
-                <Inline expand={0}>
-                  <Stack spacing={spacing.small}>
-                    <Text value={`From move ${move}`} />
-                    <Inline spacing={spacing.small}>
-                      <div
-                        style={{
-                          backgroundColor: movesColor(
-                            agent.moves,
-                            state.gridWidth,
-                          ),
-                          height: state.cellSize * 0.5,
-                          width: state.cellSize * 0.5,
-                        }}
-                      />
-                      <Text value={`${agent.moves} moves`} />
-                      <Text value={`${agent.lineage} parents`} />
-                    </Inline>
-                  </Stack>
-                  <Button onClick={handleSelectAgent(agent)} text='View' />
-                </Inline>
-              </Stack>
-            ))} */}
           </Stack>
 
           {selectedAgent ? (
@@ -582,14 +591,16 @@ export default function Evolution(_props: EvolutionProps) {
             </Inline>
             {metricsVisible.population && state.history.length > 0 ? (
               <VictoryChart theme={victoryChartTheme} height={200}>
-                <VictoryLine
+                <VictoryLine data={state.history} x='move' y='leftAgents' />
+                <VictoryLine data={state.history} x='move' y='rightAgents' />
+                {/* <VictoryLine
                   data={state.history.map(({ move, agentMoves }) => ({
                     move,
                     size: agentMoves.length,
                   }))}
                   x='move'
                   y='size'
-                />
+                /> */}
               </VictoryChart>
             ) : null}
           </Stack>

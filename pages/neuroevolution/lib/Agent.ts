@@ -1,4 +1,4 @@
-import { random, uniqueId } from 'lodash'
+import { assign, random, sample, uniqueId } from 'lodash'
 import {
   BoardState,
   Direction,
@@ -7,6 +7,7 @@ import {
 import { Genome } from './Genome'
 
 interface AgentArgs {
+  direction?: Direction
   genome?: Genome
   gridHeight: number
   gridWidth: number
@@ -14,6 +15,7 @@ interface AgentArgs {
   lineage?: number
   moves?: number
   position?: Position
+  threatType?: string
 }
 
 export class Agent {
@@ -25,45 +27,51 @@ export class Agent {
   public position: Position
   public moves: number = 0
   public lineage: number = 0
+  public direction: Direction = 'right'
+  public threatType: string = 'kill'
+
   private gridWidth: number
   private gridHeight: number
 
-  constructor(args: AgentArgs) {
-    this.gridWidth = args.gridWidth
-    this.gridHeight = args.gridHeight
+  constructor({ genome, position, id, direction, ...args }: AgentArgs) {
+    assign(this, args)
 
-    if (args.genome) {
-      this.genome = args.genome
+    if (genome) {
+      this.genome = genome
     } else {
       this.genome = new Genome({
         inputSize: Agent.inputLabels.length,
         outputSize: Agent.outputLabels.length,
+        initOutputOn: 2, // ensure they move forward
       })
     }
 
-    if (args.position) {
-      this.position = args.position
+    if (direction) {
+      this.direction = direction
     } else {
-      this.position = [0, random(0, this.gridHeight - 1)]
+      // this.direction = 'left'
+      this.direction = sample(['left', 'right'])!
     }
 
-    if (args.id) {
-      this.id = args.id
+    if (position) {
+      this.position = position
+    } else {
+      this.position = [
+        this.direction === 'left' ? 0 : this.gridWidth - 1,
+        random(0, this.gridHeight - 1),
+      ]
+    }
+
+    if (id) {
+      this.id = id
     } else {
       this.id = uniqueId()
-    }
-
-    if (args.moves) {
-      this.moves = args.moves
-    }
-
-    if (args.lineage) {
-      this.lineage = args.lineage
     }
   }
 
   private getArgs(): AgentArgs {
     return {
+      direction: this.direction,
       genome: this.genome,
       gridHeight: this.gridHeight,
       gridWidth: this.gridWidth,
@@ -71,6 +79,7 @@ export class Agent {
       lineage: this.lineage,
       moves: this.moves,
       position: this.position,
+      threatType: this.threatType,
     }
   }
 
@@ -109,13 +118,13 @@ export class Agent {
       throw new Error('Unexpected output length')
     }
 
-    const outputDirections: Direction[] = ['up', 'down', 'right']
+    const outputDirections: Direction[] = ['up', 'down', this.direction]
     const direction = outputDirections[outputs.indexOf(Math.max(...outputs))]
 
     const nextPosition = boardState.calculateMove(this.position, direction)
 
     let nextMoves = this.moves
-    if (direction === 'right') {
+    if (direction === this.direction) {
       nextMoves++
     }
 
@@ -137,7 +146,7 @@ export class Agent {
     }
 
     const threatDistance = boardState
-      .getPositions('kill')
+      .getPositions(this.threatType)
       .filter(([x, y]) => y === currentY)
       .reduce(
         (distance, [x, y]) =>
@@ -148,6 +157,12 @@ export class Agent {
         this.gridWidth,
       )
 
-    return threatDistance
+    if (this.direction === 'right') {
+      return threatDistance
+    } else if (this.direction === 'left') {
+      return this.gridWidth - threatDistance
+    } else {
+      throw new Error(`Unexpected direction ${this.direction}`)
+    }
   }
 }
