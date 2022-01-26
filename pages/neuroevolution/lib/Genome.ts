@@ -29,7 +29,7 @@ type Phenome = Neuron[]
 
 function randSquash(): Neuron.SquashingFunction | undefined {
   return sample([
-    Neuron.squash.HLIM,
+    // Neuron.squash.HLIM,
     Neuron.squash.LOGISTIC,
     Neuron.squash.ReLU,
     Neuron.squash.TANH,
@@ -87,8 +87,8 @@ export class Genome {
           ({
             type: 'output',
             id: uniqueId(),
-            bias: 1,
-            squash: randSquash(),
+            bias: 0,
+            squash: Neuron.squash.LOGISTIC,
           } as GeneNode),
       )
 
@@ -103,7 +103,8 @@ export class Genome {
             id: uniqueId(),
             fromNodeIndex: inputIndex,
             toNodeIndex: inputs.length + outputIndex,
-            weight: random(-1, 1),
+            weight: 1,
+            // weight: random(-1, 1),
           })
         }
       }
@@ -145,11 +146,17 @@ export class Genome {
     return this.nodes.slice(this.inputSize, -this.outputSize)
   }
 
-  private outputNodes(): GeneNode[] {
+  public outputNodes(): GeneNode[] {
     return this.nodes.slice(-this.outputSize)
   }
 
   private validate(): boolean {
+    const edgeIds = this.edges.map((edge) => edge.id)
+    if (edgeIds.length !== uniq(edgeIds).length) {
+      console.error(`Duplicate edge ids found [${edgeIds.join(', ')}]`, this)
+      return false
+    }
+
     for (const edge of this.edges) {
       if (
         edge.fromNodeIndex > this.nodes.length - this.outputSize ||
@@ -409,9 +416,16 @@ export class Genome {
       // if (!nextGenome.validate()) {
       //   console.log('removeNode failed validation')
       //   console.log({
-      //     this: this,
+      //     prevNodes: this.nodes,
+      //     prevEdges: this.edges,
       //     nodes: nextNodes,
       //     edges: nextEdges,
+      //     removableNode,
+      //     removableNodeIndex,
+      //     toEdges,
+      //     fromEdges,
+      //     toNodeIndexes,
+      //     fromNodeIndexes,
       //   })
       // }
 
@@ -460,10 +474,7 @@ export class Genome {
       ...this.getArgs(),
       nodes: cloneDeep(this.nodes),
       edges: nextEdges.map((edge) => {
-        if (
-          edge.fromNodeIndex === nextEdge.fromNodeIndex &&
-          edge.toNodeIndex === nextEdge.toNodeIndex
-        ) {
+        if (edge.id === nextEdge.id) {
           return nextEdge
         } else {
           return edge

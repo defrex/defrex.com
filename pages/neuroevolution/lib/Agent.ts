@@ -1,4 +1,4 @@
-import { assign, random, sample, uniqueId } from 'lodash'
+import { assign, min, random, sample, uniqueId } from 'lodash'
 import {
   BoardState,
   Direction,
@@ -20,7 +20,7 @@ interface AgentArgs {
 
 export class Agent {
   static inputLabels = ['↱🟥', '→🟥', '↳🟥']
-  static outputLabels = ['🟦→', '🟦↓', '🟦↑']
+  static outputLabels = ['🟦↑', '🟦↓', '🟦→']
 
   public id: string
   public genome: Genome
@@ -57,7 +57,7 @@ export class Agent {
       this.position = position
     } else {
       this.position = [
-        this.direction === 'left' ? 0 : this.gridWidth - 1,
+        this.direction === 'left' ? this.gridWidth - 1 : 0,
         random(0, this.gridHeight - 1),
       ]
     }
@@ -98,6 +98,7 @@ export class Agent {
       position: keepPosition ? this.position : undefined,
       moves: 0,
       lineage: this.lineage + 1,
+      direction: this.direction,
     })
   }
 
@@ -120,6 +121,15 @@ export class Agent {
 
     const outputDirections: Direction[] = ['up', 'down', this.direction]
     const direction = outputDirections[outputs.indexOf(Math.max(...outputs))]
+    // console.log(
+    //   this.direction,
+    //   'moves',
+    //   direction,
+    //   inputs,
+    //   outputs,
+    //   // this.genome.outputNodes().map((n) => n.bias),
+    //   this.genome,
+    // )
 
     const nextPosition = boardState.calculateMove(this.position, direction)
 
@@ -144,25 +154,21 @@ export class Agent {
     } else if (currentY >= this.gridHeight) {
       currentY = currentY % this.gridHeight
     }
+    let threatDistances = boardState
+      .getPositions(this.threatType) // kill positions
+      .filter(([x, y]) => y === currentY) // on the current row
+      .map(([x, y]) => x - currentX) // distance from current position (- == left, + == right)
 
-    const threatDistance = boardState
-      .getPositions(this.threatType)
-      .filter(([x, y]) => y === currentY)
-      .reduce(
-        (distance, [x, y]) =>
-          Math.min(
-            distance,
-            x > currentX ? x - currentX : x + this.gridWidth - currentX,
-          ),
-        this.gridWidth,
-      )
-
-    if (this.direction === 'right') {
-      return threatDistance
-    } else if (this.direction === 'left') {
-      return this.gridWidth - threatDistance
-    } else {
-      throw new Error(`Unexpected direction ${this.direction}`)
+    if (this.direction === 'left') {
+      threatDistances = threatDistances.map((d) => -d)
     }
+
+    threatDistances = threatDistances.map((distance) =>
+      distance < 0 ? this.gridWidth + distance : distance,
+    )
+
+    const threatDistance = min(threatDistances)!
+
+    return threatDistance
   }
 }
