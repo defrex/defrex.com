@@ -26,7 +26,7 @@ interface EvolutionProps {}
 type RunMode = 'killer' | 'competition'
 
 const minAgents = 10
-const maxAgents = 200
+const maxAgents = 150
 const defaultDifficulty = 5
 const defaultCellSize = 16
 const historyRollupGranularity = 500
@@ -433,7 +433,7 @@ export default function Evolution(_props: EvolutionProps) {
   }, [])
 
   return (
-    <PageContainer title='Neutoevolution'>
+    <PageContainer title='Neuroevolution'>
       <Stack spacing={spacing.large}>
         <Inline expand={0}>
           <Stack spacing={spacing.small}>
@@ -702,27 +702,26 @@ export default function Evolution(_props: EvolutionProps) {
             ) : null}
           </Stack>
 
-          <Stack spacing={spacing.small}>
-            <Inline expand={0}>
-              <Text
-                value={`Difficulty (Max ${state.killersPerMoveMax})`}
-                color={colors.black40}
-              />
-              <Button
-                onClick={handleToggleMetric('difficulty')}
-                text={metricsVisible.difficulty ? 'Hide' : 'Show'}
-              />
-            </Inline>
-            {metricsVisible.difficulty && state.historyRollup.length > 0 ? (
-              <VictoryChart theme={victoryChartTheme} height={200}>
-                <VictoryLine
-                  data={state.historyRollup}
-                  x='move'
-                  y='difficulty'
+          {state.runMode === 'killer' ? (
+            <Stack spacing={spacing.small}>
+              <Inline expand={0}>
+                <Text value={`Difficulty`} color={colors.black40} />
+                <Button
+                  onClick={handleToggleMetric('difficulty')}
+                  text={metricsVisible.difficulty ? 'Hide' : 'Show'}
                 />
-              </VictoryChart>
-            ) : null}
-          </Stack>
+              </Inline>
+              {metricsVisible.difficulty && state.historyRollup.length > 0 ? (
+                <VictoryChart theme={victoryChartTheme} height={200}>
+                  <VictoryLine
+                    data={state.historyRollup}
+                    x='move'
+                    y='difficulty'
+                  />
+                </VictoryChart>
+              ) : null}
+            </Stack>
+          ) : null}
         </Stack>
       </Stack>
     </PageContainer>
