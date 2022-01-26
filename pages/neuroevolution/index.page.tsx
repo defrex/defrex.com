@@ -20,7 +20,7 @@ import styles from './styles.module.scss'
 interface EvolutionProps {}
 
 const minAgents = 10
-const maxAgents = 300
+const maxAgents = 200
 const defaultDifficulty = 5
 const defaultCellSize = 16
 const historyRollupGranularity = 500
