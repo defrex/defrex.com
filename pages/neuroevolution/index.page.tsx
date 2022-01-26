@@ -320,8 +320,12 @@ export default function Evolution(_props: EvolutionProps) {
             : 'survivingAgents',
         ))
       } else {
-        const leftKillPositions = boardState.getPositions('left')
-        const rightKillPositions = boardState.getPositions('right')
+        const leftKillPositions = nextAgents
+          .filter((agent) => agent.direction === 'left')
+          .map((agent) => agent.position)
+        const rightKillPositions = nextAgents
+          .filter((agent) => agent.direction === 'right')
+          .map((agent) => agent.position)
 
         ;({ survivingAgents } = groupBy(nextAgents, (agent) =>
           some(
@@ -657,25 +661,6 @@ export default function Evolution(_props: EvolutionProps) {
                     y='agents'
                   />
                 ))}
-                {/* {state.runMode === 'killer' ? (
-                  <VictoryLine
-                    data={state.history.map(({ move, agentMoves }) => ({
-                      move,
-                      size: agentMoves.length,
-                    }))}
-                    x='move'
-                    y='size'
-                  />
-                ) : (
-                  <>
-                    <VictoryLine data={state.history} x='move' y='leftAgents' />
-                    <VictoryLine
-                      data={state.history}
-                      x='move'
-                      y='rightAgents'
-                    />
-                  </>
-                )} */}
               </VictoryChart>
             ) : null}
           </Stack>
