@@ -119,11 +119,12 @@ export class Agent {
       this.position[0] === otherAgent.position[0] &&
       this.position[1] === otherAgent.position[1]
 
-    if (!isConflict) {
-      return false
-    } else {
-      return this.moves < otherAgent.moves
-    }
+    return isConflict
+    // if (!isConflict) {
+    //   return false
+    // } else {
+    //   return this.moves > otherAgent.moves
+    // }
   }
 
   move(boardState: BoardState): Agent {

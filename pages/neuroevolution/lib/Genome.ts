@@ -146,7 +146,7 @@ export class Genome {
     return this.nodes.slice(this.inputSize, -this.outputSize)
   }
 
-  public outputNodes(): GeneNode[] {
+  private outputNodes(): GeneNode[] {
     return this.nodes.slice(-this.outputSize)
   }
 

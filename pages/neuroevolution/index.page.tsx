@@ -1,4 +1,4 @@
-import { groupBy, random, range, round, some, sum } from 'lodash'
+import { groupBy, random, range, round, shuffle, some, sum } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { VictoryChart, VictoryLine } from 'victory'
 import { Button } from '../../components/Button'
@@ -343,7 +343,7 @@ export default function Evolution(_props: EvolutionProps) {
           for (const killerAgent of killerAgents) {
             dead = agent.fight(killerAgent)
             if (dead) {
-              survivingAgents.push(killerAgent.mutate())
+              // survivingAgents.push(killerAgent.mutate())
               break
             }
           }
@@ -354,22 +354,9 @@ export default function Evolution(_props: EvolutionProps) {
           }
         }
 
-        if (deadAgents.length === 0) {
-          survivingAgents.push(initAgent(gridWidth, gridHeight, runMode))
-        }
-
-        // if (deadAgents.length) {
-        //   console.log('Dead', deadAgents)
+        // if (deadAgents.length === 0) {
+        //   survivingAgents.push(initAgent(gridWidth, gridHeight, runMode))
         // }
-
-        // ;({ survivingAgents } = groupBy(nextAgents, (agent) =>
-        //   some(
-        //     agent.direction === 'left' ? rightKillers : leftKillers,
-        //     (killerAgent) => agent.fight(killerAgent),
-        //   )
-        //     ? 'deadAgents'
-        //     : 'survivingAgents',
-        // ))
       }
 
       nextAgents = survivingAgents || []
@@ -384,16 +371,20 @@ export default function Evolution(_props: EvolutionProps) {
         killersPerMoveMax,
       )
 
-      // for (const agent of nextAgents) {
-      //   if (
-      //     nextAgents.length < maxAgents &&
-      //     ((agent.direction === 'right' &&
-      //       agent.position[0] === gridWidth - 1) ||
-      //       (agent.direction === 'left' && agent.position[0] === 0))
-      //   ) {
-      //     nextAgents.push(agent.mutate())
-      //   }
-      // }
+      for (const agent of nextAgents) {
+        if (
+          nextAgents.length < maxAgents &&
+          ((agent.direction === 'right' &&
+            agent.position[0] === gridWidth - 1) ||
+            (agent.direction === 'left' && agent.position[0] === 0))
+        ) {
+          nextAgents.push(agent.mutate())
+        }
+      }
+
+      if (nextAgents.length >= maxAgents) {
+        nextAgents = shuffle(nextAgents).slice(-(maxAgents * 0.9))
+      }
 
       while (nextAgents.length < minAgents) {
         nextAgents.push(initAgent(gridWidth, gridHeight, runMode))
@@ -592,6 +583,12 @@ export default function Evolution(_props: EvolutionProps) {
                   <th>
                     <Text value='Parents' color={colors.black40} />
                   </th>
+                  <th>
+                    <Text value='Nodes' color={colors.black40} />
+                  </th>
+                  <th>
+                    <Text value='Edges' color={colors.black40} />
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -617,6 +614,12 @@ export default function Evolution(_props: EvolutionProps) {
                     </td>
                     <td>
                       <Text value={`${agent.lineage}`} />
+                    </td>
+                    <td>
+                      <Text value={`${agent.genome.nodes.length}`} />
+                    </td>
+                    <td>
+                      <Text value={`${agent.genome.edges.length}`} />
                     </td>
                     <td>
                       <Button onClick={handleSelectAgent(agent)} text='View' />
