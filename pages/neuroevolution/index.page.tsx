@@ -37,7 +37,7 @@ function bestAgent(agents: Agent[]): Agent {
   }, agents[0])
 }
 
-const slowFps = 6
+const slowFps = 12
 
 export default function Evolution(_props: EvolutionProps) {
   const frameRef = useRef<number>()
@@ -180,18 +180,6 @@ export default function Evolution(_props: EvolutionProps) {
 
         <Stack spacing={spacing.xlarge}>
           <Stack>
-            {/* <Inline spacing={spacing.xsmall}>
-              <Button
-                onClick={handleSetMode('killer')}
-                text='Killers'
-                disabled={state.runMode === 'killer'}
-              />
-              <Button
-                onClick={handleSetMode('competition')}
-                text='Competitors'
-                disabled={state.runMode === 'competition'}
-              />
-            </Inline> */}
             <Inline expand={-1} verticalIf={{ eq: 'small' }}>
               <Button onClick={handleReset} text='Reset' />
               <Inline spacing={spacing.xsmall}>
@@ -229,10 +217,6 @@ export default function Evolution(_props: EvolutionProps) {
               </Inline>
             </Inline>
           </Stack>
-
-          {/* <pre>
-            {JSON.stringify({ difficulty: state.killersPerMove }, null, 2)}
-          </pre> */}
 
           <Stack>
             <table className={styles.sampleAgents}>
