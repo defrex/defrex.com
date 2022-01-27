@@ -1,4 +1,4 @@
-import { random, uniqueId } from 'lodash'
+import { assign, min, random, sample, uniqueId } from 'lodash'
 import {
   BoardState,
   Direction,
@@ -7,6 +7,7 @@ import {
 import { Genome } from './Genome'
 
 interface AgentArgs {
+  direction?: Direction
   genome?: Genome
   gridHeight: number
   gridWidth: number
@@ -14,56 +15,75 @@ interface AgentArgs {
   lineage?: number
   moves?: number
   position?: Position
+  threatType?: string
 }
 
 export class Agent {
   static inputLabels = ['↱🟥', '→🟥', '↳🟥']
-  static outputLabels = ['🟦→', '🟦↓', '🟦↑']
+  static outputLabels = ['🟦↑', '🟦↓', '🟦→']
 
   public id: string
   public genome: Genome
   public position: Position
   public moves: number = 0
   public lineage: number = 0
+  public direction: Direction = 'right'
+  public threatType: string
+
   private gridWidth: number
   private gridHeight: number
 
-  constructor(args: AgentArgs) {
-    this.gridWidth = args.gridWidth
-    this.gridHeight = args.gridHeight
+  constructor({
+    genome,
+    position,
+    id,
+    direction,
+    threatType,
+    ...args
+  }: AgentArgs) {
+    assign(this, args)
 
-    if (args.genome) {
-      this.genome = args.genome
+    if (genome) {
+      this.genome = genome
     } else {
       this.genome = new Genome({
         inputSize: Agent.inputLabels.length,
         outputSize: Agent.outputLabels.length,
+        initOutputBias: 2, // ensure they move forward
       })
     }
 
-    if (args.position) {
-      this.position = args.position
+    if (direction) {
+      this.direction = direction
     } else {
-      this.position = [0, random(0, this.gridHeight - 1)]
+      this.direction = sample(['left', 'right'])!
     }
 
-    if (args.id) {
-      this.id = args.id
+    if (threatType) {
+      this.threatType = threatType
+    } else {
+      this.threatType = this.direction === 'right' ? 'left' : 'right'
+    }
+
+    if (position) {
+      this.position = position
+    } else {
+      this.position = [
+        this.direction === 'left' ? this.gridWidth - 1 : 0,
+        random(0, this.gridHeight - 1),
+      ]
+    }
+
+    if (id) {
+      this.id = id
     } else {
       this.id = uniqueId()
-    }
-
-    if (args.moves) {
-      this.moves = args.moves
-    }
-
-    if (args.lineage) {
-      this.lineage = args.lineage
     }
   }
 
   private getArgs(): AgentArgs {
     return {
+      direction: this.direction,
       genome: this.genome,
       gridHeight: this.gridHeight,
       gridWidth: this.gridWidth,
@@ -71,6 +91,7 @@ export class Agent {
       lineage: this.lineage,
       moves: this.moves,
       position: this.position,
+      threatType: this.threatType,
     }
   }
 
@@ -89,7 +110,21 @@ export class Agent {
       position: keepPosition ? this.position : undefined,
       moves: 0,
       lineage: this.lineage + 1,
+      direction: this.direction,
     })
+  }
+
+  fight(otherAgent: Agent): boolean {
+    const isConflict =
+      this.position[0] === otherAgent.position[0] &&
+      this.position[1] === otherAgent.position[1]
+
+    return isConflict
+    // if (!isConflict) {
+    //   return false
+    // } else {
+    //   return this.moves > otherAgent.moves
+    // }
   }
 
   move(boardState: BoardState): Agent {
@@ -109,13 +144,22 @@ export class Agent {
       throw new Error('Unexpected output length')
     }
 
-    const outputDirections: Direction[] = ['up', 'down', 'right']
+    const outputDirections: Direction[] = ['up', 'down', this.direction]
     const direction = outputDirections[outputs.indexOf(Math.max(...outputs))]
+    // console.log(
+    //   this.direction,
+    //   'moves',
+    //   direction,
+    //   inputs,
+    //   outputs,
+    //   // this.genome.outputNodes().map((n) => n.bias),
+    //   this.genome,
+    // )
 
     const nextPosition = boardState.calculateMove(this.position, direction)
 
     let nextMoves = this.moves
-    if (direction === 'right') {
+    if (direction === this.direction) {
       nextMoves++
     }
 
@@ -135,18 +179,20 @@ export class Agent {
     } else if (currentY >= this.gridHeight) {
       currentY = currentY % this.gridHeight
     }
+    let threatDistances = boardState
+      .getPositions(this.threatType) // kill positions
+      .filter(([x, y]) => y === currentY) // on the current row
+      .map(([x, y]) => x - currentX) // distance from current position (- == left, + == right)
 
-    const threatDistance = boardState
-      .getPositions('kill')
-      .filter(([x, y]) => y === currentY)
-      .reduce(
-        (distance, [x, y]) =>
-          Math.min(
-            distance,
-            x > currentX ? x - currentX : x + this.gridWidth - currentX,
-          ),
-        this.gridWidth,
-      )
+    if (this.direction === 'left') {
+      threatDistances = threatDistances.map((d) => -d)
+    }
+
+    threatDistances = threatDistances.map((distance) =>
+      distance < 0 ? this.gridWidth + distance : distance,
+    )
+
+    const threatDistance = min(threatDistances)!
 
     return threatDistance
   }

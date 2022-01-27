@@ -1,6 +1,7 @@
 import {
   cloneDeep,
   random,
+  range,
   sample,
   shuffle,
   uniq,
@@ -27,19 +28,36 @@ interface GeneEdge {
 
 type Phenome = Neuron[]
 
+export function getSquashName(squash?: Neuron.SquashingFunction): string {
+  if (squash === Neuron.squash.LOGISTIC) {
+    return 'Sigmoid'
+  } else if (squash === Neuron.squash.ReLU) {
+    return 'ReLU'
+  } else if (squash === Neuron.squash.TANH) {
+    return 'TANH'
+  } else if (squash === Neuron.squash.HLIM) {
+    return 'HLIM'
+  } else if (squash === Neuron.squash.IDENTITY) {
+    return 'Identity'
+  } else {
+    return 'Unknown'
+  }
+}
+
 function randSquash(): Neuron.SquashingFunction | undefined {
   return sample([
-    Neuron.squash.HLIM,
+    // Neuron.squash.HLIM,
     Neuron.squash.LOGISTIC,
     Neuron.squash.ReLU,
     Neuron.squash.TANH,
+    Neuron.squash.IDENTITY,
   ])
 }
 
 function mutateScalar(value: number, learningRate: number): number {
   const adjuster = random(-2, 2, true)
   const oldValuePortion = value * (1 - learningRate)
-  const newValue = value * adjuster
+  const newValue = value === 0 ? 1 : value * adjuster
   const newValuePortion = newValue * learningRate
   const nextValue = oldValuePortion + newValuePortion
   return nextValue
@@ -53,6 +71,7 @@ interface GenomeArgs {
   inputSize?: number
   outputSize?: number
   learningRate?: number
+  initOutputBias?: number
 }
 
 export class Genome {
@@ -63,21 +82,21 @@ export class Genome {
   public edges: GeneEdge[]
   public phenome: Phenome
 
-  constructor(options: GenomeArgs = {}) {
-    this.inputSize = options.inputSize || 2
-    this.outputSize = options.outputSize || 4
-    this.learningRate = options.learningRate || defaultLearningRate
+  constructor(args: GenomeArgs = {}) {
+    this.inputSize = args.inputSize || 2
+    this.outputSize = args.outputSize || 4
+    this.learningRate = args.learningRate || defaultLearningRate
 
-    if (options.nodes && options.edges) {
-      this.nodes = options.nodes
-      this.edges = options.edges
+    if (args.nodes && args.edges) {
+      this.nodes = args.nodes
+      this.edges = args.edges
     } else {
       const inputs = new Array(this.inputSize).fill(undefined).map(
         () =>
           ({
             type: 'input',
             id: uniqueId(),
-            bias: 1,
+            bias: 0,
             squash: Neuron.squash.IDENTITY,
           } as GeneNode),
       )
@@ -86,10 +105,14 @@ export class Genome {
           ({
             type: 'output',
             id: uniqueId(),
-            bias: 1,
-            squash: randSquash(),
+            bias: 0,
+            squash: Neuron.squash.IDENTITY,
           } as GeneNode),
       )
+
+      if (args.initOutputBias) {
+        outputs[args.initOutputBias].bias = 1
+      }
 
       let edges: GeneEdge[] = []
       for (let inputIndex = 0; inputIndex < inputs.length; inputIndex++) {
@@ -98,6 +121,7 @@ export class Genome {
             id: uniqueId(),
             fromNodeIndex: inputIndex,
             toNodeIndex: inputs.length + outputIndex,
+            // weight: 1,
             weight: random(-1, 1),
           })
         }
@@ -145,6 +169,12 @@ export class Genome {
   }
 
   private validate(): boolean {
+    const edgeIds = this.edges.map((edge) => edge.id)
+    if (edgeIds.length !== uniq(edgeIds).length) {
+      console.error(`Duplicate edge ids found [${edgeIds.join(', ')}]`, this)
+      return false
+    }
+
     for (const edge of this.edges) {
       if (
         edge.fromNodeIndex > this.nodes.length - this.outputSize ||
@@ -220,21 +250,13 @@ export class Genome {
 
   mutate(): Genome {
     const mutation = sample([
-      'addNode' as const,
-      'addEdge' as const,
-      'removeNode' as const,
-      'removeNode' as const,
-      'removeEdge' as const,
-      'removeEdge' as const,
-      'mutateEdgeWeight' as const,
-      'mutateEdgeWeight' as const,
-      'mutateEdgeWeight' as const,
-      'mutateNodeBias' as const,
-      'mutateNodeBias' as const,
-      'mutateNodeBias' as const,
-      'mutateNodeSquash' as const,
-      'mutateNodeSquash' as const,
-      'mutateNodeSquash' as const,
+      ...range(1).map(() => 'addNode' as const),
+      ...range(1).map(() => 'addEdge' as const),
+      ...range(2).map(() => 'removeNode' as const),
+      ...range(2).map(() => 'removeEdge' as const),
+      ...range(10).map(() => 'mutateEdgeWeight' as const),
+      ...range(10).map(() => 'mutateNodeBias' as const),
+      ...range(5).map(() => 'mutateNodeSquash' as const),
     ])!
 
     try {
@@ -404,9 +426,16 @@ export class Genome {
       // if (!nextGenome.validate()) {
       //   console.log('removeNode failed validation')
       //   console.log({
-      //     this: this,
+      //     prevNodes: this.nodes,
+      //     prevEdges: this.edges,
       //     nodes: nextNodes,
       //     edges: nextEdges,
+      //     removableNode,
+      //     removableNodeIndex,
+      //     toEdges,
+      //     fromEdges,
+      //     toNodeIndexes,
+      //     fromNodeIndexes,
       //   })
       // }
 
@@ -455,10 +484,7 @@ export class Genome {
       ...this.getArgs(),
       nodes: cloneDeep(this.nodes),
       edges: nextEdges.map((edge) => {
-        if (
-          edge.fromNodeIndex === nextEdge.fromNodeIndex &&
-          edge.toNodeIndex === nextEdge.toNodeIndex
-        ) {
+        if (edge.id === nextEdge.id) {
           return nextEdge
         } else {
           return edge

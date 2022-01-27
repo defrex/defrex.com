@@ -1,4 +1,4 @@
-import { clone, groupBy, random, round, some, sortBy, sum } from 'lodash'
+import { round, sum } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { VictoryChart, VictoryLine } from 'victory'
 import { Button } from '../../components/Button'
@@ -11,93 +11,28 @@ import { sleep } from '../../lib/sleep'
 import { spacing } from '../../lib/spacing'
 import { victoryChartTheme } from '../../lib/victoryChartTheme'
 import { Board } from './components/Board'
-import { BoardState, Position } from './components/Board/lib/BoardState'
 import { GenomeView } from './components/GenomeView'
 import HowItWorks from './components/HowItWorks'
 import { Agent } from './lib/Agent'
+import {
+  canvasHeight,
+  canvasWidth,
+  defaultCellSize,
+  FrameState,
+  getNextFrameState,
+  initFrameState,
+  movesColor,
+  setCellSize,
+} from './lib/getNextFrameState'
 import styles from './styles.module.scss'
 
 interface EvolutionProps {}
 
-const minAgents = 10
-const maxAgents = 100
-const defaultDifficulty = 5
-const defaultCellSize = 16
-const historyRollupGranularity = 500
-const autoSampleEvery = 1000
-
-const canvasWidth =
-  typeof window === 'undefined'
-    ? 768
-    : window.innerWidth > 768
-    ? 768
-    : window.innerWidth > 512
-    ? 512
-    : 256
-const canvasHeight = 512
-
-function movesColor(moves: number, gridWidth: number): string {
-  const maxRunColors = 10
-  const runs = Math.floor(moves / gridWidth)
-  const capRuns = Math.min(runs, maxRunColors)
-  const normalizedRuns = capRuns / maxRunColors
-  const color = `hsl(${Math.round(45 + normalizedRuns * 235)}, 100%, 60%)`
-
-  return color
-}
-
-function difficulty(survivors: number, maxDifficulty: number): number {
-  const proportion = (survivors - minAgents) / (maxAgents - minAgents)
-  return maxDifficulty * proportion
-}
-
-type State = {
-  agents: Agent[]
-  boardState: BoardState
-  cellSize: number
-  gridHeight: number
-  gridWidth: number
-  history: {
-    move: number
-    difficulty: number
-    agentMoves: number[]
-    agentLineage: number[]
-    time: number
-  }[]
-  historyRollup: { move: number; difficulty: number }[]
-  killersPerMove: number
-  killersPerMoveMax: number
-  lifeSpans: Record<number, number>
-  move: number
-  running: boolean
-  speed: number
-  sampleAgents: { move: number; agent: Agent }[]
-  autoSample: boolean
-}
-
-function initState(): State {
-  const cellSize = defaultCellSize
-  const gridWidth = canvasWidth / cellSize
-  const gridHeight = canvasHeight / cellSize
-  return {
-    agents: new Array(minAgents)
-      .fill(0)
-      .map((_, i) => new Agent({ gridWidth, gridHeight })),
-    boardState: new BoardState({ gridWidth, gridHeight, cellSize }),
-    cellSize,
-    gridHeight,
-    gridWidth,
-    history: [],
-    historyRollup: [],
-    killersPerMove: 1,
-    killersPerMoveMax: defaultDifficulty,
-    lifeSpans: {},
-    move: 0,
-    running: false,
-    speed: 0,
-    sampleAgents: [],
-    autoSample: false,
-  }
+function fitnessFromDifficulty(
+  difficulty: number,
+  maxDifficulty: number,
+): number {
+  return round((difficulty / maxDifficulty) * 100)
 }
 
 function bestAgent(agents: Agent[]): Agent {
@@ -118,16 +53,17 @@ export default function Evolution(_props: EvolutionProps) {
     lineage: false,
     difficulty: true,
   })
-  const [state, setState] = useState<State>(initState())
+  const [state, setState] = useState<FrameState>(initFrameState())
 
   const handleReset = useCallback(() => {
-    setState(initState())
-  }, [setState])
+    setState(initFrameState(state.runMode))
+  }, [setState, state])
 
   const handleStart = useCallback(() => {
     setState({
       ...state,
       running: true,
+      runFor: null,
     })
   }, [setState, state])
 
@@ -137,6 +73,21 @@ export default function Evolution(_props: EvolutionProps) {
       running: false,
     })
   }, [setState, state])
+
+  const handleRunOne = useCallback(() => {
+    setState({
+      ...state,
+      running: true,
+      runFor: 1,
+    })
+  }, [setState, state])
+
+  // const handleSetMode = useCallback(
+  //   (mode: RunMode) => () => {
+  //     setState(initState(mode))
+  //   },
+  //   [setState, state],
+  // )
 
   const handleSetSpeed = useCallback(
     (speed: number) => () => {
@@ -160,17 +111,7 @@ export default function Evolution(_props: EvolutionProps) {
 
   const handleCellSize = useCallback(
     (cellSize: number) => () => {
-      const gridWidth = canvasWidth / cellSize
-      const gridHeight = canvasHeight / cellSize
-      setState({
-        ...state,
-        cellSize,
-        gridWidth,
-        gridHeight,
-        boardState: state.boardState.setGrid(gridWidth, gridHeight, cellSize),
-        killersPerMoveMax:
-          defaultDifficulty * (1 / (cellSize / defaultCellSize)),
-      })
+      setState(setCellSize(cellSize, state))
     },
     [setState, state],
   )
@@ -183,7 +124,6 @@ export default function Evolution(_props: EvolutionProps) {
       sampleAgents: [
         ...state.sampleAgents,
         { move: state.move, agent: nextSampleAgent },
-        // { move: 0, agent: new Agent(state.gridWidth, state.gridHeight) },
       ],
     })
   }, [setState, state])
@@ -199,164 +139,28 @@ export default function Evolution(_props: EvolutionProps) {
     setSelectedAgent(null)
   }, [setSelectedAgent])
 
-  const handleToggleAutoSample = useCallback(() => {
-    setState({ ...state, autoSample: !state.autoSample })
-  }, [setState, state])
-
   const handleToggleHowItWorks = useCallback(() => {
     setShowHowItWorks(!showHowItWorks)
   }, [setShowHowItWorks, showHowItWorks])
 
   const renderFrame = () => {
-    setState((currentState) => {
+    setState((currentState: FrameState) => {
       if (!currentState.running) {
         frameRef.current = requestAnimationFrame(renderFrame)
         return currentState
       }
 
-      const {
-        agents,
-        boardState,
-        gridHeight,
-        gridWidth,
-        history,
-        historyRollup,
-        killersPerMove,
-        killersPerMoveMax,
-        lifeSpans,
-        move,
-        running,
-        speed,
-        sampleAgents,
-        autoSample,
-      } = currentState
+      const frameState = getNextFrameState(currentState)
 
-      const nextSampleAgents =
-        move > 0 && move % autoSampleEvery === 0 && autoSample
-          ? [...sampleAgents, { move, agent: bestAgent(agents) }]
-          : sampleAgents
-
-      const killPositions = boardState.getPositions('kill')
-      const nextKillPositions: Position[] = killPositions
-        .map(([x, y]) => [x - 1, y] as Position)
-        .filter(([x, y]) => x >= 0 && y >= 0 && x < gridWidth && y < gridHeight)
-
-      const partialKillersPerMove = killersPerMove % 1
-      for (let i = 0; i < killersPerMove - partialKillersPerMove; i++) {
-        nextKillPositions.push([gridWidth - 1, random(0, gridHeight - 1)])
-      }
-      if (partialKillersPerMove > random(0, 1, true)) {
-        nextKillPositions.push([gridWidth - 1, random(0, gridHeight - 1)])
-      }
-
-      let nextBoardState = boardState.setPositions(
-        nextKillPositions.map((position) => ({
-          type: 'kill',
-          color: colorValues.red60,
-          position,
-        })),
-      )
-      let nextAgents = agents || []
-      nextAgents = nextAgents.map((agent) => agent.move(nextBoardState))
-
-      const { deadAgents, survivingAgents } = groupBy(nextAgents, (agent) =>
-        some(
-          killPositions,
-          ([x, y]) => agent.position[0] === x && agent.position[1] === y,
-        )
-          ? 'deadAgents'
-          : 'survivingAgents',
-      )
-      nextAgents = survivingAgents || []
-
-      const nextLifespans = clone(lifeSpans)
-      if (deadAgents?.length) {
-        for (const killedAgent of deadAgents) {
-          nextLifespans[killedAgent.moves] =
-            (nextLifespans[killedAgent.moves] || 0) + 1
-        }
-      }
-
-      let nextKillersPerMove = difficulty(
-        survivingAgents.length,
-        killersPerMoveMax,
-      )
-
-      if (nextAgents.length === maxAgents) {
-        // Max agents, kill the weak
-        nextAgents = sortBy(nextAgents, 'moves').slice(-95)
-      }
-
-      nextAgents
-        .filter((agent) => agent.position[0] >= gridWidth - 1)
-        .forEach((agent) => {
-          if (nextAgents.length < 100) {
-            nextAgents.push(agent.mutate())
-          }
-        })
-
-      while (nextAgents.length < minAgents) {
-        nextAgents.push(new Agent({ gridWidth, gridHeight }))
-      }
-
-      nextBoardState = nextBoardState.appendPositions(
-        nextAgents.map(({ position, moves }) => ({
-          color: movesColor(moves, gridWidth),
-          position,
-        })),
-      )
-
-      if (running) {
-        if (speed > 0) {
-          sleep(speed).then(() => {
-            frameRef.current = requestAnimationFrame(renderFrame)
-          })
-        } else {
+      if (frameState.speed > 0) {
+        sleep(frameState.speed).then(() => {
           frameRef.current = requestAnimationFrame(renderFrame)
-        }
+        })
+      } else {
+        frameRef.current = requestAnimationFrame(renderFrame)
       }
 
-      const nextHistory = [
-        ...history.slice(-500),
-        {
-          move,
-          difficulty: nextKillersPerMove,
-          agentMoves: nextAgents.map(({ moves }) => moves),
-          agentLineage: nextAgents.map(({ lineage }) => lineage),
-          time: Date.now(),
-        },
-      ]
-
-      let nextHistoryRollup = historyRollup
-      if (move % historyRollupGranularity === 0) {
-        nextHistoryRollup = [
-          ...nextHistoryRollup,
-          {
-            move,
-            difficulty:
-              sum(
-                history
-                  .slice(-historyRollupGranularity)
-                  .map(({ difficulty }) => difficulty),
-              ) / historyRollupGranularity,
-          },
-        ]
-      }
-
-      return {
-        ...currentState,
-        boardState: nextBoardState,
-        agents: nextAgents,
-        lifeSpans: nextLifespans,
-        running,
-        speed,
-        move: move + 1,
-        sampleAgents: nextSampleAgents,
-        killersPerMove: nextKillersPerMove,
-        history: nextHistory,
-        historyRollup: nextHistoryRollup,
-        autoSample,
-      }
+      return frameState
     })
   }
 
@@ -366,7 +170,7 @@ export default function Evolution(_props: EvolutionProps) {
   }, [])
 
   return (
-    <PageContainer title='Neutoevolution'>
+    <PageContainer title='Neuroevolution'>
       <Stack spacing={spacing.large}>
         <Inline expand={0}>
           <Stack spacing={spacing.small}>
@@ -392,6 +196,18 @@ export default function Evolution(_props: EvolutionProps) {
 
         <Stack spacing={spacing.xlarge}>
           <Stack>
+            {/* <Inline spacing={spacing.xsmall}>
+              <Button
+                onClick={handleSetMode('killer')}
+                text='Killers'
+                disabled={state.runMode === 'killer'}
+              />
+              <Button
+                onClick={handleSetMode('competition')}
+                text='Competitors'
+                disabled={state.runMode === 'competition'}
+              />
+            </Inline> */}
             <Inline expand={-1}>
               <Button onClick={handleReset} text='Reset' />
               <Inline spacing={spacing.xsmall}>
@@ -405,6 +221,11 @@ export default function Evolution(_props: EvolutionProps) {
                   text='Play'
                   disabled={state.running}
                 />
+                <Button
+                  onClick={handleRunOne}
+                  text='Play 1'
+                  disabled={state.runFor !== null && state.runFor > 0}
+                />
               </Inline>
               <Inline spacing={spacing.xsmall}>
                 <Button
@@ -413,8 +234,8 @@ export default function Evolution(_props: EvolutionProps) {
                   disabled={state.speed === 0}
                 />
                 <Button
-                  onClick={handleSetSpeed(1000 / 4)}
-                  disabled={state.speed === 1000 / 4}
+                  onClick={handleSetSpeed(1000 / 6)}
+                  disabled={state.speed === 1000 / 6}
                   text='Slow'
                 />
               </Inline>
@@ -450,45 +271,40 @@ export default function Evolution(_props: EvolutionProps) {
           </Stack>
 
           {/* <pre>
-            {JSON.stringify(
-              sortBy(state.agents, (agent) => agent.lineage, 'desc').map(
-                (agent, index) => ({
-                  index,
-                  lineage: agent.lineage,
-                }),
-              ),
-              null,
-              2,
-            )}
+            {JSON.stringify({ difficulty: state.killersPerMove }, null, 2)}
           </pre> */}
 
           <Stack>
-            <Inline expand={0}>
-              <Text value='Sample Agents' color={colors.black40} />
-              <Button
-                onClick={handleToggleAutoSample}
-                text={`${state.autoSample ? '☑' : '☐'} Auto Sample`}
-              />
-              <Button onClick={handleSampleAgent} text='Sample' />
+            <Inline align='right'>
+              <Button onClick={handleSampleAgent} text='Sample Agent' />
             </Inline>
+
             <table className={styles.sampleAgents}>
               <thead>
-                <tr>
-                  <th>
-                    <Text value='Sampled At' color={colors.black40} />
-                  </th>
-                  <th></th>
-                  <th>
-                    <Text value='Moves' color={colors.black40} />
-                  </th>
-                  <th>
-                    <Text value='Parents' color={colors.black40} />
-                  </th>
-                </tr>
+                {state.sampleAgents.length > 0 ? (
+                  <tr>
+                    <th>
+                      <Text value='Sampled At' color={colors.black40} />
+                    </th>
+                    <th></th>
+                    <th>
+                      <Text value='Moves' color={colors.black40} />
+                    </th>
+                    <th>
+                      <Text value='Parents' color={colors.black40} />
+                    </th>
+                    <th>
+                      <Text value='Nodes' color={colors.black40} />
+                    </th>
+                    <th>
+                      <Text value='Edges' color={colors.black40} />
+                    </th>
+                  </tr>
+                ) : null}
               </thead>
               <tbody>
                 {state.sampleAgents.map(({ move, agent }) => (
-                  <tr key={agent.id}>
+                  <tr key={`${move}-${agent.id}`}>
                     <td>
                       <Text value={`${move}`} />
                     </td>
@@ -511,70 +327,62 @@ export default function Evolution(_props: EvolutionProps) {
                       <Text value={`${agent.lineage}`} />
                     </td>
                     <td>
-                      <Button onClick={handleSelectAgent(agent)} text='View' />
+                      <Text value={`${agent.genome.nodes.length}`} />
+                    </td>
+                    <td>
+                      <Text value={`${agent.genome.edges.length}`} />
+                    </td>
+                    <td>
+                      <Button
+                        onClick={handleSelectAgent(agent)}
+                        text='View Brain'
+                      />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {/* {state.sampleAgents.map(({ move, agent }) => (
-              <Stack key={agent.id}>
-                <Inline expand={0}>
-                  <Stack spacing={spacing.small}>
-                    <Text value={`From move ${move}`} />
-                    <Inline spacing={spacing.small}>
-                      <div
-                        style={{
-                          backgroundColor: movesColor(
-                            agent.moves,
-                            state.gridWidth,
-                          ),
-                          height: state.cellSize * 0.5,
-                          width: state.cellSize * 0.5,
-                        }}
-                      />
-                      <Text value={`${agent.moves} moves`} />
-                      <Text value={`${agent.lineage} parents`} />
-                    </Inline>
-                  </Stack>
-                  <Button onClick={handleSelectAgent(agent)} text='View' />
-                </Inline>
-              </Stack>
-            ))} */}
           </Stack>
 
           {selectedAgent ? (
             <Stack>
-              <Inline expand={0}>
-                <Stack spacing={spacing.small}>
-                  <Text value='Selected Agent' color={colors.black40} />
-                  <Inline spacing={spacing.medium}>
-                    <div
-                      style={{
-                        backgroundColor: movesColor(
-                          selectedAgent.moves,
-                          state.gridWidth,
-                        ),
-                        height: 8,
-                        width: 8,
-                      }}
-                    />
-                    <Text value={`${selectedAgent.moves} moves`} />
-                    <Text value={`${selectedAgent.lineage} parents`} />
-                  </Inline>
-                </Stack>
-                <Button onClick={handleClearSelectedAgent} text='Clear' />
+              <Inline align='right'>
+                <Button onClick={handleClearSelectedAgent} text='Close' />
               </Inline>
               <GenomeView genome={selectedAgent.genome} />
             </Stack>
           ) : null}
 
+          {state.runMode === 'killer' ? (
+            <Stack spacing={spacing.small}>
+              <Inline expand={0}>
+                <Text value={`Fitness`} color={colors.black40} />
+                <Button
+                  onClick={handleToggleMetric('difficulty')}
+                  text={metricsVisible.difficulty ? 'Hide' : 'Show'}
+                />
+              </Inline>
+              {metricsVisible.difficulty && state.historyRollup.length > 0 ? (
+                <VictoryChart theme={victoryChartTheme} height={200}>
+                  <VictoryLine
+                    data={state.historyRollup.map(({ move, difficulty }) => ({
+                      move,
+                      fitness: fitnessFromDifficulty(
+                        difficulty,
+                        state.killersPerMoveMax,
+                      ),
+                    }))}
+                    x='move'
+                    y='fitness'
+                  />
+                </VictoryChart>
+              ) : null}
+            </Stack>
+          ) : null}
+
           <Stack spacing={spacing.small}>
             <Inline expand={0}>
-              <Text
-                value={`Population (Max ${maxAgents})`}
-                color={colors.black40}
-              />
+              <Text value={`Population`} color={colors.black40} />
               <Button
                 onClick={handleToggleMetric('population')}
                 text={metricsVisible.population ? 'Hide' : 'Show'}
@@ -582,14 +390,28 @@ export default function Evolution(_props: EvolutionProps) {
             </Inline>
             {metricsVisible.population && state.history.length > 0 ? (
               <VictoryChart theme={victoryChartTheme} height={200}>
-                <VictoryLine
-                  data={state.history.map(({ move, agentMoves }) => ({
-                    move,
-                    size: agentMoves.length,
-                  }))}
-                  x='move'
-                  y='size'
-                />
+                {(state.runMode === 'killer'
+                  ? ['right', 'kill']
+                  : ['right', 'left']
+                ).map((positionType) => (
+                  <VictoryLine
+                    key={positionType}
+                    style={{
+                      data: {
+                        stroke:
+                          positionType === 'kill'
+                            ? colorValues.red60
+                            : colorValues.blue60,
+                      },
+                    }}
+                    data={state.history.map(({ move, positionTypes }) => ({
+                      move,
+                      agents: positionTypes[positionType]?.length || 0,
+                    }))}
+                    x='move'
+                    y='agents'
+                  />
+                ))}
               </VictoryChart>
             ) : null}
           </Stack>
@@ -611,28 +433,6 @@ export default function Evolution(_props: EvolutionProps) {
                   }))}
                   x='move'
                   y='lineage'
-                />
-              </VictoryChart>
-            ) : null}
-          </Stack>
-
-          <Stack spacing={spacing.small}>
-            <Inline expand={0}>
-              <Text
-                value={`Difficulty (Max ${state.killersPerMoveMax})`}
-                color={colors.black40}
-              />
-              <Button
-                onClick={handleToggleMetric('difficulty')}
-                text={metricsVisible.difficulty ? 'Hide' : 'Show'}
-              />
-            </Inline>
-            {metricsVisible.difficulty && state.historyRollup.length > 0 ? (
-              <VictoryChart theme={victoryChartTheme} height={200}>
-                <VictoryLine
-                  data={state.historyRollup}
-                  x='move'
-                  y='difficulty'
                 />
               </VictoryChart>
             ) : null}

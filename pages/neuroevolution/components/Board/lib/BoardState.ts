@@ -11,7 +11,7 @@ interface BoardStateArgs {
   positions?: ColorPosition[]
 }
 
-interface ColorPosition {
+export interface ColorPosition {
   color: string
   position: Position
   type?: string
@@ -69,7 +69,7 @@ export class BoardState {
     })
   }
 
-  getPositions(positionType: string): Position[] {
+  getPositions(positionType?: string): Position[] {
     return (
       this.positions
         .filter(({ type }) => type === positionType)
@@ -132,7 +132,10 @@ export class BoardState {
 
     let [toX, toY] = toPosition
     ;[toX, toY] = [toX % this.gridWidth, toY % this.gridHeight]
-    ;[toX, toY] = [toX < 0 ? 0 : toX, toY < 0 ? this.gridHeight + toY : toY]
+    ;[toX, toY] = [
+      toX < 0 ? this.gridWidth + toX : toX,
+      toY < 0 ? this.gridHeight + toY : toY,
+    ]
     return [toX, toY]
   }
 }

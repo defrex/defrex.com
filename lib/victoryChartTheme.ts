@@ -20,7 +20,7 @@ const colorScale = [
 const sansSerif =
   "'Open Sans', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif"
 const letterSpacing = 'normal'
-const fontSize = 10
+const fontSize = 8
 // *
 // * Layout
 // *
