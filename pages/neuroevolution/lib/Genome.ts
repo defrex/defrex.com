@@ -1,6 +1,7 @@
 import {
   cloneDeep,
   random,
+  range,
   sample,
   shuffle,
   uniq,
@@ -39,7 +40,7 @@ function randSquash(): Neuron.SquashingFunction | undefined {
 function mutateScalar(value: number, learningRate: number): number {
   const adjuster = random(-2, 2, true)
   const oldValuePortion = value * (1 - learningRate)
-  const newValue = value * adjuster
+  const newValue = value === 0 ? 1 : value * adjuster
   const newValuePortion = newValue * learningRate
   const nextValue = oldValuePortion + newValuePortion
   return nextValue
@@ -232,21 +233,13 @@ export class Genome {
 
   mutate(): Genome {
     const mutation = sample([
-      'addNode' as const,
-      'addEdge' as const,
-      'removeNode' as const,
-      'removeNode' as const,
-      'removeEdge' as const,
-      'removeEdge' as const,
-      'mutateEdgeWeight' as const,
-      'mutateEdgeWeight' as const,
-      'mutateEdgeWeight' as const,
-      'mutateNodeBias' as const,
-      'mutateNodeBias' as const,
-      'mutateNodeBias' as const,
-      'mutateNodeSquash' as const,
-      'mutateNodeSquash' as const,
-      'mutateNodeSquash' as const,
+      ...range(1).map(() => 'addNode' as const),
+      ...range(1).map(() => 'addEdge' as const),
+      ...range(2).map(() => 'removeNode' as const),
+      ...range(2).map(() => 'removeEdge' as const),
+      ...range(10).map(() => 'mutateEdgeWeight' as const),
+      ...range(10).map(() => 'mutateNodeBias' as const),
+      ...range(5).map(() => 'mutateNodeSquash' as const),
     ])!
 
     try {

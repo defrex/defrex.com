@@ -18,7 +18,7 @@ export default function HowItWorks(_props: HowItWorksProps) {
         color={colors.black30}
         value={`
           Each colored square (🟦) is a Neural Network, and each red square (🟥) is
-          a killer! If a 🟦 touched a 🟥, it dies.
+          a killer! If a 🟦 touches a 🟥, it dies.
         `}
       />
 
@@ -163,19 +163,6 @@ export default function HowItWorks(_props: HowItWorksProps) {
           size={14}
           color={colors.black30}
           value='Select a random squash (or activation) function.'
-        />
-      </Stack>
-
-      <Stack spacing={spacing.small}>
-        <Text value='What should I look for?' size={16} />
-        <Text
-          size={14}
-          color={colors.black30}
-          value={`
-            The key metric is "difficulty", which is the number of 🟥
-            spawned per frame. Over time, as the 🟦 networks get stronger,
-            they can handle a higher spawn rate.
-          `}
         />
       </Stack>
     </Stack>
