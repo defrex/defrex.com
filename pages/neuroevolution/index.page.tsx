@@ -152,14 +152,12 @@ export default function Evolution(_props: EvolutionProps) {
 
       const frameState = getNextFrameState(currentState)
 
-      if (frameState.running) {
-        if (frameState.speed > 0) {
-          sleep(frameState.speed).then(() => {
-            frameRef.current = requestAnimationFrame(renderFrame)
-          })
-        } else {
+      if (frameState.speed > 0) {
+        sleep(frameState.speed).then(() => {
           frameRef.current = requestAnimationFrame(renderFrame)
-        }
+        })
+      } else {
+        frameRef.current = requestAnimationFrame(renderFrame)
       }
 
       return frameState

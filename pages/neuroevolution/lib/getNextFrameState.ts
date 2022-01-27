@@ -252,6 +252,8 @@ export function getNextFrameState(state: FrameState): FrameState {
     ]
   }
 
+  const runFor = state.runFor ? state.runFor - 1 : null
+
   return {
     ...state,
     agents,
@@ -260,8 +262,8 @@ export function getNextFrameState(state: FrameState): FrameState {
     historyRollup,
     killersPerMove,
     move,
-    runFor: state.runFor ? state.runFor - 1 : null,
-    running: state.runFor === null ? state.running : state.runFor - 1 > 0,
+    runFor,
+    running: runFor === null ? state.running : runFor > 0,
   }
 }
 
