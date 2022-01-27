@@ -234,8 +234,8 @@ export default function Evolution(_props: EvolutionProps) {
                   disabled={state.speed === 0}
                 />
                 <Button
-                  onClick={handleSetSpeed(1000 / 8)}
-                  disabled={state.speed === 1000 / 8}
+                  onClick={handleSetSpeed(1000 / 6)}
+                  disabled={state.speed === 1000 / 6}
                   text='Slow'
                 />
               </Inline>
