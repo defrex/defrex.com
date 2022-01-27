@@ -223,6 +223,10 @@ export default function Evolution(_props: EvolutionProps) {
                   />
                 </Inline>
               ) : null}
+
+              <Inline align='right'>
+                <Button onClick={handleSampleAgent} text='Sample Agent' />
+              </Inline>
             </Inline>
           </Stack>
 
@@ -231,10 +235,6 @@ export default function Evolution(_props: EvolutionProps) {
           </pre> */}
 
           <Stack>
-            <Inline align='right'>
-              <Button onClick={handleSampleAgent} text='Sample Agent' />
-            </Inline>
-
             <table className={styles.sampleAgents}>
               <thead>
                 {state.sampleAgents.length > 0 ? (
