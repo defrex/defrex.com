@@ -17,7 +17,6 @@ import { Agent } from './lib/Agent'
 import {
   canvasHeight,
   canvasWidth,
-  defaultCellSize,
   FrameState,
   getNextFrameState,
   initFrameState,
@@ -99,13 +98,6 @@ export default function Evolution(_props: EvolutionProps) {
       })
     },
     [metricsVisible, setMetricsVisible],
-  )
-
-  const handleCellSize = useCallback(
-    (cellSize: number) => () => {
-      setState(setCellSize(cellSize, state))
-    },
-    [setState, state],
   )
 
   const handleSampleAgent = useCallback(() => {
@@ -218,21 +210,7 @@ export default function Evolution(_props: EvolutionProps) {
                   disabled={state.running && state.speed === 1000 / slowFps}
                   text='Slow'
                 />
-                <Button onClick={handleRunOne} text='One' />
-              </Inline>
-              <Inline spacing={spacing.xsmall}>
-                {[
-                  ['small', defaultCellSize * 2],
-                  ['medium', defaultCellSize],
-                  ['large', defaultCellSize / 2],
-                ].map(([sizeName, cellSize]) => (
-                  <Button
-                    key={sizeName}
-                    onClick={handleCellSize(cellSize as number)}
-                    text={sizeName as string}
-                    disabled={state.cellSize === cellSize}
-                  />
-                ))}
+                <Button onClick={handleRunOne} text='Step' />
               </Inline>
 
               {state.history.length > 2 ? (
