@@ -28,12 +28,29 @@ interface GeneEdge {
 
 type Phenome = Neuron[]
 
+export function getSquashName(squash?: Neuron.SquashingFunction): string {
+  if (squash === Neuron.squash.LOGISTIC) {
+    return 'Sigmoid'
+  } else if (squash === Neuron.squash.ReLU) {
+    return 'ReLU'
+  } else if (squash === Neuron.squash.TANH) {
+    return 'TANH'
+  } else if (squash === Neuron.squash.HLIM) {
+    return 'HLIM'
+  } else if (squash === Neuron.squash.IDENTITY) {
+    return 'Identity'
+  } else {
+    return 'Unknown'
+  }
+}
+
 function randSquash(): Neuron.SquashingFunction | undefined {
   return sample([
     // Neuron.squash.HLIM,
     Neuron.squash.LOGISTIC,
     Neuron.squash.ReLU,
     Neuron.squash.TANH,
+    Neuron.squash.IDENTITY,
   ])
 }
 
@@ -79,7 +96,7 @@ export class Genome {
           ({
             type: 'input',
             id: uniqueId(),
-            bias: 1,
+            bias: 0,
             squash: Neuron.squash.IDENTITY,
           } as GeneNode),
       )
@@ -89,7 +106,7 @@ export class Genome {
             type: 'output',
             id: uniqueId(),
             bias: 0,
-            squash: Neuron.squash.LOGISTIC,
+            squash: Neuron.squash.IDENTITY,
           } as GeneNode),
       )
 

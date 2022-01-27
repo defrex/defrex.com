@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { EdgeData, NodeData } from 'reaflow'
 import { colorValues } from '../../../../lib/colors'
 import { Agent } from '../../lib/Agent'
-import { Genome } from '../../lib/Genome'
+import { Genome, getSquashName } from '../../lib/Genome'
 
 interface GenomeViewProps {
   genome: Genome
@@ -36,7 +36,7 @@ export function GenomeView({ genome }: GenomeViewProps) {
           : node.type === 'hidden'
           ? ''
           : node.type
-      } ${round(node.bias, 2)}`,
+      } ${getSquashName(node.squash)}(${round(node.bias, 2)})`,
     }))
   }, [genome])
 
