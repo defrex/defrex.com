@@ -1,4 +1,4 @@
-import { round, sum } from 'lodash'
+import { last } from 'lodash'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { VictoryChart, VictoryLine } from 'victory'
 import { Button } from '../../components/Button'
@@ -21,19 +21,13 @@ import {
   FrameState,
   getNextFrameState,
   initFrameState,
+  metricsWith,
   movesColor,
   setCellSize,
 } from './lib/getNextFrameState'
 import styles from './styles.module.scss'
 
 interface EvolutionProps {}
-
-function fitnessFromDifficulty(
-  difficulty: number,
-  maxDifficulty: number,
-): number {
-  return round((difficulty / maxDifficulty) * 100)
-}
 
 function bestAgent(agents: Agent[]): Agent {
   return agents.reduce((best, agent) => {
@@ -43,6 +37,8 @@ function bestAgent(agents: Agent[]): Agent {
     return best
   }, agents[0])
 }
+
+const slowFps = 6
 
 export default function Evolution(_props: EvolutionProps) {
   const frameRef = useRef<number>()
@@ -56,14 +52,15 @@ export default function Evolution(_props: EvolutionProps) {
   const [state, setState] = useState<FrameState>(initFrameState())
 
   const handleReset = useCallback(() => {
-    setState(initFrameState(state.runMode))
+    setState(setCellSize(state.cellSize, initFrameState()))
   }, [setState, state])
 
-  const handleStart = useCallback(() => {
+  const handlePlay = useCallback(() => {
     setState({
       ...state,
       running: true,
       runFor: null,
+      speed: 0,
     })
   }, [setState, state])
 
@@ -82,17 +79,12 @@ export default function Evolution(_props: EvolutionProps) {
     })
   }, [setState, state])
 
-  // const handleSetMode = useCallback(
-  //   (mode: RunMode) => () => {
-  //     setState(initState(mode))
-  //   },
-  //   [setState, state],
-  // )
-
   const handleSetSpeed = useCallback(
     (speed: number) => () => {
       setState({
         ...state,
+
+        running: true,
         speed,
       })
     },
@@ -208,7 +200,7 @@ export default function Evolution(_props: EvolutionProps) {
                 disabled={state.runMode === 'competition'}
               />
             </Inline> */}
-            <Inline expand={-1}>
+            <Inline expand={-1} verticalIf={{ eq: 'small' }}>
               <Button onClick={handleReset} text='Reset' />
               <Inline spacing={spacing.xsmall}>
                 <Button
@@ -217,27 +209,16 @@ export default function Evolution(_props: EvolutionProps) {
                   disabled={!state.running}
                 />
                 <Button
-                  onClick={handleStart}
+                  onClick={handlePlay}
                   text='Play'
-                  disabled={state.running}
+                  disabled={state.running && state.speed === 0}
                 />
                 <Button
-                  onClick={handleRunOne}
-                  text='Play 1'
-                  disabled={state.runFor !== null && state.runFor > 0}
-                />
-              </Inline>
-              <Inline spacing={spacing.xsmall}>
-                <Button
-                  onClick={handleSetSpeed(0)}
-                  text='Fast'
-                  disabled={state.speed === 0}
-                />
-                <Button
-                  onClick={handleSetSpeed(1000 / 6)}
-                  disabled={state.speed === 1000 / 6}
+                  onClick={handleSetSpeed(1000 / slowFps)}
+                  disabled={state.running && state.speed === 1000 / slowFps}
                   text='Slow'
                 />
+                <Button onClick={handleRunOne} text='One' />
               </Inline>
               <Inline spacing={spacing.xsmall}>
                 {[
@@ -257,12 +238,9 @@ export default function Evolution(_props: EvolutionProps) {
               {state.history.length > 2 ? (
                 <Inline align='right'>
                   <Text
-                    value={`${round(
-                      1 /
-                        ((state.history[state.history.length - 1].time -
-                          state.history[state.history.length - 2].time) /
-                          1000),
-                    )}fps`}
+                    value={`${
+                      last(metricsWith(state.metrics, 'fps'))?.fps || 0
+                    }fps`}
                     color={colors.black40}
                   />
                 </Inline>
@@ -291,7 +269,7 @@ export default function Evolution(_props: EvolutionProps) {
                       <Text value='Moves' color={colors.black40} />
                     </th>
                     <th>
-                      <Text value='Parents' color={colors.black40} />
+                      <Text value='Lineage' color={colors.black40} />
                     </th>
                     <th>
                       <Text value='Nodes' color={colors.black40} />
@@ -353,32 +331,24 @@ export default function Evolution(_props: EvolutionProps) {
             </Stack>
           ) : null}
 
-          {state.runMode === 'killer' ? (
-            <Stack spacing={spacing.small}>
-              <Inline expand={0}>
-                <Text value={`Fitness`} color={colors.black40} />
-                <Button
-                  onClick={handleToggleMetric('difficulty')}
-                  text={metricsVisible.difficulty ? 'Hide' : 'Show'}
+          <Stack spacing={spacing.small}>
+            <Inline expand={0}>
+              <Text value={`Fitness`} color={colors.black40} />
+              <Button
+                onClick={handleToggleMetric('difficulty')}
+                text={metricsVisible.difficulty ? 'Hide' : 'Show'}
+              />
+            </Inline>
+            {metricsVisible.difficulty && state.metrics.length > 0 ? (
+              <VictoryChart theme={victoryChartTheme} height={200}>
+                <VictoryLine
+                  data={metricsWith(state.metrics, 'fitness')}
+                  x='move'
+                  y='fitness'
                 />
-              </Inline>
-              {metricsVisible.difficulty && state.historyRollup.length > 0 ? (
-                <VictoryChart theme={victoryChartTheme} height={200}>
-                  <VictoryLine
-                    data={state.historyRollup.map(({ move, difficulty }) => ({
-                      move,
-                      fitness: fitnessFromDifficulty(
-                        difficulty,
-                        state.killersPerMoveMax,
-                      ),
-                    }))}
-                    x='move'
-                    y='fitness'
-                  />
-                </VictoryChart>
-              ) : null}
-            </Stack>
-          ) : null}
+              </VictoryChart>
+            ) : null}
+          </Stack>
 
           <Stack spacing={spacing.small}>
             <Inline expand={0}>
@@ -388,37 +358,31 @@ export default function Evolution(_props: EvolutionProps) {
                 text={metricsVisible.population ? 'Hide' : 'Show'}
               />
             </Inline>
-            {metricsVisible.population && state.history.length > 0 ? (
+            {metricsVisible.population && state.metrics.length > 0 ? (
               <VictoryChart theme={victoryChartTheme} height={200}>
-                {(state.runMode === 'killer'
-                  ? ['right', 'kill']
-                  : ['right', 'left']
-                ).map((positionType) => (
-                  <VictoryLine
-                    key={positionType}
-                    style={{
-                      data: {
-                        stroke:
-                          positionType === 'kill'
-                            ? colorValues.red60
-                            : colorValues.blue60,
-                      },
-                    }}
-                    data={state.history.map(({ move, positionTypes }) => ({
-                      move,
-                      agents: positionTypes[positionType]?.length || 0,
-                    }))}
-                    x='move'
-                    y='agents'
-                  />
-                ))}
+                <VictoryLine
+                  style={{
+                    data: { stroke: colorValues.blue60, strokeWidth: 1 },
+                  }}
+                  data={metricsWith(state.metrics, 'population', 1000)}
+                  x='move'
+                  y='population'
+                />
+                <VictoryLine
+                  style={{
+                    data: { stroke: colorValues.red60, strokeWidth: 1 },
+                  }}
+                  data={metricsWith(state.metrics, 'killers', 1000)}
+                  x='move'
+                  y='killers'
+                />
               </VictoryChart>
             ) : null}
           </Stack>
 
           <Stack spacing={spacing.small}>
             <Inline expand={0}>
-              <Text value={`Lineage (Avg Length)`} color={colors.black40} />
+              <Text value={`Lineage`} color={colors.black40} />
               <Button
                 onClick={handleToggleMetric('lineage')}
                 text={metricsVisible.lineage ? 'Hide' : 'Show'}
@@ -427,12 +391,14 @@ export default function Evolution(_props: EvolutionProps) {
             {metricsVisible.lineage && state.history.length > 0 ? (
               <VictoryChart theme={victoryChartTheme} height={200}>
                 <VictoryLine
-                  data={state.history.map(({ move, agentLineage }) => ({
-                    move,
-                    lineage: round(sum(agentLineage) / agentLineage.length),
-                  }))}
+                  data={metricsWith(state.metrics, 'lineageMax', 1000)}
                   x='move'
-                  y='lineage'
+                  y='lineageMax'
+                />
+                <VictoryLine
+                  data={metricsWith(state.metrics, 'lineageMin', 1000)}
+                  x='move'
+                  y='lineageMin'
                 />
               </VictoryChart>
             ) : null}

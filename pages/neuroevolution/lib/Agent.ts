@@ -33,52 +33,25 @@ export class Agent {
   private gridWidth: number
   private gridHeight: number
 
-  constructor({
-    genome,
-    position,
-    id,
-    direction,
-    threatType,
-    ...args
-  }: AgentArgs) {
+  constructor({ ...args }: AgentArgs) {
     assign(this, args)
 
-    if (genome) {
-      this.genome = genome
-    } else {
-      this.genome = new Genome({
-        inputSize: Agent.inputLabels.length,
-        outputSize: Agent.outputLabels.length,
-        initOutputBias: 2, // ensure they move forward
-      })
-    }
+    this.genome ||= new Genome({
+      inputSize: Agent.inputLabels.length,
+      outputSize: Agent.outputLabels.length,
+      initOutputBias: 2, // ensure they move forward
+    })
 
-    if (direction) {
-      this.direction = direction
-    } else {
-      this.direction = sample(['left', 'right'])!
-    }
+    this.direction ||= sample(['left', 'right'])!
 
-    if (threatType) {
-      this.threatType = threatType
-    } else {
-      this.threatType = this.direction === 'right' ? 'left' : 'right'
-    }
+    this.threatType ||= this.direction === 'right' ? 'left' : 'right'
 
-    if (position) {
-      this.position = position
-    } else {
-      this.position = [
-        this.direction === 'left' ? this.gridWidth - 1 : 0,
-        random(0, this.gridHeight - 1),
-      ]
-    }
+    this.position ||= [
+      this.direction === 'left' ? this.gridWidth - 1 : 0,
+      random(0, this.gridHeight - 1),
+    ]
 
-    if (id) {
-      this.id = id
-    } else {
-      this.id = uniqueId()
-    }
+    this.id ||= uniqueId()
   }
 
   private getArgs(): AgentArgs {
@@ -103,14 +76,15 @@ export class Agent {
     })
   }
 
-  mutate(keepPosition = false): Agent {
+  mutate(args?: AgentArgs): Agent {
     return new Agent({
       ...this.getArgs(),
+      ...(args || {}),
       genome: this.genome.mutate(),
-      position: keepPosition ? this.position : undefined,
       moves: 0,
       lineage: this.lineage + 1,
       direction: this.direction,
+      position: undefined,
     })
   }
 
@@ -167,6 +141,7 @@ export class Agent {
       ...this.getArgs(),
       position: nextPosition,
       moves: nextMoves,
+      id: this.id,
     })
   }
 

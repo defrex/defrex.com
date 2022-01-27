@@ -188,8 +188,10 @@ export const victoryChartTheme = {
       style: {
         data: {
           fill: 'transparent',
-          stroke: fgMainColor,
-          strokeWidth: 2,
+          // stroke: fgMainColor,
+          // strokeWidth: 2,
+          stroke: colorValues.brandDark,
+          strokeWidth: 1,
         },
         labels: baseLabelStyles,
       },
