@@ -183,12 +183,12 @@ export default function Evolution(_props: EvolutionProps) {
     })
   }, [setState, state])
 
-  const handleSetMode = useCallback(
-    (mode: RunMode) => () => {
-      setState(initState(mode))
-    },
-    [setState, state],
-  )
+  // const handleSetMode = useCallback(
+  //   (mode: RunMode) => () => {
+  //     setState(initState(mode))
+  //   },
+  //   [setState, state],
+  // )
 
   const handleSetSpeed = useCallback(
     (speed: number) => () => {
