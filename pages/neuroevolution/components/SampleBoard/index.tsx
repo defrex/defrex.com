@@ -23,8 +23,7 @@ interface SampleBoardProps {
 interface SampleFrameState extends DefaultFrameState {
   agent: Agent
   boardState: BoardState
-  timeout: number
-  result: 'death' | 'life' | 'timeout' | null
+  result: 'death' | 'life' | null
 }
 
 const cellSize = defaultCellSize
@@ -32,7 +31,6 @@ const canvasHeight = defaultCellSize * 5
 const canvasWidth = defaultCanvasWidth
 const gridWidth = canvasWidth / cellSize
 const gridHeight = canvasHeight / cellSize
-const defaultTimeout = gridWidth * 5
 
 export function SampleBoard(props: SampleBoardProps) {
   const initSampleFrameState = useCallback(
@@ -41,7 +39,6 @@ export function SampleBoard(props: SampleBoardProps) {
       return {
         agent,
         running: state ? false : true,
-        timeout: defaultTimeout,
         result: state && state.result !== null ? state.result : null,
         boardState: new BoardState({
           gridWidth,
@@ -71,8 +68,8 @@ export function SampleBoard(props: SampleBoardProps) {
 
       const killPositions: Position[] = advanceKillPositions(boardState)
 
-      if (state.timeout === 0) {
-        return initSampleFrameState({ ...state, result: 'timeout' })
+      if (killPositions.length === 0) {
+        return initSampleFrameState({ ...state, result: 'life' })
       }
 
       if (
@@ -92,7 +89,6 @@ export function SampleBoard(props: SampleBoardProps) {
           ...killPositionColors(killPositions),
           ...agentPositionColors([agent], gridWidth),
         ]),
-        timeout: state.timeout - 1,
         result: null,
       }
     },
@@ -113,8 +109,6 @@ export function SampleBoard(props: SampleBoardProps) {
                 ? '👑'
                 : state.result === 'death'
                 ? '☠️'
-                : state.result === 'timeout'
-                ? '👑'
                 : ''
             }
           />
