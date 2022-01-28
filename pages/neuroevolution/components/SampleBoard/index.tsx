@@ -114,7 +114,7 @@ export function SampleBoard(props: SampleBoardProps) {
                 : state.result === 'death'
                 ? '☠️'
                 : state.result === 'timeout'
-                ? '⌛'
+                ? '👑'
                 : ''
             }
           />
