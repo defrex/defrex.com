@@ -143,6 +143,10 @@ export default function HowItWorks(_props: HowItWorksProps) {
             constant, currently ${defaultLearningRate}.
           `}
         />
+        <pre>
+          let newValue = (value * random(-2, 2) * learningRate) + (value * (1 -
+          learningRate))
+        </pre>
       </Stack>
 
       <Stack spacing={spacing.small}>
