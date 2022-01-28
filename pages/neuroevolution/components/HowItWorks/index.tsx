@@ -120,7 +120,7 @@ export default function HowItWorks(_props: HowItWorksProps) {
         <Text
           size={14}
           color={colors.black30}
-          value={`Find and remove a hidden node, connecting all it's inbound edges to all it's outbound edges.`}
+          value={`Find and remove a hidden node, connecting all its inbound edges to all its outbound edges.`}
         />
       </Stack>
 
