@@ -42,7 +42,7 @@ function bestAgent(agents: Agent[]): Agent {
 export default function Evolution(_props: EvolutionProps) {
   const [showHowItWorks, setShowHowItWorks] = useState(false)
   const [sampleAgents, setSampleAgents] = useState<AgentSample[]>([])
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
+  const [showAgentBehavior, setShowAgentBehavior] = useState<Agent | null>(null)
   const [showAgentNetwork, setShowAgentNetwork] = useState<Agent | null>(null)
   const [metricsVisible, setMetricsVisible] = useState({
     population: false,
@@ -82,15 +82,15 @@ export default function Evolution(_props: EvolutionProps) {
     [setSampleAgents],
   )
 
-  const handleSelectAgent = useCallback(
+  const handleShowAgentBehavior = useCallback(
     (selection: Agent | null) => () => {
-      setSelectedAgent(null)
-      requestAnimationFrame(() => setSelectedAgent(selection))
+      setShowAgentBehavior(null)
+      requestAnimationFrame(() => setShowAgentBehavior(selection))
     },
-    [setSelectedAgent],
+    [setShowAgentBehavior],
   )
 
-  const handleSelectAgentNetwork = useCallback(
+  const handleShowAgentNetwork = useCallback(
     (selection: Agent | null) => () => {
       setShowAgentNetwork(selection)
     },
@@ -247,7 +247,9 @@ export default function Evolution(_props: EvolutionProps) {
                   <tr
                     key={`${move}-${agent.id}`}
                     className={
-                      selectedAgent === agent ? styles.selectedAgent : undefined
+                      showAgentBehavior === agent
+                        ? styles.showAgentBehavior
+                        : undefined
                     }
                   >
                     <td>
@@ -283,11 +285,11 @@ export default function Evolution(_props: EvolutionProps) {
                     <td>
                       <Inline align='right'>
                         <Button
-                          onClick={handleSelectAgentNetwork(agent)}
+                          onClick={handleShowAgentNetwork(agent)}
                           text='Network'
                         />
                         <Button
-                          onClick={handleSelectAgent(agent)}
+                          onClick={handleShowAgentBehavior(agent)}
                           text='Behavior'
                         />
                       </Inline>
@@ -297,12 +299,14 @@ export default function Evolution(_props: EvolutionProps) {
               </tbody>
             </table>
 
-            {selectedAgent ? <AgentBehavior agent={selectedAgent} /> : null}
+            {showAgentBehavior ? (
+              <AgentBehavior agent={showAgentBehavior} />
+            ) : null}
 
             {showAgentNetwork ? (
               <GenomeView
                 genome={showAgentNetwork.genome}
-                onClick={handleSelectAgentNetwork(null)}
+                onClick={handleShowAgentNetwork(null)}
               />
             ) : null}
           </Stack>

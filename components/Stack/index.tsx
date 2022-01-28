@@ -21,18 +21,14 @@ export function Stack({
   )
   return (
     <div className={className}>
-      {realChildren.map((child, index) =>
-        realChildren.length - 1 === index ? (
-          child
-        ) : (
-          <div
-            key={index}
-            className={styles[`stack-${spacing}${debug ? '-debug' : ''}`]}
-          >
-            {child}
-          </div>
-        ),
-      )}
+      {realChildren.map((child, index) => (
+        <div
+          key={index}
+          className={styles[`stack-${spacing}${debug ? '-debug' : ''}`]}
+        >
+          {child}
+        </div>
+      ))}
     </div>
   )
 }
