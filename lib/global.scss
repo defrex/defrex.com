@@ -16,6 +16,7 @@ body {
   font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
   border-top: 2px solid colors.$brandDark;
   border-bottom: 2px solid colors.$brandDark;
+  padding-bottom: 16px;
   color: white;
   background-color: colors.$black80;
 }
@@ -37,4 +38,8 @@ h4,
 h5,
 h6 {
   margin: 0;
+}
+
+table {
+  border-collapse: collapse;
 }

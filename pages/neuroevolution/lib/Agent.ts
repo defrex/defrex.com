@@ -68,6 +68,13 @@ export class Agent {
     }
   }
 
+  setPosition(position: Position): Agent {
+    return new Agent({
+      ...this.getArgs(),
+      position,
+    })
+  }
+
   resetHistory(): Agent {
     return new Agent({
       gridWidth: this.gridWidth,
@@ -85,6 +92,7 @@ export class Agent {
       lineage: this.lineage + 1,
       direction: this.direction,
       position: undefined,
+      id: undefined,
     })
   }
 

@@ -1,15 +1,17 @@
 import { round } from 'lodash'
-import { useEffect, useMemo, useState } from 'react'
+import { MouseEvent, useEffect, useMemo, useState } from 'react'
 import { EdgeData, NodeData } from 'reaflow'
 import { colorValues } from '../../../../lib/colors'
 import { Agent } from '../../lib/Agent'
 import { Genome, getSquashName } from '../../lib/Genome'
+import styles from './styles.module.scss'
 
 interface GenomeViewProps {
   genome: Genome
+  onClick?: (event: MouseEvent<HTMLDivElement>) => void
 }
 
-export function GenomeView({ genome }: GenomeViewProps) {
+export function GenomeView({ genome, onClick }: GenomeViewProps) {
   const [realflow, setRealflow] = useState<typeof import('reaflow') | null>(
     null,
   )
@@ -53,32 +55,34 @@ export function GenomeView({ genome }: GenomeViewProps) {
     return null
   } else {
     return (
-      <realflow.Canvas
-        fit={true}
-        // maxWidth={768}
-        // maxHeight={768}
-        nodes={nodes}
-        edges={edges}
-        disabled={true}
-        animated={false}
-        node={
-          <realflow.Node
-            style={{
-              fill: colorValues.black70,
-              strokeWidth: 0,
-            }}
-            label={<realflow.Label style={{ fill: colorValues.black10 }} />}
-          />
-        }
-        edge={
-          <realflow.Edge
-            style={{
-              stroke: colorValues.black60,
-            }}
-          />
-        }
-        arrow={<realflow.MarkerArrow style={{ fill: colorValues.black60 }} />}
-      />
+      <div className={styles.genomeView} onClick={onClick}>
+        <realflow.Canvas
+          fit={true}
+          // maxWidth={768}
+          // maxHeight={768}
+          nodes={nodes}
+          edges={edges}
+          disabled={true}
+          animated={false}
+          node={
+            <realflow.Node
+              style={{
+                fill: colorValues.black70,
+                strokeWidth: 0,
+              }}
+              label={<realflow.Label style={{ fill: colorValues.black10 }} />}
+            />
+          }
+          edge={
+            <realflow.Edge
+              style={{
+                stroke: colorValues.black60,
+              }}
+            />
+          }
+          arrow={<realflow.MarkerArrow style={{ fill: colorValues.black60 }} />}
+        />
+      </div>
     )
   }
 }

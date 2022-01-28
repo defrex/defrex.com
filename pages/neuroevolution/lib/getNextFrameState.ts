@@ -1,4 +1,4 @@
-import { max, min, nth, random, range, some, sum } from 'lodash'
+import { max, maxBy, min, nth, random, range, some, sum } from 'lodash'
 import { colorValues } from '../../../lib/colors'
 import { round } from '../../../lib/round'
 import {
@@ -36,20 +36,18 @@ export type FrameState = {
   running: boolean
   runFor: number | null
   killersPerMove: number
-  killersPerMoveMax: number
   move: number
   sampleAgents: { move: number; agent: Agent }[]
   speed: number
+  respawnAgent?: Agent
 }
 
 const minAgents = 10
-const maxAgents = 150
-const defaultMaxDifficulty = 5
+const maxAgents = 600
+const maxDifficulty = 30
 export const defaultCellSize = 16
-const defaultGame = 'killer'
-const historyRollupGranularity = 1000
 
-export const canvasWidth =
+export const defaultCanvasWidth =
   typeof window === 'undefined'
     ? 768
     : window.innerWidth > 768
@@ -57,7 +55,7 @@ export const canvasWidth =
     : window.innerWidth > 512
     ? 512
     : 256
-export const canvasHeight = 512
+export const defaultCanvasHeight = 512
 
 export function metricsWith(
   metrics: Metrics[],
@@ -79,11 +77,7 @@ export function movesColor(moves: number, gridWidth: number): string {
   return color
 }
 
-function initAgent(
-  gridWidth: number,
-  gridHeight: number,
-  mode: RunMode = defaultGame,
-): Agent {
+function initAgent(gridWidth: number, gridHeight: number): Agent {
   return new Agent({
     gridWidth,
     gridHeight,
@@ -92,7 +86,7 @@ function initAgent(
   })
 }
 
-function agentPositionColors(
+export function agentPositionColors(
   agents: Agent[],
   gridWidth: number,
 ): ColorPosition[] {
@@ -103,24 +97,28 @@ function agentPositionColors(
   }))
 }
 
-function difficultyFromSurvivors(
-  survivors: number,
-  maxDifficulty: number,
-): number {
+export function killPositionColors(killPositions: Position[]): ColorPosition[] {
+  return killPositions.map((position) => ({
+    type: 'kill',
+    color: colorValues.red60,
+    position,
+  }))
+}
+
+function difficultyFromSurvivors(survivors: number): number {
   const proportion = (survivors - minAgents) / (maxAgents - minAgents)
   return maxDifficulty * proportion
 }
 
-function fitnessFromDifficulty(
-  difficulty: number,
-  maxDifficulty: number,
-): number {
+export function fitnessFromDifficulty(difficulty: number): number {
   return round((difficulty / maxDifficulty) * 100)
 }
 
 export function setCellSize(
   cellSize: number,
   frameState: FrameState,
+  canvasWidth = defaultCanvasWidth,
+  canvasHeight = defaultCanvasHeight,
 ): FrameState {
   const gridWidth = canvasWidth / cellSize
   const gridHeight = canvasHeight / cellSize
@@ -130,13 +128,27 @@ export function setCellSize(
     gridWidth,
     gridHeight,
     boardState: frameState.boardState.setGrid(gridWidth, gridHeight, cellSize),
-    killersPerMoveMax:
-      defaultMaxDifficulty * (1 / (cellSize / defaultCellSize)),
   }
 }
 
-export function initFrameState(): FrameState {
-  const cellSize = defaultCellSize
+export function advanceKillPositions(boardState: BoardState): Position[] {
+  return boardState
+    .getPositions('kill')
+    .map(([x, y]) => [x - 1, y] as Position)
+    .filter(
+      ([x, y]) =>
+        x >= 0 &&
+        y >= 0 &&
+        x < boardState.gridWidth &&
+        y < boardState.gridHeight,
+    )
+}
+
+export function initFrameState(
+  cellSize = defaultCellSize,
+  canvasWidth = defaultCanvasWidth,
+  canvasHeight = defaultCanvasHeight,
+): FrameState {
   const gridWidth = canvasWidth / cellSize
   const gridHeight = canvasHeight / cellSize
   const agents = range(0, minAgents).map(() => initAgent(gridWidth, gridHeight))
@@ -155,7 +167,6 @@ export function initFrameState(): FrameState {
     running: false,
     runFor: null,
     killersPerMove: 1,
-    killersPerMoveMax: defaultMaxDifficulty,
     move: 0,
     sampleAgents: [],
     speed: 0,
@@ -163,13 +174,7 @@ export function initFrameState(): FrameState {
 }
 
 export function getNextFrameState(state: FrameState): FrameState {
-  const killPositions: Position[] = state.boardState
-    .getPositions('kill')
-    .map(([x, y]) => [x - 1, y] as Position)
-    .filter(
-      ([x, y]) =>
-        x >= 0 && y >= 0 && x < state.gridWidth && y < state.gridHeight,
-    )
+  const killPositions: Position[] = advanceKillPositions(state.boardState)
 
   const partialKillersPerMove = state.killersPerMove % 1
   for (let i = 0; i < state.killersPerMove - partialKillersPerMove; i++) {
@@ -202,56 +207,46 @@ export function getNextFrameState(state: FrameState): FrameState {
     }
   }
 
-  if (state.move < state.gridWidth * 2) {
-    while (agents.length < minAgents) {
-      agents.push(initAgent(state.gridWidth, state.gridHeight))
-    }
+  const respawnAgent = maxBy(
+    [...agents, state.respawnAgent],
+    (agent) => agent?.lineage,
+  )
+
+  while (agents.length < minAgents) {
+    agents.push(respawnAgent || initAgent(state.gridWidth, state.gridHeight))
   }
 
   const boardState = state.boardState.setPositions([
-    ...killPositions.map((position) => ({
-      type: 'kill',
-      color: colorValues.red60,
-      position,
-    })),
+    ...killPositionColors(killPositions),
     ...agentPositionColors(agents, state.gridWidth),
   ])
-
-  const move = state.move + 1
-  const history = [
-    ...state.history.slice(-500),
-    {
-      move,
-      difficulty: difficultyFromSurvivors(
-        agents.length,
-        state.killersPerMoveMax,
-      ),
-      time: Date.now(),
-    },
-  ]
 
   const prevDifficulty = state.history
     .slice(-5)
     .map((entry) => entry.difficulty)
-  const killersPerMove = sum(prevDifficulty) / prevDifficulty.length
+  const killersPerMove = max([sum(prevDifficulty) / prevDifficulty.length, 1])!
+
+  const move = state.move + 1
+
+  const fitnessGranularity = move < 1000 ? 100 : move < 10000 ? 1000 : 5000
+
+  const history = [
+    ...state.history.slice(-max([500, fitnessGranularity])!),
+    {
+      move,
+      difficulty: difficultyFromSurvivors(agents.length),
+      time: Date.now(),
+    },
+  ]
 
   const metrics: Metrics = { move }
 
-  if (
-    (move < 1000 && move % 100 === 0) ||
-    (move < 10000 && move % 1000 === 0) ||
-    move % 10000 === 0
-  ) {
+  if (move % fitnessGranularity === 0) {
+    const lookBack = min([fitnessGranularity, history.length])!
     metrics.difficulty =
-      sum(
-        state.history
-          .slice(-historyRollupGranularity)
-          .map(({ difficulty }) => difficulty),
-      ) / historyRollupGranularity
-    metrics.fitness = fitnessFromDifficulty(
-      metrics.difficulty,
-      state.killersPerMoveMax,
-    )
+      sum(history.slice(-lookBack).map(({ difficulty }) => difficulty)) /
+      lookBack
+    metrics.fitness = fitnessFromDifficulty(metrics.difficulty)
   }
 
   if (move % 5 === 0) {
@@ -282,6 +277,6 @@ export function getNextFrameState(state: FrameState): FrameState {
     killersPerMove,
     move,
     runFor,
-    running: runFor === null ? state.running : runFor > 0,
+    respawnAgent,
   }
 }

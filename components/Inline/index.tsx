@@ -76,15 +76,11 @@ export function Inline({
         className,
       )}
     >
-      {realChildren.map((child, index) =>
-        childClassName(index).length > 0 ? (
-          <div key={index} className={childClassName(index)}>
-            {child}
-          </div>
-        ) : (
-          child
-        ),
-      )}
+      {realChildren.map((child, index) => (
+        <div key={index} className={childClassName(index)}>
+          {child}
+        </div>
+      ))}
     </div>
   )
 }

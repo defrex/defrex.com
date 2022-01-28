@@ -1,3 +1,5 @@
+@use "../../lib/colors";
+
 .sampleAgents {
   width: 100%;
 
@@ -8,4 +10,13 @@
   tbody td:last-child {
     text-align: right;
   }
+}
+
+.colContainer {
+  max-width: 768px * 2;
+  margin: auto;
+}
+
+.selectedAgent {
+  background-color: colors.$black70;
 }

@@ -58,14 +58,13 @@ export class BoardState {
   setPositions(positions: ColorPosition[]): BoardState {
     return new BoardState({
       ...this.getArgs(),
-      positions,
-    })
-  }
-
-  appendPositions(positions: ColorPosition[]): BoardState {
-    return new BoardState({
-      ...this.getArgs(),
-      positions: [...this.positions, ...positions],
+      positions: positions.map(({ position, ...colorPosition }) => ({
+        ...colorPosition,
+        position: [
+          position[0] < 0 ? this.gridWidth + position[0] : position[0],
+          position[1] < 0 ? this.gridHeight + position[1] : position[1],
+        ],
+      })),
     })
   }
 
@@ -127,6 +126,11 @@ export class BoardState {
         : null
 
     if (!toPosition) {
+      console.log({
+        board: this,
+        fromPosition,
+        direction,
+      })
       throw new Error('invalid direction')
     }
 
