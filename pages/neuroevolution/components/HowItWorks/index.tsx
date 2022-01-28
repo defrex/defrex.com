@@ -100,7 +100,7 @@ export default function HowItWorks(_props: HowItWorksProps) {
           size={14}
           color={colors.black30}
           value={`
-            Pick and edge at random and intermediate it with a node of bias
+            Pick an edge at random and intermediate it with a node of bias
             1, a random squash function, and edge of weight 1.
           `}
         />
