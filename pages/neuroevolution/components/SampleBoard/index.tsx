@@ -24,7 +24,7 @@ interface SampleFrameState extends DefaultFrameState {
   agent: Agent
   boardState: BoardState
   timeout: number
-  dead: boolean | null
+  result: 'death' | 'life' | 'timeout' | null
 }
 
 const cellSize = defaultCellSize
@@ -42,7 +42,7 @@ export function SampleBoard(props: SampleBoardProps) {
         agent,
         running: state ? false : true,
         timeout: defaultTimeout,
-        dead: state && state.dead !== null ? state.dead : null,
+        result: state && state.result !== null ? state.result : null,
         boardState: new BoardState({
           gridWidth,
           gridHeight,
@@ -66,20 +66,23 @@ export function SampleBoard(props: SampleBoardProps) {
       const agent = state.agent.move(boardState)
 
       if (agent.position[0] >= gridWidth - 1) {
-        return initSampleFrameState({ ...state, dead: false })
+        return initSampleFrameState({ ...state, result: 'life' })
       }
 
       const killPositions: Position[] = advanceKillPositions(boardState)
 
+      if (state.timeout === 0) {
+        return initSampleFrameState({ ...state, result: 'timeout' })
+      }
+
       if (
-        state.timeout === 0 ||
         some(
           killPositions,
           ([killerX, killerY]) =>
             agent.position[0] === killerX && agent.position[1] === killerY,
         )
       ) {
-        return initSampleFrameState({ ...state, dead: true })
+        return initSampleFrameState({ ...state, result: 'death' })
       }
 
       return {
@@ -90,7 +93,7 @@ export function SampleBoard(props: SampleBoardProps) {
           ...agentPositionColors([agent], gridWidth),
         ]),
         timeout: state.timeout - 1,
-        dead: null,
+        result: null,
       }
     },
     [],
@@ -106,7 +109,13 @@ export function SampleBoard(props: SampleBoardProps) {
         <Inline align='right'>
           <Text
             value={
-              state.dead === false ? '👑' : state.dead === true ? '☠️' : ''
+              state.result === 'life'
+                ? '👑'
+                : state.result === 'death'
+                ? '☠️'
+                : state.result === 'timeout'
+                ? '⌛'
+                : ''
             }
           />
         </Inline>
