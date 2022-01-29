@@ -25,7 +25,15 @@ export interface DefaultFrameState {
   fps?: number
   fpss?: number[]
   time?: number
+  framesPerFrame?: number
+  pendingFrames?: number
 }
+
+const turboFramesPerFrame = 8
+const defaultFramesPerFrame = 1
+const slowFps = 12
+const slowSpeed = 1000 / slowFps
+const defaultSpeed = 0
 
 function framesPerSecond(
   currentFrameTime: number,
@@ -43,8 +51,6 @@ interface FrameBoardProps<FrameState extends DefaultFrameState> {
   renderControl?: (state: FrameState) => ReactNode
   renderChildren?: (state: FrameState) => ReactNode
 }
-
-const slowFps = 12
 
 export function FrameBoard<FrameState extends DefaultFrameState>({
   initFrameState,
@@ -64,7 +70,13 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
         return prevState
       }
 
-      const nextState = getNextFrameState(prevState)
+      let nextState = getNextFrameState(prevState)
+
+      let extraFrames = (prevState.framesPerFrame || 1) - 1
+      while (extraFrames--) {
+        nextState = getNextFrameState(nextState)
+      }
+
       nextState.time = time
 
       nextState.fpss = [
@@ -105,7 +117,8 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
       ...state,
       running: true,
       runFor: null,
-      speed: 0,
+      speed: defaultSpeed,
+      framesPerFrame: defaultFramesPerFrame,
     })
   }, [setState, state])
 
@@ -113,6 +126,9 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
     setState({
       ...state,
       running: false,
+      runFor: null,
+      speed: defaultSpeed,
+      framesPerFrame: defaultFramesPerFrame,
     })
   }, [setState, state])
 
@@ -121,6 +137,8 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
       ...state,
       running: true,
       runFor: 1,
+      speed: defaultSpeed,
+      framesPerFrame: defaultFramesPerFrame,
     })
   }, [setState, state])
 
@@ -128,9 +146,21 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
     (speed: number) => () => {
       setState({
         ...state,
-
         running: true,
         speed,
+        framesPerFrame: defaultFramesPerFrame,
+      })
+    },
+    [setState, state],
+  )
+
+  const handleSetFramesPerFrame = useCallback(
+    (framesPerFrame: number) => () => {
+      setState({
+        ...state,
+        running: true,
+        speed: defaultSpeed,
+        framesPerFrame,
       })
     },
     [setState, state],
@@ -161,11 +191,22 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
             <Button
               onClick={handlePlay}
               text='Play'
-              disabled={state.running && state.speed === 0}
+              disabled={
+                state.running &&
+                state.framesPerFrame !== turboFramesPerFrame &&
+                state.speed !== slowSpeed
+              }
             />
             <Button
-              onClick={handleSetSpeed(1000 / slowFps)}
-              disabled={state.running && state.speed === 1000 / slowFps}
+              onClick={handleSetFramesPerFrame(turboFramesPerFrame)}
+              disabled={
+                state.running && state.framesPerFrame === turboFramesPerFrame
+              }
+              text='Turbo'
+            />
+            <Button
+              onClick={handleSetSpeed(slowSpeed)}
+              disabled={state.running && state.speed === slowSpeed}
               text='Slow'
             />
             <Button onClick={handleRunOne} text='Step' />
