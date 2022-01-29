@@ -1,6 +1,15 @@
-import { max, maxBy, min, random, range, some, sum } from 'lodash'
+import {
+  entries,
+  max,
+  maxBy,
+  min,
+  random,
+  range,
+  some,
+  sum,
+  values,
+} from 'lodash'
 import { colorValues } from '../../../lib/colors'
-import { round } from '../../../lib/round'
 import {
   BoardState,
   ColorPosition,
@@ -10,24 +19,21 @@ import { Agent } from './Agent'
 
 export type RunMode = 'killer' | 'competition'
 
+type Metrics =
+  | 'difficulty'
+  | 'population'
+  | 'killers'
+  | 'lineageMax'
+  | 'lineageMin'
+
 export type FrameState = {
   agents: Agent[]
   boardState: BoardState
   cellSize: number
   gridHeight: number
   gridWidth: number
-  history: {
-    move: number
-    difficulty: number
-  }[]
-  metrics: {
-    difficulty: { move: number; value: number }[]
-    population: { move: number; value: number }[]
-    killers: { move: number; value: number }[]
-    fitness: { move: number; value: number }[]
-    lineageMax: { move: number; value: number }[]
-    lineageMin: { move: number; value: number }[]
-  }
+  history: Record<Metrics | 'move', number>[]
+  metrics: Record<Metrics, { move: number; value: number }[]>
   running: boolean
   runFor: number | null
   killersPerMove: number
@@ -40,10 +46,9 @@ export type FrameState = {
 const minAgents = 10
 const maxAgents = 600
 const maxDifficulty = 30
-const metricLength = 1000
-const metricSampleRate = 5
-export const defaultCellSize = 16
+const difficultySmoothing = 1
 
+export const defaultCellSize = 16
 export const defaultCanvasWidth =
   typeof window === 'undefined'
     ? 768
@@ -53,6 +58,26 @@ export const defaultCanvasWidth =
     ? 512
     : 256
 export const defaultCanvasHeight = 512
+
+function getMetricGranularity(move: number): Record<Metrics, number> {
+  return {
+    difficulty: move < 1000 ? 100 : move < 10000 ? 1000 : 5000,
+    population: 8,
+    killers: 8,
+    lineageMax: 8,
+    lineageMin: 8,
+  }
+}
+
+function getMetricHistory(move: number): Record<Metrics, number> {
+  return {
+    difficulty: 0,
+    population: 1000,
+    killers: 1000,
+    lineageMax: 1000,
+    lineageMin: 1000,
+  }
+}
 
 export function movesColor(moves: number, gridWidth: number): string {
   const maxRunColors = 10
@@ -95,10 +120,6 @@ export function killPositionColors(killPositions: Position[]): ColorPosition[] {
 function difficultyFromSurvivors(survivors: number): number {
   const proportion = (survivors - minAgents) / (maxAgents - minAgents)
   return maxDifficulty * proportion
-}
-
-export function fitnessFromDifficulty(difficulty: number): number {
-  return round((difficulty / maxDifficulty) * 100)
 }
 
 export function setCellSize(
@@ -154,7 +175,6 @@ export function initFrameState(
       difficulty: [],
       population: [],
       killers: [],
-      fitness: [],
       lineageMax: [],
       lineageMin: [],
     },
@@ -215,64 +235,44 @@ export function getNextFrameState(state: FrameState): FrameState {
     ...agentPositionColors(agents, state.gridWidth),
   ])
 
-  const prevDifficulty = state.history
-    .slice(-5)
-    .map((entry) => entry.difficulty)
-  const killersPerMove = max([sum(prevDifficulty) / prevDifficulty.length, 1])!
-
   const move = state.move + 1
 
-  const fitnessGranularity = move < 1000 ? 100 : move < 10000 ? 1000 : 5000
+  const metricGranularity = getMetricGranularity(move)
+  const metricHistory = getMetricHistory(move)
 
-  const history = [
-    ...state.history.slice(-max([500, fitnessGranularity])!),
+  const history: Record<Metrics | 'move', number>[] = [
+    ...state.history.slice(-max([500, ...values(metricGranularity)])!),
     {
       move,
       difficulty: difficultyFromSurvivors(agents.length),
+      population: agents.length,
+      killers: boardState.getPositions('kill').length,
+      lineageMax: max(agents.map(({ lineage }) => lineage))!,
+      lineageMin: min(agents.map(({ lineage }) => lineage))!,
     },
   ]
 
+  const prevDifficulty = state.history
+    .slice(-difficultySmoothing)
+    .map((entry) => entry.difficulty)
+  const killersPerMove = max([sum(prevDifficulty) / prevDifficulty.length, 1])!
+
   const metrics = { ...state.metrics }
 
-  if (move % fitnessGranularity === 0) {
-    const lookBack = min([fitnessGranularity, history.length])!
-    const difficulty =
-      sum(history.slice(-lookBack).map(({ difficulty }) => difficulty)) /
-      lookBack
-    metrics.difficulty = [...metrics.difficulty, { move, value: difficulty }]
-    metrics.fitness = [
-      ...metrics.fitness,
-      { move, value: fitnessFromDifficulty(difficulty) },
-    ]
-  }
-
-  if (move % metricSampleRate === 0) {
-    metrics.population = [
-      ...metrics.population.slice(-(metricLength / metricSampleRate)),
-      { move, value: agents.length },
-    ]
-    metrics.killers = [
-      ...metrics.killers.slice(-(metricLength / metricSampleRate)),
-      {
-        move,
-        value: boardState.getPositions('kill').length,
-      },
-    ]
-
-    metrics.lineageMax = [
-      ...metrics.lineageMax.slice(-(metricLength / metricSampleRate)),
-      {
-        move,
-        value: max(agents.map(({ lineage }) => lineage))!,
-      },
-    ]
-    metrics.lineageMin = [
-      ...metrics.lineageMin.slice(-(metricLength / metricSampleRate)),
-      {
-        move,
-        value: min(agents.map(({ lineage }) => lineage))!,
-      },
-    ]
+  for (const [metric, granularity] of entries(metricGranularity) as [
+    Metrics,
+    number,
+  ][]) {
+    if (move % granularity === 0) {
+      const lookBack = min([granularity, history.length])!
+      const value =
+        sum(history.slice(-lookBack).map((history) => history[metric])) /
+        lookBack
+      metrics[metric] = [
+        ...metrics[metric].slice(-metricHistory[metric] / granularity),
+        { move, value },
+      ]
+    }
   }
 
   const runFor = state.runFor ? state.runFor - 1 : null
