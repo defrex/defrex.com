@@ -47,9 +47,10 @@ interface FrameBoardProps<FrameState extends DefaultFrameState> {
   getNextFrameState: (state: FrameState) => FrameState
   height: number
   width: number
-
   renderControl?: (state: FrameState) => ReactNode
   renderChildren?: (state: FrameState) => ReactNode
+  reset?: boolean
+  turbo?: boolean
 }
 
 export function FrameBoard<FrameState extends DefaultFrameState>({
@@ -59,6 +60,8 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
   width,
   renderControl,
   renderChildren,
+  reset = true,
+  turbo = true,
 }: FrameBoardProps<FrameState>) {
   const frameRef = useRef<number>()
   const [state, setState] = useState<FrameState>(initFrameState)
@@ -80,10 +83,13 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
       nextState.time = time
 
       nextState.fpss = [
-        ...(nextState.fpss?.slice(-10) || []),
+        ...(nextState.fpss?.slice(-5) || []),
         framesPerSecond(nextState.time, prevState.time || time),
       ]
       nextState.fps = round(sum(nextState.fpss) / nextState.fpss.length)
+      if (nextState.fps === Infinity) {
+        nextState.fps = undefined
+      }
 
       nextState.runFor = prevState.runFor ? prevState.runFor - 1 : null
       nextState.running =
@@ -181,7 +187,7 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
         <Board boardState={state.boardState} width={width} height={height} />
 
         <Inline expand={-1} verticalIf={{ eq: 'small' }}>
-          <Button onClick={handleReset} text='Reset' />
+          {reset ? <Button onClick={handleReset} text='Reset' /> : null}
           <Inline spacing={spacing.xsmall}>
             <Button
               onClick={handlePause}
@@ -199,13 +205,15 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
             />
           </Inline>
           <Inline spacing={spacing.xsmall}>
-            <Button
-              onClick={handleSetFramesPerFrame(turboFramesPerFrame)}
-              disabled={
-                state.running && state.framesPerFrame === turboFramesPerFrame
-              }
-              text='Turbo'
-            />
+            {turbo ? (
+              <Button
+                onClick={handleSetFramesPerFrame(turboFramesPerFrame)}
+                disabled={
+                  state.running && state.framesPerFrame === turboFramesPerFrame
+                }
+                text='Turbo'
+              />
+            ) : null}
             <Button
               onClick={handleSetSpeed(slowSpeed)}
               disabled={state.running && state.speed === slowSpeed}

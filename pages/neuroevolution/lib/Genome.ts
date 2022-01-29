@@ -55,9 +55,8 @@ function randSquash(): Neuron.SquashingFunction | undefined {
 }
 
 function mutateScalar(value: number, learningRate: number): number {
-  const adjuster = random(-2, 2, true)
   const oldValuePortion = value * (1 - learningRate)
-  const newValue = value === 0 ? 1 : value * adjuster
+  const newValue = (value === 0 ? 1 : value) * random(-2, 2, true)
   const newValuePortion = newValue * learningRate
   const nextValue = oldValuePortion + newValuePortion
   return nextValue

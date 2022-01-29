@@ -1,4 +1,4 @@
-import { last, round } from 'lodash'
+import { last, round, some } from 'lodash'
 import { useCallback, useState } from 'react'
 import { VictoryChart, VictoryLine } from 'victory'
 import { Button } from '../../components/Button'
@@ -34,13 +34,8 @@ type AgentSample = {
   agent: Agent
 }
 
-function bestAgent(agents: Agent[]): Agent {
-  return agents.reduce((best, agent) => {
-    if (agent.moves > best.moves) {
-      return agent
-    }
-    return best
-  }, agents[0])
+function equivalentSamples(agent: Agent, otherAgent: Agent): boolean {
+  return otherAgent.id === agent.id && otherAgent.move === agent.move
 }
 
 export default function Evolution(_props: EvolutionProps) {
@@ -67,7 +62,27 @@ export default function Evolution(_props: EvolutionProps) {
   const handleSampleAgent = useCallback(
     (state: FrameState) => () => {
       setSampleAgents((sampleAgents) => {
-        const nextSampleAgent = bestAgent(state.agents)
+        // const nextSampleAgent = bestAgent(state.agents)
+        const nextSampleAgent = state.agents.reduce(
+          (best: Agent | undefined, agent) => {
+            if (
+              !some(sampleAgents, (sampleAgent) =>
+                equivalentSamples(agent, sampleAgent.agent),
+              ) &&
+              (best === undefined || agent.moves > best.moves)
+            ) {
+              return agent
+            }
+            return best
+          },
+          undefined,
+        )
+
+        if (!nextSampleAgent) {
+          console.log('No Samples Left!')
+          return sampleAgents
+        }
+
         console.log('Sample Agent', nextSampleAgent)
 
         return [
@@ -78,6 +93,17 @@ export default function Evolution(_props: EvolutionProps) {
             agent: nextSampleAgent,
           },
         ]
+      })
+    },
+    [setSampleAgents],
+  )
+
+  const handleClearSampleAgent = useCallback(
+    (agent: Agent) => () => {
+      setSampleAgents((sampleAgents) => {
+        return sampleAgents.filter(
+          (sample) => !equivalentSamples(sample.agent, agent),
+        )
       })
     },
     [setSampleAgents],
@@ -223,7 +249,7 @@ export default function Evolution(_props: EvolutionProps) {
               <thead>
                 <tr>
                   <th>
-                    <Text value='At Move' color={colors.black40} />
+                    <Text value='At Frame' color={colors.black40} />
                   </th>
                   <th>
                     <Text value='At Difficulty' color={colors.black40} />
@@ -248,8 +274,8 @@ export default function Evolution(_props: EvolutionProps) {
                   <tr
                     key={`${move}-${agent.id}`}
                     className={
-                      showAgentBehavior?.id === agent.id &&
-                      showAgentBehavior?.move === agent.move
+                      showAgentBehavior &&
+                      equivalentSamples(showAgentBehavior, agent)
                         ? styles.selectedAgent
                         : undefined
                     }
@@ -286,13 +312,19 @@ export default function Evolution(_props: EvolutionProps) {
                     </td>
                     <td>
                       <Inline align='right'>
+                        <Inline spacing={spacing.xsmall}>
+                          <Button
+                            onClick={handleShowAgentNetwork(agent)}
+                            text='Network'
+                          />
+                          <Button
+                            onClick={handleShowAgentBehavior(agent)}
+                            text='Behavior'
+                          />
+                        </Inline>
                         <Button
-                          onClick={handleShowAgentNetwork(agent)}
-                          text='Network'
-                        />
-                        <Button
-                          onClick={handleShowAgentBehavior(agent)}
-                          text='Behavior'
+                          onClick={handleClearSampleAgent(agent)}
+                          text='Trash'
                         />
                       </Inline>
                     </td>

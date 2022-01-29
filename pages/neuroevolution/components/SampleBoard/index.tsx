@@ -101,6 +101,8 @@ export function SampleBoard(props: SampleBoardProps) {
       getNextFrameState={getNextSampleFrameState}
       width={canvasWidth}
       height={canvasHeight}
+      turbo={false}
+      reset={false}
       renderControl={(state: SampleFrameState) => (
         <Inline align='right'>
           <Text
