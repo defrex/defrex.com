@@ -29,7 +29,7 @@ export interface DefaultFrameState {
   pendingFrames?: number
 }
 
-const turboFramesPerFrame = 8
+const turboFramesPerFrame = 16
 const defaultFramesPerFrame = 1
 const slowFps = 12
 const slowSpeed = 1000 / slowFps
@@ -197,6 +197,8 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
                 state.speed !== slowSpeed
               }
             />
+          </Inline>
+          <Inline spacing={spacing.xsmall}>
             <Button
               onClick={handleSetFramesPerFrame(turboFramesPerFrame)}
               disabled={

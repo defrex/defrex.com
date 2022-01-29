@@ -74,8 +74,8 @@ export default function HowItWorks(_props: HowItWorksProps) {
         element='p'
         color={colors.black30}
         value={`
-          The initial state of the network is just the inputs mapped to the
-          outputs, with edge weights randomly set to 1 or -1.
+          The initial state of the network has the inputs mapped to the
+          outputs with no hidden nodes, and edge weights randomly set to 1 or -1.
         `}
       />
       <div style={{ width: 256, height: 256 }}>

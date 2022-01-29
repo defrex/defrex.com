@@ -19,7 +19,6 @@ export type FrameState = {
   history: {
     move: number
     difficulty: number
-    time: number
   }[]
   metrics: {
     difficulty: { move: number; value: number }[]
@@ -41,6 +40,8 @@ export type FrameState = {
 const minAgents = 10
 const maxAgents = 600
 const maxDifficulty = 30
+const metricLength = 1000
+const metricSampleRate = 5
 export const defaultCellSize = 16
 
 export const defaultCanvasWidth =
@@ -228,7 +229,6 @@ export function getNextFrameState(state: FrameState): FrameState {
     {
       move,
       difficulty: difficultyFromSurvivors(agents.length),
-      time: Date.now(),
     },
   ]
 
@@ -246,24 +246,28 @@ export function getNextFrameState(state: FrameState): FrameState {
     ]
   }
 
-  if (move % 5 === 0) {
-    metrics.population = [...metrics.population, { move, value: agents.length }]
+  if (move % metricSampleRate === 0) {
+    metrics.population = [
+      ...metrics.population.slice(-(metricLength / metricSampleRate)),
+      { move, value: agents.length },
+    ]
     metrics.killers = [
-      ...metrics.killers,
+      ...metrics.killers.slice(-(metricLength / metricSampleRate)),
       {
         move,
         value: boardState.getPositions('kill').length,
       },
     ]
+
     metrics.lineageMax = [
-      ...metrics.lineageMax,
+      ...metrics.lineageMax.slice(-(metricLength / metricSampleRate)),
       {
         move,
         value: max(agents.map(({ lineage }) => lineage))!,
       },
     ]
     metrics.lineageMin = [
-      ...metrics.lineageMin,
+      ...metrics.lineageMin.slice(-(metricLength / metricSampleRate)),
       {
         move,
         value: min(agents.map(({ lineage }) => lineage))!,

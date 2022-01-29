@@ -10,23 +10,24 @@
   text-decoration: none;
   cursor: pointer;
 
-  background-color: colors.$brand;
+  border: 1px solid colors.$black70;
+  // border: 1px solid colors.$brandDark;
+  background-color: colors.$black90;
 }
 
 .button:hover {
   text-decoration: none;
-  background-color: darken(colors.$brand, 0.8);
+  // background-color: black;
+  background-color: colors.$black70;
+  // background-color: darken(colors.$brandDark, 0.8);
 }
 
 .buttonText {
-  color: colors.$black90;
+  color: colors.$black20;
 }
 
 .button.disabled,
 .button.disabled:hover {
   background-color: colors.$black60;
-}
-
-.disabled .buttonText {
-  color: colors.$black30;
+  border-color: colors.$black90;
 }

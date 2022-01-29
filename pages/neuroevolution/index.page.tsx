@@ -1,4 +1,4 @@
-import { last } from 'lodash'
+import { last, round } from 'lodash'
 import { useCallback, useState } from 'react'
 import { VictoryChart, VictoryLine } from 'victory'
 import { Button } from '../../components/Button'
@@ -27,7 +27,12 @@ import styles from './styles.module.scss'
 
 interface EvolutionProps {}
 
-type AgentSample = { move: number; fitness: number; agent: Agent }
+type AgentSample = {
+  move: number
+  difficulty: number
+  fitness?: number
+  agent: Agent
+}
 
 function bestAgent(agents: Agent[]): Agent {
   return agents.reduce((best, agent) => {
@@ -46,7 +51,7 @@ export default function Evolution(_props: EvolutionProps) {
   const [metricsVisible, setMetricsVisible] = useState({
     population: false,
     lineage: false,
-    difficulty: false,
+    difficulty: true,
   })
 
   const handleToggleMetric = useCallback(
@@ -69,7 +74,7 @@ export default function Evolution(_props: EvolutionProps) {
           ...sampleAgents,
           {
             move: state.move,
-            fitness: last(state.metrics.fitness)?.value || 0,
+            difficulty: last(state.metrics.difficulty)?.value || 0,
             agent: nextSampleAgent,
           },
         ]
@@ -138,7 +143,7 @@ export default function Evolution(_props: EvolutionProps) {
             <Stack spacing={spacing.large}>
               <Stack spacing={spacing.small}>
                 <Inline expand={0}>
-                  <Text value={`Fitness`} color={colors.black40} />
+                  <Text value={`Difficulty`} color={colors.black40} />
                   <Button
                     onClick={handleToggleMetric('difficulty')}
                     text={metricsVisible.difficulty ? 'Hide' : 'Show'}
@@ -167,7 +172,7 @@ export default function Evolution(_props: EvolutionProps) {
                   <VictoryChart theme={victoryChartTheme} height={200}>
                     <VictoryLine
                       style={{
-                        data: { stroke: colorValues.blue60, strokeWidth: 1 },
+                        data: { stroke: colorValues.blue60 },
                       }}
                       data={state.metrics.population}
                       x='move'
@@ -175,7 +180,7 @@ export default function Evolution(_props: EvolutionProps) {
                     />
                     <VictoryLine
                       style={{
-                        data: { stroke: colorValues.red60, strokeWidth: 1 },
+                        data: { stroke: colorValues.red60 },
                       }}
                       data={state.metrics.killers}
                       x='move'
@@ -221,7 +226,7 @@ export default function Evolution(_props: EvolutionProps) {
                     <Text value='At Move' color={colors.black40} />
                   </th>
                   <th>
-                    <Text value='At Fitness' color={colors.black40} />
+                    <Text value='At Difficulty' color={colors.black40} />
                   </th>
                   <th></th>
                   <th>
@@ -239,7 +244,7 @@ export default function Evolution(_props: EvolutionProps) {
                 </tr>
               </thead>
               <tbody>
-                {sampleAgents.map(({ move, fitness, agent }) => (
+                {sampleAgents.map(({ move, fitness, difficulty, agent }) => (
                   <tr
                     key={`${move}-${agent.id}`}
                     className={
@@ -253,7 +258,7 @@ export default function Evolution(_props: EvolutionProps) {
                       <Text value={`${move}`} />
                     </td>
                     <td>
-                      <Text value={`${fitness}`} />
+                      <Text value={`${round(difficulty || fitness || 0, 2)}`} />
                     </td>
                     <td>
                       <div
