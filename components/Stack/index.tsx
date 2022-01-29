@@ -24,7 +24,11 @@ export function Stack({
       {realChildren.map((child, index) => (
         <div
           key={index}
-          className={styles[`stack-${spacing}${debug ? '-debug' : ''}`]}
+          className={
+            realChildren.length - 1 === index
+              ? undefined
+              : styles[`stack-${spacing}${debug ? '-debug' : ''}`]
+          }
         >
           {child}
         </div>

@@ -1,5 +1,12 @@
-import { round } from 'lodash'
-import { ReactNode, useCallback, useEffect, useRef, useState } from 'react'
+import { round, sum } from 'lodash'
+import {
+  ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { Button } from '../../../../components/Button'
 import { Inline } from '../../../../components/Inline'
 import { Stack } from '../../../../components/Stack'
@@ -15,8 +22,16 @@ export interface DefaultFrameState {
   running?: boolean
   speed?: number
   runFor?: number | null
-  lastFrameTime?: number
   fps?: number
+  fpss?: number[]
+  time?: number
+}
+
+function framesPerSecond(
+  currentFrameTime: number,
+  previousFrameTime: number,
+): number {
+  return 1000 / (currentFrameTime - previousFrameTime)
 }
 
 interface FrameBoardProps<FrameState extends DefaultFrameState> {
@@ -43,35 +58,34 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
   const [state, setState] = useState<FrameState>(initFrameState)
 
   const renderFrame = () => {
-    setState((currentState: FrameState) => {
-      if (!currentState.running) {
+    setState((prevState: FrameState) => {
+      if (!prevState.running) {
         frameRef.current = requestAnimationFrame(renderFrame)
-        return currentState
+        return prevState
       }
 
-      const frameState = getNextFrameState(currentState)
+      const nextState = getNextFrameState(prevState)
+      nextState.time = Date.now()
 
-      frameState.lastFrameTime = Date.now()
-      frameState.fps = round(
-        1 /
-          ((frameState.lastFrameTime -
-            (currentState.lastFrameTime || Date.now())) /
-            1000),
-      )
+      nextState.fpss = [
+        ...(nextState.fpss?.slice(-10) || []),
+        framesPerSecond(nextState.time, prevState.time || Date.now()),
+      ]
+      nextState.fps = round(sum(nextState.fpss) / nextState.fpss.length)
 
-      frameState.runFor = currentState.runFor ? currentState.runFor - 1 : null
-      frameState.running =
-        frameState.runFor === null ? frameState.running : frameState.runFor > 0
+      nextState.runFor = prevState.runFor ? prevState.runFor - 1 : null
+      nextState.running =
+        nextState.runFor === null ? nextState.running : nextState.runFor > 0
 
-      if (frameState.speed && frameState.speed > 0) {
-        sleep(frameState.speed).then(() => {
+      if (nextState.speed && nextState.speed > 0) {
+        sleep(nextState.speed).then(() => {
           frameRef.current = requestAnimationFrame(renderFrame)
         })
       } else {
         frameRef.current = requestAnimationFrame(renderFrame)
       }
 
-      return frameState
+      return nextState
     })
   }
 
@@ -122,6 +136,15 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
     [setState, state],
   )
 
+  const control = useMemo(
+    () => (renderControl ? renderControl(state) : null),
+    [state, renderControl],
+  )
+  const children = useMemo(
+    () => (renderChildren ? renderChildren(state) : null),
+    [state, renderChildren],
+  )
+
   return (
     <Stack spacing={spacing.large}>
       <Stack spacing={spacing.xsmall}>
@@ -152,10 +175,10 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
             <Text value={`${state.fps || 0}fps`} color={colors.black40} />
           ) : null}
 
-          {renderControl ? renderControl(state) : null}
+          {control}
         </Inline>
       </Stack>
-      {renderChildren ? renderChildren(state) : null}
+      {children}
     </Stack>
   )
 }

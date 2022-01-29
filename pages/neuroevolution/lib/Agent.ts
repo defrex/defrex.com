@@ -1,4 +1,4 @@
-import { assign, min, random, sample, uniqueId } from 'lodash'
+import { assign, max, min, random, sample, uniqueId } from 'lodash'
 import {
   BoardState,
   Direction,
@@ -127,16 +127,18 @@ export class Agent {
     }
 
     const outputDirections: Direction[] = ['up', 'down', this.direction]
-    const direction = outputDirections[outputs.indexOf(Math.max(...outputs))]
-    // console.log(
-    //   this.direction,
-    //   'moves',
-    //   direction,
-    //   inputs,
-    //   outputs,
-    //   // this.genome.outputNodes().map((n) => n.bias),
-    //   this.genome,
-    // )
+    const direction = outputDirections[outputs.indexOf(max(outputs)!)]
+
+    if (direction === undefined) {
+      console.log({
+        agent: this,
+        inputs,
+        outputs,
+        outputDirections,
+        maxOutput: max(outputs),
+        maxOutputIndex: outputs.indexOf(max(outputs)!),
+      })
+    }
 
     const nextPosition = boardState.calculateMove(this.position, direction)
 

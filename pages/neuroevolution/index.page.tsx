@@ -21,7 +21,6 @@ import {
   FrameState,
   getNextFrameState,
   initFrameState,
-  metricsWith,
   movesColor,
 } from './lib/getNextFrameState'
 import styles from './styles.module.scss'
@@ -47,7 +46,7 @@ export default function Evolution(_props: EvolutionProps) {
   const [metricsVisible, setMetricsVisible] = useState({
     population: false,
     lineage: false,
-    difficulty: true,
+    difficulty: false,
   })
 
   const handleToggleMetric = useCallback(
@@ -70,10 +69,7 @@ export default function Evolution(_props: EvolutionProps) {
           ...sampleAgents,
           {
             move: state.move,
-            fitness: last(metricsWith(state.metrics, 'fitness'))?.fitness || 0,
-            // fitness: fitnessFromDifficulty(
-            //   last(state.history)?.difficulty || 0,
-            // ),
+            fitness: last(state.metrics.fitness)?.value || 0,
             agent: nextSampleAgent,
           },
         ]
@@ -148,12 +144,12 @@ export default function Evolution(_props: EvolutionProps) {
                     text={metricsVisible.difficulty ? 'Hide' : 'Show'}
                   />
                 </Inline>
-                {metricsVisible.difficulty && state.metrics.length > 0 ? (
+                {metricsVisible.difficulty ? (
                   <VictoryChart theme={victoryChartTheme} height={200}>
                     <VictoryLine
-                      data={metricsWith(state.metrics, 'fitness')}
+                      data={state.metrics.difficulty}
                       x='move'
-                      y='fitness'
+                      y='value'
                     />
                   </VictoryChart>
                 ) : null}
@@ -167,23 +163,23 @@ export default function Evolution(_props: EvolutionProps) {
                     text={metricsVisible.population ? 'Hide' : 'Show'}
                   />
                 </Inline>
-                {metricsVisible.population && state.metrics.length > 0 ? (
+                {metricsVisible.population ? (
                   <VictoryChart theme={victoryChartTheme} height={200}>
                     <VictoryLine
                       style={{
                         data: { stroke: colorValues.blue60, strokeWidth: 1 },
                       }}
-                      data={metricsWith(state.metrics, 'population', 1000)}
+                      data={state.metrics.population}
                       x='move'
-                      y='population'
+                      y='value'
                     />
                     <VictoryLine
                       style={{
                         data: { stroke: colorValues.red60, strokeWidth: 1 },
                       }}
-                      data={metricsWith(state.metrics, 'killers', 1000)}
+                      data={state.metrics.killers}
                       x='move'
-                      y='killers'
+                      y='value'
                     />
                   </VictoryChart>
                 ) : null}
@@ -200,14 +196,14 @@ export default function Evolution(_props: EvolutionProps) {
                 {metricsVisible.lineage && state.history.length > 0 ? (
                   <VictoryChart theme={victoryChartTheme} height={200}>
                     <VictoryLine
-                      data={metricsWith(state.metrics, 'lineageMax', 1000)}
+                      data={state.metrics.lineageMax}
                       x='move'
-                      y='lineageMax'
+                      y='value'
                     />
                     <VictoryLine
-                      data={metricsWith(state.metrics, 'lineageMin', 1000)}
+                      data={state.metrics.lineageMin}
                       x='move'
-                      y='lineageMin'
+                      y='value'
                     />
                   </VictoryChart>
                 ) : null}
@@ -247,8 +243,9 @@ export default function Evolution(_props: EvolutionProps) {
                   <tr
                     key={`${move}-${agent.id}`}
                     className={
-                      showAgentBehavior === agent
-                        ? styles.showAgentBehavior
+                      showAgentBehavior?.id === agent.id &&
+                      showAgentBehavior?.move === agent.move
+                        ? styles.selectedAgent
                         : undefined
                     }
                   >
