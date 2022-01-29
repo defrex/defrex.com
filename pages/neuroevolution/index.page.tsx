@@ -98,7 +98,7 @@ export default function Evolution(_props: EvolutionProps) {
   }, [setShowHowItWorks, showHowItWorks])
 
   return (
-    <Stack spacing={spacing.xlarge}>
+    <Stack>
       <PageContainer title='Neuroevolution'>
         <Stack spacing={spacing.large}>
           <Inline expand={0}>
