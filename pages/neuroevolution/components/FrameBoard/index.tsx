@@ -57,7 +57,7 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
   const frameRef = useRef<number>()
   const [state, setState] = useState<FrameState>(initFrameState)
 
-  const renderFrame = () => {
+  const renderFrame = (time: number) => {
     setState((prevState: FrameState) => {
       if (!prevState.running) {
         frameRef.current = requestAnimationFrame(renderFrame)
@@ -65,11 +65,11 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
       }
 
       const nextState = getNextFrameState(prevState)
-      nextState.time = Date.now()
+      nextState.time = time
 
       nextState.fpss = [
         ...(nextState.fpss?.slice(-10) || []),
-        framesPerSecond(nextState.time, prevState.time || Date.now()),
+        framesPerSecond(nextState.time, prevState.time || time),
       ]
       nextState.fps = round(sum(nextState.fpss) / nextState.fpss.length)
 
