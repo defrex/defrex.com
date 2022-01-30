@@ -130,7 +130,7 @@ export class Agent {
     const direction = outputDirections[outputs.indexOf(max(outputs)!)]
 
     if (direction === undefined) {
-      console.log({
+      console.warn('agent direction undefined', {
         agent: this,
         inputs,
         outputs,
@@ -140,7 +140,10 @@ export class Agent {
       })
     }
 
-    const nextPosition = boardState.calculateMove(this.position, direction)
+    const nextPosition = boardState.calculateMove(
+      this.position,
+      direction || this.direction,
+    )
 
     let nextMoves = this.moves
     if (direction === this.direction) {
