@@ -43,25 +43,27 @@ function framesPerSecond(
 }
 
 interface FrameBoardProps<FrameState extends DefaultFrameState> {
-  initFrameState: () => FrameState
   getNextFrameState: (state: FrameState) => FrameState
   height: number
-  width: number
-  renderControl?: (state: FrameState) => ReactNode
+  initFrameState: () => FrameState
+  onFrame?: (state: FrameState) => FrameState
   renderChildren?: (state: FrameState) => ReactNode
+  renderControl?: (state: FrameState) => ReactNode
   reset?: boolean
   turbo?: boolean
+  width: number
 }
 
 export function FrameBoard<FrameState extends DefaultFrameState>({
-  initFrameState,
   getNextFrameState,
   height,
-  width,
-  renderControl,
+  initFrameState,
+  onFrame,
   renderChildren,
+  renderControl,
   reset = true,
   turbo = true,
+  width,
 }: FrameBoardProps<FrameState>) {
   const frameRef = useRef<number>()
   const [state, setState] = useState<FrameState>(initFrameState)
@@ -74,10 +76,12 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
       }
 
       let nextState = getNextFrameState(prevState)
+      if (onFrame) nextState = onFrame(nextState)
 
       let extraFrames = (prevState.framesPerFrame || 1) - 1
       while (extraFrames--) {
         nextState = getNextFrameState(nextState)
+        if (onFrame) nextState = onFrame(nextState)
       }
 
       nextState.time = time

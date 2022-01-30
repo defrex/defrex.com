@@ -25,6 +25,8 @@ type Metrics =
   | 'killers'
   | 'lineageMax'
   | 'lineageMin'
+  | 'complexityMin'
+  | 'complexityMax'
 
 export type FrameState = {
   agents: Agent[]
@@ -60,12 +62,15 @@ export const defaultCanvasWidth =
 export const defaultCanvasHeight = 512
 
 function getMetricGranularity(move: number): Record<Metrics, number> {
+  const scaling = move < 1000 ? 100 : move < 10000 ? 1000 : 5000
   return {
-    difficulty: move < 1000 ? 100 : move < 10000 ? 1000 : 5000,
+    difficulty: scaling,
     population: 8,
     killers: 8,
     lineageMax: 8,
     lineageMin: 8,
+    complexityMin: scaling,
+    complexityMax: scaling,
   }
 }
 
@@ -76,6 +81,8 @@ function getMetricHistory(move: number): Record<Metrics, number> {
     killers: 1000,
     lineageMax: 1000,
     lineageMin: 1000,
+    complexityMin: 0,
+    complexityMax: 0,
   }
 }
 
@@ -177,6 +184,8 @@ export function initFrameState(
       killers: [],
       lineageMax: [],
       lineageMin: [],
+      complexityMin: [],
+      complexityMax: [],
     },
     running: false,
     runFor: null,
@@ -227,7 +236,9 @@ export function getNextFrameState(state: FrameState): FrameState {
   )
 
   while (agents.length < minAgents) {
-    agents.push(respawnAgent || initAgent(state.gridWidth, state.gridHeight))
+    agents.push(
+      respawnAgent?.mutate() || initAgent(state.gridWidth, state.gridHeight),
+    )
   }
 
   const boardState = state.boardState.setPositions([
@@ -249,6 +260,12 @@ export function getNextFrameState(state: FrameState): FrameState {
       killers: boardState.getPositions('kill').length,
       lineageMax: max(agents.map(({ lineage }) => lineage))!,
       lineageMin: min(agents.map(({ lineage }) => lineage))!,
+      complexityMin: max(
+        agents.map(({ genome }) => genome.nodes.length + genome.edges.length),
+      )!,
+      complexityMax: min(
+        agents.map(({ genome }) => genome.nodes.length + genome.edges.length),
+      )!,
     },
   ]
 

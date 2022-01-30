@@ -1,3 +1,4 @@
+import classnames from 'classnames'
 import { last, round, some } from 'lodash'
 import { useCallback, useState } from 'react'
 import { VictoryChart, VictoryLine } from 'victory'
@@ -41,16 +42,18 @@ function equivalentSamples(agent: Agent, otherAgent: Agent): boolean {
 export default function Evolution(_props: EvolutionProps) {
   const [showHowItWorks, setShowHowItWorks] = useState(false)
   const [sampleAgents, setSampleAgents] = useState<AgentSample[]>([])
+  const [autoSample, setAutoSample] = useState(false)
   const [showAgentBehavior, setShowAgentBehavior] = useState<Agent | null>(null)
   const [showAgentNetwork, setShowAgentNetwork] = useState<Agent | null>(null)
   const [metricsVisible, setMetricsVisible] = useState({
     population: false,
     lineage: false,
     difficulty: true,
+    complexity: true,
   })
 
   const handleToggleMetric = useCallback(
-    (metric: 'population' | 'lineage' | 'difficulty') => () => {
+    (metric: 'population' | 'lineage' | 'difficulty' | 'complexity') => () => {
       setMetricsVisible({
         ...metricsVisible,
         [metric]: !metricsVisible[metric],
@@ -58,6 +61,10 @@ export default function Evolution(_props: EvolutionProps) {
     },
     [metricsVisible, setMetricsVisible],
   )
+
+  const handleToggleAutoSample = useCallback(() => {
+    setAutoSample(!autoSample)
+  }, [autoSample, setAutoSample])
 
   const handleSampleAgent = useCallback(
     (state: FrameState) => () => {
@@ -96,6 +103,22 @@ export default function Evolution(_props: EvolutionProps) {
       })
     },
     [setSampleAgents],
+  )
+
+  const handleFrame = useCallback(
+    (state: FrameState): FrameState => {
+      setAutoSample((autoSample) => {
+        const sampleRate = state.move < 100000 ? 10000 : 100000
+        if (autoSample && state.move % sampleRate === 0) {
+          console.log('auto sample')
+          handleSampleAgent(state)()
+        }
+        return autoSample
+      })
+
+      return state
+    },
+    [setAutoSample, setSampleAgents],
   )
 
   const handleClearSampleAgent = useCallback(
@@ -160,8 +183,23 @@ export default function Evolution(_props: EvolutionProps) {
           getNextFrameState={getNextFrameState}
           width={defaultCanvasWidth}
           height={defaultCanvasHeight}
+          onFrame={handleFrame}
           renderControl={(state) => (
-            <Inline align='right'>
+            <Inline align='right' spacing={spacing.small}>
+              <div
+                onClick={handleToggleAutoSample}
+                className={styles.checkboxContainer}
+              >
+                <Inline spacing={spacing.xsmall}>
+                  <Text value='Auto' size={12} color={colors.black40} />
+                  <div
+                    className={classnames(
+                      styles.checkbox,
+                      autoSample ? styles.checkboxChecked : null,
+                    )}
+                  />
+                </Inline>
+              </div>
               <Button onClick={handleSampleAgent(state)} text='Take Sample' />
             </Inline>
           )}
@@ -179,6 +217,33 @@ export default function Evolution(_props: EvolutionProps) {
                   <VictoryChart theme={victoryChartTheme} height={200}>
                     <VictoryLine
                       data={state.metrics.difficulty}
+                      x='move'
+                      y='value'
+                    />
+                  </VictoryChart>
+                ) : null}
+              </Stack>
+
+              <Stack spacing={spacing.small}>
+                <Inline expand={0}>
+                  <Text
+                    value={`Network Complexity (min & max)`}
+                    color={colors.black40}
+                  />
+                  <Button
+                    onClick={handleToggleMetric('complexity')}
+                    text={metricsVisible.complexity ? 'Hide' : 'Show'}
+                  />
+                </Inline>
+                {metricsVisible.complexity ? (
+                  <VictoryChart theme={victoryChartTheme} height={200}>
+                    <VictoryLine
+                      data={state.metrics.complexityMax}
+                      x='move'
+                      y='value'
+                    />
+                    <VictoryLine
+                      data={state.metrics.complexityMin}
                       x='move'
                       y='value'
                     />
@@ -218,7 +283,7 @@ export default function Evolution(_props: EvolutionProps) {
 
               <Stack spacing={spacing.small}>
                 <Inline expand={0}>
-                  <Text value={`Lineage`} color={colors.black40} />
+                  <Text value={`Lineage (min & max)`} color={colors.black40} />
                   <Button
                     onClick={handleToggleMetric('lineage')}
                     text={metricsVisible.lineage ? 'Hide' : 'Show'}
@@ -281,7 +346,7 @@ export default function Evolution(_props: EvolutionProps) {
                     }
                   >
                     <td>
-                      <Text value={`${move}`} />
+                      <Text value={`${move.toLocaleString()}`} />
                     </td>
                     <td>
                       <Text value={`${round(difficulty || fitness || 0, 2)}`} />
@@ -302,7 +367,7 @@ export default function Evolution(_props: EvolutionProps) {
                       <Text value={`${agent.moves}`} />
                     </td>
                     <td>
-                      <Text value={`${agent.lineage}`} />
+                      <Text value={`${agent.lineage.toLocaleString()}`} />
                     </td>
                     <td>
                       <Text value={`${agent.genome.nodes.length}`} />
