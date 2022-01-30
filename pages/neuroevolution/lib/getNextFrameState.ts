@@ -40,7 +40,7 @@ export type FrameState = {
   runFor: number | null
   killersPerMove: number
   move: number
-  sampleAgents: { move: number; agent: Agent }[]
+  autoSample?: boolean
   speed: number
   respawnAgent?: Agent
 }
@@ -60,104 +60,6 @@ export const defaultCanvasWidth =
     ? 512
     : 256
 export const defaultCanvasHeight = 512
-
-function getMetricGranularity(move: number): Record<Metrics, number> {
-  const scaling = move < 1000 ? 100 : move < 10000 ? 1000 : 5000
-  return {
-    difficulty: scaling,
-    population: 8,
-    killers: 8,
-    lineageMax: 8,
-    lineageMin: 8,
-    complexityMin: scaling,
-    complexityMax: scaling,
-  }
-}
-
-function getMetricHistory(move: number): Record<Metrics, number> {
-  return {
-    difficulty: 0,
-    population: 1000,
-    killers: 1000,
-    lineageMax: 1000,
-    lineageMin: 1000,
-    complexityMin: 0,
-    complexityMax: 0,
-  }
-}
-
-export function movesColor(moves: number, gridWidth: number): string {
-  const maxRunColors = 10
-  const runs = Math.floor(moves / gridWidth)
-  const capRuns = Math.min(runs, maxRunColors)
-  const normalizedRuns = capRuns / maxRunColors
-  const color = `hsl(${Math.round(45 + normalizedRuns * 235)}, 100%, 60%)`
-
-  return color
-}
-
-function initAgent(gridWidth: number, gridHeight: number): Agent {
-  return new Agent({
-    gridWidth,
-    gridHeight,
-    direction: 'right',
-    threatType: 'kill',
-  })
-}
-
-export function agentPositionColors(
-  agents: Agent[],
-  gridWidth: number,
-): ColorPosition[] {
-  return agents.map(({ direction, position, moves }) => ({
-    type: direction,
-    color: movesColor(moves, gridWidth),
-    position,
-  }))
-}
-
-export function killPositionColors(killPositions: Position[]): ColorPosition[] {
-  return killPositions.map((position) => ({
-    type: 'kill',
-    color: colorValues.red60,
-    position,
-  }))
-}
-
-function difficultyFromSurvivors(survivors: number): number {
-  const proportion = (survivors - minAgents) / (maxAgents - minAgents)
-  return maxDifficulty * proportion
-}
-
-export function setCellSize(
-  cellSize: number,
-  frameState: FrameState,
-  canvasWidth = defaultCanvasWidth,
-  canvasHeight = defaultCanvasHeight,
-): FrameState {
-  const gridWidth = canvasWidth / cellSize
-  const gridHeight = canvasHeight / cellSize
-  return {
-    ...frameState,
-    cellSize,
-    gridWidth,
-    gridHeight,
-    boardState: frameState.boardState.setGrid(gridWidth, gridHeight, cellSize),
-  }
-}
-
-export function advanceKillPositions(boardState: BoardState): Position[] {
-  return boardState
-    .getPositions('kill')
-    .map(([x, y]) => [x - 1, y] as Position)
-    .filter(
-      ([x, y]) =>
-        x >= 0 &&
-        y >= 0 &&
-        x < boardState.gridWidth &&
-        y < boardState.gridHeight,
-    )
-}
 
 export function initFrameState(
   cellSize = defaultCellSize,
@@ -191,7 +93,6 @@ export function initFrameState(
     runFor: null,
     killersPerMove: 1,
     move: 0,
-    sampleAgents: [],
     speed: 0,
   }
 }
@@ -305,4 +206,102 @@ export function getNextFrameState(state: FrameState): FrameState {
     runFor,
     respawnAgent,
   }
+}
+
+function getMetricGranularity(move: number): Record<Metrics, number> {
+  const scaling = move < 1000 ? 100 : move < 10000 ? 1000 : 5000
+  return {
+    difficulty: scaling,
+    population: 8,
+    killers: 8,
+    lineageMax: 8,
+    lineageMin: 8,
+    complexityMin: scaling,
+    complexityMax: scaling,
+  }
+}
+
+function getMetricHistory(move: number): Record<Metrics, number> {
+  return {
+    difficulty: 0,
+    population: 1000,
+    killers: 1000,
+    lineageMax: 1000,
+    lineageMin: 1000,
+    complexityMin: 0,
+    complexityMax: 0,
+  }
+}
+
+export function movesColor(moves: number, gridWidth: number): string {
+  const maxRunColors = 10
+  const runs = Math.floor(moves / gridWidth)
+  const capRuns = Math.min(runs, maxRunColors)
+  const normalizedRuns = capRuns / maxRunColors
+  const color = `hsl(${Math.round(45 + normalizedRuns * 235)}, 100%, 60%)`
+
+  return color
+}
+
+function initAgent(gridWidth: number, gridHeight: number): Agent {
+  return new Agent({
+    gridWidth,
+    gridHeight,
+    direction: 'right',
+    threatType: 'kill',
+  })
+}
+
+export function agentPositionColors(
+  agents: Agent[],
+  gridWidth: number,
+): ColorPosition[] {
+  return agents.map(({ direction, position, moves }) => ({
+    type: direction,
+    color: movesColor(moves, gridWidth),
+    position,
+  }))
+}
+
+export function killPositionColors(killPositions: Position[]): ColorPosition[] {
+  return killPositions.map((position) => ({
+    type: 'kill',
+    color: colorValues.red60,
+    position,
+  }))
+}
+
+function difficultyFromSurvivors(survivors: number): number {
+  const proportion = (survivors - minAgents) / (maxAgents - minAgents)
+  return maxDifficulty * proportion
+}
+
+export function setCellSize(
+  cellSize: number,
+  frameState: FrameState,
+  canvasWidth = defaultCanvasWidth,
+  canvasHeight = defaultCanvasHeight,
+): FrameState {
+  const gridWidth = canvasWidth / cellSize
+  const gridHeight = canvasHeight / cellSize
+  return {
+    ...frameState,
+    cellSize,
+    gridWidth,
+    gridHeight,
+    boardState: frameState.boardState.setGrid(gridWidth, gridHeight, cellSize),
+  }
+}
+
+export function advanceKillPositions(boardState: BoardState): Position[] {
+  return boardState
+    .getPositions('kill')
+    .map(([x, y]) => [x - 1, y] as Position)
+    .filter(
+      ([x, y]) =>
+        x >= 0 &&
+        y >= 0 &&
+        x < boardState.gridWidth &&
+        y < boardState.gridHeight,
+    )
 }

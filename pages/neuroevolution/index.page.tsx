@@ -11,7 +11,7 @@ import { colors, colorValues } from '../../lib/colors'
 import { spacing } from '../../lib/spacing'
 import { victoryChartTheme } from '../../lib/victoryChartTheme'
 import { AgentBehavior } from './components/AgentBehavior'
-import { FrameBoard } from './components/FrameBoard'
+import { FrameBoard, SetState } from './components/FrameBoard'
 import { GenomeView } from './components/GenomeView'
 import HowItWorks from './components/HowItWorks'
 import { Agent } from './lib/Agent'
@@ -42,7 +42,6 @@ function equivalentSamples(agent: Agent, otherAgent: Agent): boolean {
 export default function Evolution(_props: EvolutionProps) {
   const [showHowItWorks, setShowHowItWorks] = useState(false)
   const [sampleAgents, setSampleAgents] = useState<AgentSample[]>([])
-  const [autoSample, setAutoSample] = useState(false)
   const [showAgentBehavior, setShowAgentBehavior] = useState<Agent | null>(null)
   const [showAgentNetwork, setShowAgentNetwork] = useState<Agent | null>(null)
   const [metricsVisible, setMetricsVisible] = useState({
@@ -62,9 +61,12 @@ export default function Evolution(_props: EvolutionProps) {
     [metricsVisible, setMetricsVisible],
   )
 
-  const handleToggleAutoSample = useCallback(() => {
-    setAutoSample(!autoSample)
-  }, [autoSample, setAutoSample])
+  const handleToggleAutoSample = useCallback(
+    (setState: SetState<FrameState>) => () => {
+      setState((state) => ({ ...state, autoSample: !state.autoSample }))
+    },
+    [],
+  )
 
   const handleSampleAgent = useCallback(
     (state: FrameState) => () => {
@@ -106,19 +108,13 @@ export default function Evolution(_props: EvolutionProps) {
   )
 
   const handleFrame = useCallback(
-    (state: FrameState): FrameState => {
-      setAutoSample((autoSample) => {
-        const sampleRate = state.move < 100000 ? 10000 : 100000
-        if (autoSample && state.move % sampleRate === 0) {
-          console.log('auto sample')
-          handleSampleAgent(state)()
-        }
-        return autoSample
-      })
-
-      return state
+    (state: FrameState): void => {
+      const sampleRate = state.move < 100000 ? 10000 : 100000
+      if (state.autoSample && state.move % sampleRate === 0) {
+        requestAnimationFrame(handleSampleAgent(state))
+      }
     },
-    [setAutoSample, setSampleAgents],
+    [handleSampleAgent],
   )
 
   const handleClearSampleAgent = useCallback(
@@ -132,12 +128,17 @@ export default function Evolution(_props: EvolutionProps) {
     [setSampleAgents],
   )
 
-  const handleShowAgentBehavior = useCallback(
+  const handleToggleAgentBehavior = useCallback(
     (selection: Agent | null) => () => {
       setShowAgentBehavior(null)
-      requestAnimationFrame(() => setShowAgentBehavior(selection))
+      if (
+        selection &&
+        (!showAgentBehavior || !equivalentSamples(selection, showAgentBehavior))
+      ) {
+        requestAnimationFrame(() => setShowAgentBehavior(selection))
+      }
     },
-    [setShowAgentBehavior],
+    [setShowAgentBehavior, showAgentBehavior],
   )
 
   const handleShowAgentNetwork = useCallback(
@@ -181,13 +182,13 @@ export default function Evolution(_props: EvolutionProps) {
         <FrameBoard
           initFrameState={initFrameState}
           getNextFrameState={getNextFrameState}
+          onFrame={handleFrame}
           width={defaultCanvasWidth}
           height={defaultCanvasHeight}
-          onFrame={handleFrame}
-          renderControl={(state) => (
+          renderControl={(state, setState) => (
             <Inline align='right' spacing={spacing.small}>
               <div
-                onClick={handleToggleAutoSample}
+                onClick={handleToggleAutoSample(setState)}
                 className={styles.checkboxContainer}
               >
                 <Inline spacing={spacing.xsmall}>
@@ -195,7 +196,7 @@ export default function Evolution(_props: EvolutionProps) {
                   <div
                     className={classnames(
                       styles.checkbox,
-                      autoSample ? styles.checkboxChecked : null,
+                      state.autoSample ? styles.checkboxChecked : null,
                     )}
                   />
                 </Inline>
@@ -207,7 +208,10 @@ export default function Evolution(_props: EvolutionProps) {
             <Stack spacing={spacing.large}>
               <Stack spacing={spacing.small}>
                 <Inline expand={0}>
-                  <Text value={`Difficulty`} color={colors.black40} />
+                  <Text
+                    value={`Difficulty (spawns/frame)`}
+                    color={colors.black40}
+                  />
                   <Button
                     onClick={handleToggleMetric('difficulty')}
                     text={metricsVisible.difficulty ? 'Hide' : 'Show'}
@@ -336,15 +340,7 @@ export default function Evolution(_props: EvolutionProps) {
               </thead>
               <tbody>
                 {sampleAgents.map(({ move, fitness, difficulty, agent }) => (
-                  <tr
-                    key={`${move}-${agent.id}`}
-                    className={
-                      showAgentBehavior &&
-                      equivalentSamples(showAgentBehavior, agent)
-                        ? styles.selectedAgent
-                        : undefined
-                    }
-                  >
+                  <tr key={`${move}-${agent.id}`}>
                     <td>
                       <Text value={`${move.toLocaleString()}`} />
                     </td>
@@ -383,8 +379,14 @@ export default function Evolution(_props: EvolutionProps) {
                             text='Network'
                           />
                           <Button
-                            onClick={handleShowAgentBehavior(agent)}
+                            onClick={handleToggleAgentBehavior(agent)}
                             text='Behavior'
+                            disabled={
+                              !!(
+                                showAgentBehavior &&
+                                equivalentSamples(showAgentBehavior, agent)
+                              )
+                            }
                           />
                         </Inline>
                         <Button

@@ -1,6 +1,8 @@
 import { round, sum } from 'lodash'
 import {
+  Dispatch,
   ReactNode,
+  SetStateAction,
   useCallback,
   useEffect,
   useMemo,
@@ -42,27 +44,35 @@ function framesPerSecond(
   return 1000 / (currentFrameTime - previousFrameTime)
 }
 
+export type SetState<TFrameState> = Dispatch<SetStateAction<TFrameState>>
+
 interface FrameBoardProps<FrameState extends DefaultFrameState> {
   getNextFrameState: (state: FrameState) => FrameState
-  height: number
+  onFrame?: (state: FrameState) => void
   initFrameState: () => FrameState
-  onFrame?: (state: FrameState) => FrameState
-  renderChildren?: (state: FrameState) => ReactNode
-  renderControl?: (state: FrameState) => ReactNode
+  renderChildren?: (
+    state: FrameState,
+    setState: SetState<FrameState>,
+  ) => ReactNode
+  renderControl?: (
+    state: FrameState,
+    setState: SetState<FrameState>,
+  ) => ReactNode
   reset?: boolean
   turbo?: boolean
+  height: number
   width: number
 }
 
 export function FrameBoard<FrameState extends DefaultFrameState>({
   getNextFrameState,
-  height,
-  initFrameState,
   onFrame,
+  initFrameState,
   renderChildren,
   renderControl,
   reset = true,
   turbo = true,
+  height,
   width,
 }: FrameBoardProps<FrameState>) {
   const frameRef = useRef<number>()
@@ -76,12 +86,12 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
       }
 
       let nextState = getNextFrameState(prevState)
-      if (onFrame) nextState = onFrame(nextState)
+      if (onFrame) onFrame(nextState)
 
       let extraFrames = (prevState.framesPerFrame || 1) - 1
       while (extraFrames--) {
         nextState = getNextFrameState(nextState)
-        if (onFrame) nextState = onFrame(nextState)
+        if (onFrame) onFrame(nextState)
       }
 
       nextState.time = time
@@ -177,12 +187,12 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
   )
 
   const control = useMemo(
-    () => (renderControl ? renderControl(state) : null),
-    [state, renderControl],
+    () => (renderControl ? renderControl(state, setState) : null),
+    [state, renderControl, setState],
   )
   const children = useMemo(
-    () => (renderChildren ? renderChildren(state) : null),
-    [state, renderChildren],
+    () => (renderChildren ? renderChildren(state, setState) : null),
+    [state, renderChildren, setState],
   )
 
   return (
