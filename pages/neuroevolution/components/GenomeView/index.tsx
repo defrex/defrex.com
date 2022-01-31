@@ -24,14 +24,12 @@ export function GenomeView({ genome, onClick }: GenomeViewProps) {
   }, [realflow, setRealflow])
 
   useEffect(() => {
-    const prevHeight = document.documentElement.style.height
-    document.documentElement.style.height = '100vh'
+    const prevScrollY = window.scrollY
+    window.scroll(0, 0)
     document.documentElement.style.overflow = 'hidden'
-    console.log('noscroll')
     return () => {
-      document.documentElement.style.height = prevHeight
+      window.scroll(0, prevScrollY)
       document.documentElement.style.overflow = 'initial'
-      console.log('rescroll')
     }
   }, [])
 

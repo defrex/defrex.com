@@ -262,7 +262,7 @@ function isNotInPositions(positions: Position[], [px, py]: Position): boolean {
 }
 
 export function movesColor(moves: number, gridWidth: number): string {
-  const maxRunColors = 10
+  const maxRunColors = 7
   const runs = Math.floor(moves / gridWidth)
   const capRuns = Math.min(runs, maxRunColors)
   const normalizedRuns = capRuns / maxRunColors
