@@ -1,13 +1,13 @@
-import classnames from 'classnames'
 import { last, round, some } from 'lodash'
 import { useCallback, useState } from 'react'
-import { VictoryChart, VictoryLine } from 'victory'
+import { VictoryArea, VictoryChart, VictoryLine } from 'victory'
 import { Button } from '../../components/Button'
+import { Checkbox } from '../../components/Checkbox'
 import { Inline } from '../../components/Inline'
 import { PageContainer } from '../../components/PageContainer'
 import { Stack } from '../../components/Stack'
 import { Text } from '../../components/Text'
-import { colors, colorValues } from '../../lib/colors'
+import { colors } from '../../lib/colors'
 import { spacing } from '../../lib/spacing'
 import { victoryChartTheme } from '../../lib/victoryChartTheme'
 import { AgentBehavior } from './components/AgentBehavior'
@@ -44,21 +44,23 @@ export default function Evolution(_props: EvolutionProps) {
   const [sampleAgents, setSampleAgents] = useState<AgentSample[]>([])
   const [showAgentBehavior, setShowAgentBehavior] = useState<Agent | null>(null)
   const [showAgentNetwork, setShowAgentNetwork] = useState<Agent | null>(null)
-  const [metricsVisible, setMetricsVisible] = useState({
-    population: false,
-    lineage: false,
-    difficulty: true,
-    complexity: true,
+  const [metricsSpeed, setMetricsSpeed] = useState<
+    Record<string, 'fast' | 'slow'>
+  >({
+    population: 'slow',
+    lineage: 'slow',
+    difficulty: 'slow',
+    complexity: 'slow',
   })
 
   const handleToggleMetric = useCallback(
     (metric: 'population' | 'lineage' | 'difficulty' | 'complexity') => () => {
-      setMetricsVisible({
-        ...metricsVisible,
-        [metric]: !metricsVisible[metric],
+      setMetricsSpeed({
+        ...metricsSpeed,
+        [metric]: metricsSpeed[metric] === 'fast' ? 'slow' : 'fast',
       })
     },
-    [metricsVisible, setMetricsVisible],
+    [metricsSpeed, setMetricsSpeed],
   )
 
   const handleToggleAutoSample = useCallback(
@@ -98,7 +100,7 @@ export default function Evolution(_props: EvolutionProps) {
           ...sampleAgents,
           {
             move: state.move,
-            difficulty: last(state.metrics.difficulty)?.value || 0,
+            difficulty: last(state.metrics.fast.difficulty)?.value || 0,
             agent: nextSampleAgent,
           },
         ]
@@ -187,20 +189,11 @@ export default function Evolution(_props: EvolutionProps) {
           height={defaultCanvasHeight}
           renderControl={(state, setState) => (
             <Inline align='right' spacing={spacing.small}>
-              <div
+              <Checkbox
                 onClick={handleToggleAutoSample(setState)}
-                className={styles.checkboxContainer}
-              >
-                <Inline spacing={spacing.xsmall}>
-                  <Text value='Auto' size={12} color={colors.black40} />
-                  <div
-                    className={classnames(
-                      styles.checkbox,
-                      state.autoSample ? styles.checkboxChecked : null,
-                    )}
-                  />
-                </Inline>
-              </div>
+                left='Auto'
+                checked={!!state.autoSample}
+              />
               <Button onClick={handleSampleAgent(state)} text='Take Sample' />
             </Inline>
           )}
@@ -212,101 +205,78 @@ export default function Evolution(_props: EvolutionProps) {
                     value={`Difficulty (spawns/frame)`}
                     color={colors.black40}
                   />
-                  <Button
+                  <Checkbox
                     onClick={handleToggleMetric('difficulty')}
-                    text={metricsVisible.difficulty ? 'Hide' : 'Show'}
+                    left='Realtime'
+                    checked={metricsSpeed.difficulty === 'fast'}
                   />
                 </Inline>
-                {metricsVisible.difficulty ? (
-                  <VictoryChart theme={victoryChartTheme} height={200}>
-                    <VictoryLine
-                      data={state.metrics.difficulty}
-                      x='move'
-                      y='value'
-                    />
-                  </VictoryChart>
-                ) : null}
+                <VictoryChart theme={victoryChartTheme} height={200}>
+                  <VictoryLine
+                    data={state.metrics[metricsSpeed.difficulty].difficulty}
+                    x='move'
+                    y='value'
+                  />
+                </VictoryChart>
               </Stack>
 
               <Stack spacing={spacing.small}>
                 <Inline expand={0}>
-                  <Text
-                    value={`Network Complexity (min & max)`}
-                    color={colors.black40}
-                  />
-                  <Button
+                  <Text value={`Network Complexity`} color={colors.black40} />
+                  <Checkbox
                     onClick={handleToggleMetric('complexity')}
-                    text={metricsVisible.complexity ? 'Hide' : 'Show'}
+                    left='Realtime'
+                    checked={metricsSpeed.complexity === 'fast'}
                   />
                 </Inline>
-                {metricsVisible.complexity ? (
-                  <VictoryChart theme={victoryChartTheme} height={200}>
-                    <VictoryLine
-                      data={state.metrics.complexityMax}
-                      x='move'
-                      y='value'
-                    />
-                    <VictoryLine
-                      data={state.metrics.complexityMin}
-                      x='move'
-                      y='value'
-                    />
-                  </VictoryChart>
-                ) : null}
+                <VictoryChart theme={victoryChartTheme} height={200}>
+                  <VictoryArea
+                    data={state.metrics[metricsSpeed.complexity].complexity}
+                    x='move'
+                    y0='min'
+                    y='max'
+                  />
+                  <VictoryLine
+                    data={state.metrics[metricsSpeed.complexity].complexityMax}
+                    x='move'
+                    y='value'
+                  />
+                  <VictoryLine
+                    data={state.metrics[metricsSpeed.complexity].complexityMin}
+                    x='move'
+                    y='value'
+                  />
+                </VictoryChart>
               </Stack>
 
               <Stack spacing={spacing.small}>
                 <Inline expand={0}>
-                  <Text value={`Population`} color={colors.black40} />
-                  <Button
-                    onClick={handleToggleMetric('population')}
-                    text={metricsVisible.population ? 'Hide' : 'Show'}
-                  />
-                </Inline>
-                {metricsVisible.population ? (
-                  <VictoryChart theme={victoryChartTheme} height={200}>
-                    <VictoryLine
-                      style={{
-                        data: { stroke: colorValues.blue60 },
-                      }}
-                      data={state.metrics.population}
-                      x='move'
-                      y='value'
-                    />
-                    <VictoryLine
-                      style={{
-                        data: { stroke: colorValues.red60 },
-                      }}
-                      data={state.metrics.killers}
-                      x='move'
-                      y='value'
-                    />
-                  </VictoryChart>
-                ) : null}
-              </Stack>
-
-              <Stack spacing={spacing.small}>
-                <Inline expand={0}>
-                  <Text value={`Lineage (min & max)`} color={colors.black40} />
-                  <Button
+                  <Text value={`Lineage`} color={colors.black40} />
+                  <Checkbox
                     onClick={handleToggleMetric('lineage')}
-                    text={metricsVisible.lineage ? 'Hide' : 'Show'}
+                    left='Realtime'
+                    checked={metricsSpeed.lineage === 'fast'}
                   />
                 </Inline>
-                {metricsVisible.lineage && state.history.length > 0 ? (
-                  <VictoryChart theme={victoryChartTheme} height={200}>
-                    <VictoryLine
-                      data={state.metrics.lineageMax}
-                      x='move'
-                      y='value'
-                    />
-                    <VictoryLine
-                      data={state.metrics.lineageMin}
-                      x='move'
-                      y='value'
-                    />
-                  </VictoryChart>
-                ) : null}
+                <VictoryChart theme={victoryChartTheme} height={200}>
+                  {/* {console.log(state.metrics)} */}
+                  <VictoryArea
+                    data={state.metrics[metricsSpeed.lineage].lineage}
+                    x='move'
+                    y0='min'
+                    y='max'
+                  />
+                  <VictoryLine
+                    data={state.metrics[metricsSpeed.lineage].lineageMax}
+                    x='move'
+                    y='value'
+                  />
+                  <VictoryLine
+                    data={state.metrics[metricsSpeed.lineage].lineageMin}
+                    x='move'
+                    y='value'
+                  />
+                </VictoryChart>
               </Stack>
             </Stack>
           )}
@@ -331,10 +301,7 @@ export default function Evolution(_props: EvolutionProps) {
                     <Text value='Lineage' color={colors.black40} />
                   </th>
                   <th>
-                    <Text value='Nodes' color={colors.black40} />
-                  </th>
-                  <th>
-                    <Text value='Edges' color={colors.black40} />
+                    <Text value='Complexity' color={colors.black40} />
                   </th>
                 </tr>
               </thead>
@@ -366,10 +333,11 @@ export default function Evolution(_props: EvolutionProps) {
                       <Text value={`${agent.lineage.toLocaleString()}`} />
                     </td>
                     <td>
-                      <Text value={`${agent.genome.nodes.length}`} />
-                    </td>
-                    <td>
-                      <Text value={`${agent.genome.edges.length}`} />
+                      <Text
+                        value={`${
+                          agent.genome.nodes.length + agent.genome.edges.length
+                        }`}
+                      />
                     </td>
                     <td>
                       <Inline align='right'>

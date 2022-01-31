@@ -1,5 +1,5 @@
 import {
-  entries,
+  map,
   max,
   maxBy,
   min,
@@ -7,7 +7,7 @@ import {
   range,
   some,
   sum,
-  values,
+  zipObject,
 } from 'lodash'
 import { colorValues } from '../../../lib/colors'
 import {
@@ -19,14 +19,12 @@ import { Agent } from './Agent'
 
 export type RunMode = 'killer' | 'competition'
 
-type Metrics =
-  | 'difficulty'
-  | 'population'
-  | 'killers'
-  | 'lineageMax'
-  | 'lineageMin'
-  | 'complexityMin'
-  | 'complexityMax'
+type MetricValue = {
+  move: number
+  value?: number
+  min?: number
+  max?: number
+}
 
 export type FrameState = {
   agents: Agent[]
@@ -34,8 +32,11 @@ export type FrameState = {
   cellSize: number
   gridHeight: number
   gridWidth: number
-  history: Record<Metrics | 'move', number>[]
-  metrics: Record<Metrics, { move: number; value: number }[]>
+  history: Record<string | 'move', number>[]
+  metrics: {
+    fast: Record<string, MetricValue[]>
+    slow: Record<string, MetricValue[]>
+  }
   running: boolean
   runFor: number | null
   killersPerMove: number
@@ -61,6 +62,18 @@ export const defaultCanvasWidth =
     : 256
 export const defaultCanvasHeight = 512
 
+const areaMetricNames = ['lineage', 'complexity']
+const lineMetricNames = [
+  'difficulty',
+  'population',
+  'killers',
+  'lineageMax',
+  'lineageMin',
+  'complexityMin',
+  'complexityMax',
+]
+const metricNames = [...areaMetricNames, ...lineMetricNames]
+
 export function initFrameState(
   cellSize = defaultCellSize,
   canvasWidth = defaultCanvasWidth,
@@ -69,6 +82,7 @@ export function initFrameState(
   const gridWidth = canvasWidth / cellSize
   const gridHeight = canvasHeight / cellSize
   const agents = range(0, minAgents).map(() => initAgent(gridWidth, gridHeight))
+
   return {
     agents,
     boardState: new BoardState({
@@ -81,13 +95,14 @@ export function initFrameState(
     gridWidth,
     history: [],
     metrics: {
-      difficulty: [],
-      population: [],
-      killers: [],
-      lineageMax: [],
-      lineageMin: [],
-      complexityMin: [],
-      complexityMax: [],
+      fast: zipObject(
+        metricNames,
+        range(metricNames.length).map(() => []),
+      ),
+      slow: zipObject(
+        metricNames,
+        range(metricNames.length).map(() => []),
+      ),
     },
     running: false,
     runFor: null,
@@ -98,7 +113,7 @@ export function initFrameState(
 }
 
 export function getNextFrameState(state: FrameState): FrameState {
-  const killPositions: Position[] = advanceKillPositions(state.boardState)
+  let killPositions: Position[] = advanceKillPositions(state.boardState)
 
   const partialKillersPerMove = state.killersPerMove % 1
   for (let i = 0; i < state.killersPerMove - partialKillersPerMove; i++) {
@@ -108,15 +123,14 @@ export function getNextFrameState(state: FrameState): FrameState {
     killPositions.push([state.gridWidth - 1, random(0, state.gridHeight - 1)])
   }
 
-  const agents = state.agents
-    .map((agent) => agent.move(state.boardState))
-    .filter(
-      (agent) =>
-        !some(
-          killPositions,
-          ([x, y]) => agent.position[0] === x && agent.position[1] === y,
-        ),
-    )
+  const movedAgents = state.agents.map((agent) => agent.move(state.boardState))
+  const agents = movedAgents.filter((agent) =>
+    isNotInPositions(killPositions, agent.position),
+  )
+
+  killPositions = killPositions.filter(
+    isNotInPositions.bind(null, map(movedAgents, 'position')),
+  )
 
   if (agents.length < maxAgents) {
     for (const agent of [...agents]) {
@@ -149,11 +163,13 @@ export function getNextFrameState(state: FrameState): FrameState {
 
   const move = state.move + 1
 
-  const metricGranularity = getMetricGranularity(move)
-  const metricHistory = getMetricHistory(move)
+  const slowSampleRate = move < 1000 ? 100 : move < 10000 ? 1000 : 5000
+  const slowSampleDuration = 0
+  const fastSampleRate = 16
+  const fastSampleDuration = 1000
 
-  const history: Record<Metrics | 'move', number>[] = [
-    ...state.history.slice(-max([500, ...values(metricGranularity)])!),
+  const history: Record<string | 'move', number>[] = [
+    ...state.history.slice(-max([fastSampleDuration, slowSampleRate])!),
     {
       move,
       difficulty: difficultyFromSurvivors(agents.length),
@@ -175,21 +191,54 @@ export function getNextFrameState(state: FrameState): FrameState {
     .map((entry) => entry.difficulty)
   const killersPerMove = max([sum(prevDifficulty) / prevDifficulty.length, 1])!
 
-  const metrics = { ...state.metrics }
+  const metrics = {
+    fast: { ...state.metrics.fast },
+    slow: { ...state.metrics.slow },
+  }
 
-  for (const [metric, granularity] of entries(metricGranularity) as [
-    Metrics,
-    number,
-  ][]) {
-    if (move % granularity === 0) {
-      const lookBack = min([granularity, history.length])!
-      const value =
-        sum(history.slice(-lookBack).map((history) => history[metric])) /
-        lookBack
-      metrics[metric] = [
-        ...metrics[metric].slice(-metricHistory[metric] / granularity),
-        { move, value },
-      ]
+  for (const metricSpeed of ['fast', 'slow'] as ['fast', 'slow']) {
+    const sampleRate = metricSpeed === 'fast' ? fastSampleRate : slowSampleRate
+    const sampleDuration =
+      metricSpeed === 'fast' ? fastSampleDuration : slowSampleDuration
+
+    if (move % sampleRate === 0) {
+      for (const metricName of metricNames) {
+        const lookBack = min([sampleRate, history.length])!
+        let metricValue: MetricValue
+
+        if (lineMetricNames.indexOf(metricName) !== -1) {
+          metricValue = {
+            move,
+            value:
+              sum(
+                history.slice(-lookBack).map((history) => history[metricName]),
+              ) / lookBack,
+          }
+        } else {
+          metricValue = {
+            move,
+            min:
+              sum(
+                history
+                  .slice(-lookBack)
+                  .map((history) => history[`${metricName}Min`]),
+              ) / lookBack,
+            max:
+              sum(
+                history
+                  .slice(-lookBack)
+                  .map((history) => history[`${metricName}Max`]),
+              ) / lookBack,
+          }
+        }
+
+        metrics[metricSpeed][metricName] = [
+          ...metrics[metricSpeed][metricName].slice(
+            -(sampleDuration / sampleRate),
+          ),
+          metricValue,
+        ]
+      }
     }
   }
 
@@ -208,29 +257,8 @@ export function getNextFrameState(state: FrameState): FrameState {
   }
 }
 
-function getMetricGranularity(move: number): Record<Metrics, number> {
-  const scaling = move < 1000 ? 100 : move < 10000 ? 1000 : 5000
-  return {
-    difficulty: scaling,
-    population: 8,
-    killers: 8,
-    lineageMax: 8,
-    lineageMin: 8,
-    complexityMin: scaling,
-    complexityMax: scaling,
-  }
-}
-
-function getMetricHistory(move: number): Record<Metrics, number> {
-  return {
-    difficulty: 0,
-    population: 1000,
-    killers: 1000,
-    lineageMax: 1000,
-    lineageMin: 1000,
-    complexityMin: 0,
-    complexityMax: 0,
-  }
+function isNotInPositions(positions: Position[], [px, py]: Position): boolean {
+  return !some(positions, ([x, y]) => px === x && py === y)
 }
 
 export function movesColor(moves: number, gridWidth: number): string {

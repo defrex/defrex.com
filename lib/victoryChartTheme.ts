@@ -54,7 +54,7 @@ export const victoryChartTheme = {
     {
       style: {
         data: {
-          fill: fgMainColor,
+          fill: `${colorValues.brandDark}30`,
         },
         labels: baseLabelStyles,
       },
@@ -76,7 +76,7 @@ export const victoryChartTheme = {
         }),
         grid: {
           fill: 'none',
-          stroke: 'none',
+          stroke: colorValues.black70,
           pointerEvents: 'painted',
         },
         ticks: {

@@ -249,10 +249,10 @@ export class Genome {
 
   mutate(): Genome {
     const mutation = sample([
-      ...range(2).map(() => 'addNode' as const),
-      ...range(2).map(() => 'addEdge' as const),
-      ...range(3).map(() => 'removeNode' as const),
-      ...range(3).map(() => 'removeEdge' as const),
+      ...range(1).map(() => 'addNode' as const),
+      ...range(1).map(() => 'addEdge' as const),
+      ...range(2).map(() => 'removeNode' as const),
+      ...range(2).map(() => 'removeEdge' as const),
       ...range(10).map(() => 'mutateEdgeWeight' as const),
       ...range(10).map(() => 'mutateNodeBias' as const),
       ...range(4).map(() => 'mutateNodeSquash' as const),

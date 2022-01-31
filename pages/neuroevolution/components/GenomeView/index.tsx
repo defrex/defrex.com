@@ -23,6 +23,18 @@ export function GenomeView({ genome, onClick }: GenomeViewProps) {
     })
   }, [realflow, setRealflow])
 
+  useEffect(() => {
+    const prevHeight = document.documentElement.style.height
+    document.documentElement.style.height = '100vh'
+    document.documentElement.style.overflow = 'hidden'
+    console.log('noscroll')
+    return () => {
+      document.documentElement.style.height = prevHeight
+      document.documentElement.style.overflow = 'initial'
+      console.log('rescroll')
+    }
+  }, [])
+
   const nodes: NodeData[] = useMemo(() => {
     return genome.nodes.map((node, index) => ({
       id: index.toString(),
