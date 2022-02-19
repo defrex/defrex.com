@@ -11,7 +11,7 @@ import { Text } from '../Text'
 import styles from './styles.module.scss'
 
 interface PageContainerProps {
-  children: ReactNode
+  children?: ReactNode
   title?: string
 }
 
