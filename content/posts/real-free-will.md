@@ -3,8 +3,6 @@ title: Real Free Will
 date: 2022-06-23T00:00:00.000Z
 ---
 
-# Real Free Will
-
 The topic of free will is often fraught with ill-defined terms. The question "what is free will?" is often neglected in favour of the question "do we have free will?". This leads the conversation into mystical places, where free will stands in oposition to material reality. This is because pure materialism implies that causes lead to effects in a nesscisary and unbroken chain that leaves no room for something presumably non-physical like free will.
 
 It's the presumed non-physicality of free will that I intend to challenge in this article. Free will can be perfectly compatible with a deterministic physical reality.
@@ -53,21 +51,3 @@ Within and without being defined is critical for our agent, as we shall see.
 ### How to Act
 
 Given all this, what is an action? An action occurs when a stimulous from without you leads you to alter the information you emit.
-
-----
-
-(We could definite this mathematically using Bayes, but it's not necessary for this argument.)
-
-Identity comes from time-wise continuity of information.
-
-The Ship of Theseus is _information_. Information is merely a quantity for communication.
-so the ship is information is the sense that, when observed, it communicates the idea "Ship of Theseus".
-
-
-
-Outline
-- fake free will
-- identity
-- agency
-- computation
-- real free will
