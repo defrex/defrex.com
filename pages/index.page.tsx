@@ -18,6 +18,11 @@ export default function Index({ posts }: IndexProps) {
       <Stack spacing={spacing.xlarge}>
         <Stack>
           <Text value='Experiments' size={20} />
+          <Link href='/normativity'>
+            <a>
+              <Text value='Normativity' />
+            </a>
+          </Link>
           <Link href='/neuroevolution'>
             <a>
               <Text value='Neuroevolution' />
