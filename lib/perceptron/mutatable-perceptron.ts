@@ -9,40 +9,7 @@ import {
   without,
 } from 'lodash'
 import { Neuron } from 'synaptic'
-
-type GeneId = string
-
-interface GeneNode {
-  type: 'input' | 'output' | 'hidden'
-  id: GeneId
-  bias: number
-  squash?: Neuron.SquashingFunction
-}
-
-interface GeneEdge {
-  id: GeneId
-  fromNodeIndex: number
-  toNodeIndex: number
-  weight: number
-}
-
-type Phenome = Neuron[]
-
-export function getSquashName(squash?: Neuron.SquashingFunction): string {
-  if (squash === Neuron.squash.LOGISTIC) {
-    return 'Sigmoid'
-  } else if (squash === Neuron.squash.ReLU) {
-    return 'ReLU'
-  } else if (squash === Neuron.squash.TANH) {
-    return 'TANH'
-  } else if (squash === Neuron.squash.HLIM) {
-    return 'HLIM'
-  } else if (squash === Neuron.squash.IDENTITY) {
-    return 'Identity'
-  } else {
-    return 'Unknown'
-  }
-}
+import { Edge, Node, Perceptron, PerceptronArgs } from './perceptron'
 
 function randSquash(): Neuron.SquashingFunction | undefined {
   return sample([
@@ -64,89 +31,8 @@ function mutateScalar(value: number, learningRate: number): number {
 
 export const defaultLearningRate = 0.5
 
-interface GenomeArgs {
-  nodes?: GeneNode[]
-  edges?: GeneEdge[]
-  inputSize?: number
-  outputSize?: number
-  learningRate?: number
-  initOutputBias?: number
-}
-
-export class Genome {
-  public inputSize: number
-  public outputSize: number
-  public learningRate: number
-  public nodes: GeneNode[]
-  public edges: GeneEdge[]
-  public phenome: Phenome
-
-  constructor(args: GenomeArgs = {}) {
-    this.inputSize = args.inputSize || 2
-    this.outputSize = args.outputSize || 4
-    this.learningRate = args.learningRate || defaultLearningRate
-
-    if (args.nodes && args.edges) {
-      this.nodes = args.nodes
-      this.edges = args.edges
-    } else {
-      const inputs = new Array(this.inputSize).fill(undefined).map(
-        () =>
-          ({
-            type: 'input',
-            id: uniqueId(),
-            bias: 0,
-            squash: Neuron.squash.IDENTITY,
-          } as GeneNode),
-      )
-      const outputs = new Array(this.outputSize).fill(undefined).map(
-        () =>
-          ({
-            type: 'output',
-            id: uniqueId(),
-            bias: 0,
-            squash: Neuron.squash.IDENTITY,
-          } as GeneNode),
-      )
-
-      if (args.initOutputBias) {
-        outputs[args.initOutputBias].bias = 1
-      }
-
-      let edges: GeneEdge[] = []
-      for (let inputIndex = 0; inputIndex < inputs.length; inputIndex++) {
-        for (let outputIndex = 0; outputIndex < outputs.length; outputIndex++) {
-          edges.push({
-            id: uniqueId(),
-            fromNodeIndex: inputIndex,
-            toNodeIndex: inputs.length + outputIndex,
-            // weight: 1,
-            weight: random(-1, 1),
-          })
-        }
-      }
-
-      this.nodes = [...inputs, ...outputs]
-      this.edges = edges
-    }
-
-    this.phenome = this.nodes.map((geneNode: GeneNode): Neuron => {
-      const neuron = new Neuron()
-      if (geneNode.squash) {
-        neuron.squash = geneNode.squash
-      }
-      neuron.bias = geneNode.bias
-      return neuron
-    })
-    this.edges.forEach((geneEdge: GeneEdge) => {
-      this.phenome[geneEdge.fromNodeIndex].project(
-        this.phenome[geneEdge.toNodeIndex],
-        geneEdge.weight,
-      )
-    })
-  }
-
-  private getArgs(): GenomeArgs {
+export class MutatablePerceptron extends Perceptron {
+  private getArgs(): PerceptronArgs {
     return {
       inputSize: this.inputSize,
       outputSize: this.outputSize,
@@ -155,99 +41,19 @@ export class Genome {
     }
   }
 
-  private inputNodes(): GeneNode[] {
+  private inputNodes(): Node[] {
     return this.nodes.slice(0, this.inputSize)
   }
 
-  private hiddenNodes(): GeneNode[] {
+  private hiddenNodes(): Node[] {
     return this.nodes.slice(this.inputSize, -this.outputSize)
   }
 
-  private outputNodes(): GeneNode[] {
+  private outputNodes(): Node[] {
     return this.nodes.slice(-this.outputSize)
   }
 
-  private validate(): boolean {
-    const edgeIds = this.edges.map((edge) => edge.id)
-    if (edgeIds.length !== uniq(edgeIds).length) {
-      console.error(`Duplicate edge ids found [${edgeIds.join(', ')}]`, this)
-      return false
-    }
-
-    for (const edge of this.edges) {
-      if (
-        edge.fromNodeIndex > this.nodes.length - this.outputSize ||
-        edge.fromNodeIndex < 0
-      ) {
-        console.error(
-          `Edge fromNodeIndex ${edge.fromNodeIndex} is out of bounds`,
-          this,
-        )
-        return false
-      }
-      if (
-        edge.toNodeIndex < this.inputSize ||
-        edge.toNodeIndex > this.nodes.length - 1
-      ) {
-        console.error(
-          `Edge toNodeIndex ${edge.toNodeIndex} is out of bounds`,
-          this,
-        )
-        return false
-      }
-    }
-
-    for (let inputIndex = 0; inputIndex < this.inputSize; inputIndex++) {
-      const edges = this.edges.filter(
-        (edge) => edge.fromNodeIndex === inputIndex,
-      )
-      if (edges.length === 0) {
-        console.error(
-          `Input node ${inputIndex} has no edges connected to it`,
-          this,
-        )
-        return false
-      }
-    }
-
-    for (let outputNumber = 0; outputNumber < this.outputSize; outputNumber++) {
-      const outputIndex = this.nodes.length - 1 - outputNumber
-      const edges = this.edges.filter(
-        (edge) => edge.toNodeIndex === outputIndex,
-      )
-      if (edges.length === 0) {
-        console.error(
-          `Output node ${outputIndex} has no edges connected to it`,
-          this,
-        )
-        return false
-      }
-    }
-
-    return true
-  }
-
-  compute(inputs: number[]): number[] {
-    if (inputs.length !== this.inputSize) {
-      throw new Error(`Expected ${this.inputSize} inputs, got ${inputs.length}`)
-    }
-    const outputs = this.phenome.reduce(
-      (outputs: number[], neuron: Neuron, index: number) => {
-        if (index < this.inputSize) {
-          neuron.activate(inputs[index])
-        } else if (index >= this.phenome.length - this.outputSize) {
-          outputs.push(neuron.activate())
-        } else {
-          neuron.activate()
-        }
-        return outputs
-      },
-      [] as number[],
-    )
-    return outputs
-  }
-
-  mutate(): Genome {
+  mutate(): MutatablePerceptron {
     const mutation = sample([
       ...range(1).map(() => 'addNode' as const),
       ...range(1).map(() => 'addEdge' as const),
@@ -279,7 +85,7 @@ export class Genome {
     }
   }
 
-  private addNode(): Genome {
+  private addNode(): MutatablePerceptron {
     const newNode = {
       type: 'hidden' as const,
       id: uniqueId(),
@@ -311,7 +117,7 @@ export class Genome {
     intermediatedEdge.toNodeIndex = newNodeIndex
     nextEdges[intermediatedEdgeIndex] = intermediatedEdge
 
-    const newEdge: GeneEdge = {
+    const newEdge: Edge = {
       id: uniqueId(),
       fromNodeIndex: newNodeIndex,
       toNodeIndex: oldToIndex,
@@ -320,25 +126,11 @@ export class Genome {
     nextEdges.push(newEdge)
 
     try {
-      const nextGenome = new Genome({
+      return new MutatablePerceptron({
         ...this.getArgs(),
         nodes: nextNodes,
         edges: nextEdges,
       })
-
-      // if (!nextGenome.validate()) {
-      //   console.log('addNode failed validation')
-      //   console.log({
-      //     this: this,
-      //     nodes: nextNodes,
-      //     edges: nextEdges,
-      //     newNode,
-      //     intermediatedEdge,
-      //     newEdge,
-      //   })
-      // }
-
-      return nextGenome
     } catch (error) {
       console.log({
         this: this,
@@ -349,8 +141,8 @@ export class Genome {
     }
   }
 
-  private addEdge(): Genome {
-    const newEdge: GeneEdge = {
+  private addEdge(): MutatablePerceptron {
+    const newEdge: Edge = {
       id: uniqueId(),
       fromNodeIndex: this.nodes.indexOf(
         sample([...this.inputNodes(), ...this.hiddenNodes()])!,
@@ -360,7 +152,7 @@ export class Genome {
       ),
       weight: 1,
     }
-    const nextGenome = new Genome({
+    const nextGenome = new MutatablePerceptron({
       ...this.getArgs(),
       nodes: cloneDeep(this.nodes),
       edges: cloneDeep([...this.edges, newEdge]),
@@ -368,7 +160,7 @@ export class Genome {
     return nextGenome
   }
 
-  private removeNode(): Genome | null {
+  private removeNode(): MutatablePerceptron | null {
     const removableNode = sample(this.hiddenNodes())
     if (!removableNode) {
       return null
@@ -413,32 +205,14 @@ export class Genome {
         nodes.push(cloneDeep(node))
       }
       return nodes
-    }, [] as GeneNode[])
+    }, [] as Node[])
 
     try {
-      const nextGenome = new Genome({
+      return new MutatablePerceptron({
         ...this.getArgs(),
         nodes: nextNodes,
         edges: nextEdges,
       })
-
-      // if (!nextGenome.validate()) {
-      //   console.log('removeNode failed validation')
-      //   console.log({
-      //     prevNodes: this.nodes,
-      //     prevEdges: this.edges,
-      //     nodes: nextNodes,
-      //     edges: nextEdges,
-      //     removableNode,
-      //     removableNodeIndex,
-      //     toEdges,
-      //     fromEdges,
-      //     toNodeIndexes,
-      //     fromNodeIndexes,
-      //   })
-      // }
-
-      return nextGenome
     } catch (error) {
       console.log({
         removableNode,
@@ -449,7 +223,7 @@ export class Genome {
     }
   }
 
-  private removeEdge(): Genome | null {
+  private removeEdge(): MutatablePerceptron | null {
     const removableEdge = shuffle(this.edges).find((candidateEdge) => {
       const fromEdges = this.edges.filter(
         (edge) =>
@@ -466,7 +240,7 @@ export class Genome {
     if (!removableEdge) {
       return null
     } else {
-      const nextGenome = new Genome({
+      const nextGenome = new MutatablePerceptron({
         ...this.getArgs(),
         nodes: cloneDeep(this.nodes),
         edges: cloneDeep(without(this.edges, removableEdge)),
@@ -475,11 +249,11 @@ export class Genome {
     }
   }
 
-  private mutateEdgeWeight(): Genome {
+  private mutateEdgeWeight(): MutatablePerceptron {
     const nextEdges = cloneDeep(this.edges)
     const nextEdge = { ...sample(nextEdges)! }
     nextEdge.weight = mutateScalar(nextEdge.weight, this.learningRate)
-    return new Genome({
+    return new MutatablePerceptron({
       ...this.getArgs(),
       nodes: cloneDeep(this.nodes),
       edges: nextEdges.map((edge) => {
@@ -492,13 +266,13 @@ export class Genome {
     })
   }
 
-  private mutateNodeBias(): Genome {
+  private mutateNodeBias(): MutatablePerceptron {
     const nextNodes = cloneDeep(this.nodes)
     const nextNode = {
       ...sample([...this.hiddenNodes(), ...this.outputNodes()])!,
     }
     nextNode.bias = mutateScalar(nextNode.bias, this.learningRate)
-    return new Genome({
+    return new MutatablePerceptron({
       ...this.getArgs(),
       nodes: nextNodes.map((node) => {
         if (node.id === nextNode.id) {
@@ -511,13 +285,13 @@ export class Genome {
     })
   }
 
-  private mutateNodeSquash(): Genome {
+  private mutateNodeSquash(): MutatablePerceptron {
     const nextNodes = cloneDeep(this.nodes)
     const nextNode = {
       ...sample([...this.hiddenNodes(), ...this.outputNodes()])!,
     }
     nextNode.squash = randSquash()
-    return new Genome({
+    return new MutatablePerceptron({
       ...this.getArgs(),
       nodes: nextNodes.map((node) => {
         if (node.id === nextNode.id) {

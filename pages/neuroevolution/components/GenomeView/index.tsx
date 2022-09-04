@@ -3,11 +3,14 @@ import { MouseEvent, useEffect, useMemo, useState } from 'react'
 import { EdgeData, NodeData } from 'reaflow'
 import { colorValues } from '../../../../lib/colors'
 import { Agent } from '../../lib/Agent'
-import { Genome, getSquashName } from '../../lib/Genome'
+import {
+  Perceptron,
+  getSquashName,
+} from '../../../../lib/perceptron/perceptron'
 import styles from './styles.module.scss'
 
 interface GenomeViewProps {
-  genome: Genome
+  genome: Perceptron
   onClick?: (event: MouseEvent<HTMLDivElement>) => void
 }
 

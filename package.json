@@ -3,7 +3,7 @@
   "scripts": {
     "build": "next build",
     "serve": "next start",
-    "start": "next"
+    "dev": "next"
   },
   "dependencies": {
     "classnames": "~2.3.1",

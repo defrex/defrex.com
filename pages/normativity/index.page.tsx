@@ -6,6 +6,16 @@ import { spacing } from '../../lib/spacing'
 
 interface NormativityProps {}
 
+/**
+ * notes
+ * - agent model
+ * - hypergraph connections
+ * - edge weights
+ * - normalize against neighbors
+ * - mutate graph edges
+ * - selection pressure
+ * - back-propagation
+ */
 export default function Normativity(_props: NormativityProps) {
   return (
     <PageContainer title='Normativity'>

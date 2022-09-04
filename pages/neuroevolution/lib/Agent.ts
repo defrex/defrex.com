@@ -1,14 +1,14 @@
 import { assign, max, min, random, sample, uniqueId } from 'lodash'
+import { MutatablePerceptron } from '../../../lib/perceptron/mutatable-perceptron'
 import {
   BoardState,
   Direction,
   Position,
 } from '../components/Board/lib/BoardState'
-import { Genome } from './Genome'
 
 interface AgentArgs {
   direction?: Direction
-  genome?: Genome
+  genome?: MutatablePerceptron
   gridHeight: number
   gridWidth: number
   id?: string
@@ -23,7 +23,7 @@ export class Agent {
   static outputLabels = ['🟦↑', '🟦↓', '🟦→']
 
   public id: string
-  public genome: Genome
+  public genome: MutatablePerceptron
   public position: Position
   public moves: number = 0
   public lineage: number = 0
@@ -36,7 +36,7 @@ export class Agent {
   constructor({ ...args }: AgentArgs) {
     assign(this, args)
 
-    this.genome ||= new Genome({
+    this.genome ||= new MutatablePerceptron({
       inputSize: Agent.inputLabels.length,
       outputSize: Agent.outputLabels.length,
       initOutputBias: 2, // ensure they move forward
