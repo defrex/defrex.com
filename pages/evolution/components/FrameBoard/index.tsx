@@ -9,27 +9,30 @@ import {
   useRef,
   useState,
 } from 'react'
-import { Button } from '../../../../../components/Button'
-import { Inline } from '../../../../../components/Inline'
-import { Stack } from '../../../../../components/Stack'
-import { Text } from '../../../../../components/Text'
-import { colors } from '../../../../../lib/colors'
-import { sleep } from '../../../../../lib/sleep'
-import { spacing } from '../../../../../lib/spacing'
+import { Button } from '../../../../components/Button'
+import { Inline } from '../../../../components/Inline'
+import { Stack } from '../../../../components/Stack'
+import { Text } from '../../../../components/Text'
+import { colors } from '../../../../lib/colors'
+import { sleep } from '../../../../lib/sleep'
+import { spacing } from '../../../../lib/spacing'
+import { Agent } from '../../lib/Agent'
 import { Board } from '../Board'
 import { BoardState } from '../Board/lib/BoardState'
 
 export interface DefaultFrameState {
+  agents: Agent<any, any>[]
   boardState: BoardState
-  running?: boolean
-  speed?: number
-  runFor?: number | null
   fps?: number
   fpss?: number[]
+  framesPerFrame?: number
+  move: number
+  pendingFrames?: number
+  runFor?: number | null
+  running?: boolean
+  speed?: number
   time?: number
   turbo?: boolean
-  framesPerFrame?: number
-  pendingFrames?: number
 }
 
 const turboFramesPerFrame = 16
@@ -37,6 +40,17 @@ const defaultFramesPerFrame = 1
 const slowFps = 12
 const slowSpeed = 1000 / slowFps
 const defaultSpeed = 0
+
+export const cellSize = 16
+export const canvasWidth =
+  typeof window === 'undefined'
+    ? 768
+    : window.innerWidth > 768
+    ? 768
+    : window.innerWidth > 512
+    ? 512
+    : 256
+export const canvasHeight = 512
 
 function framesPerSecond(
   currentFrameTime: number,
@@ -73,8 +87,8 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
   renderControl,
   reset = true,
   turbo = true,
-  height,
-  width,
+  height = canvasHeight,
+  width = canvasWidth,
 }: FrameBoardProps<FrameState>) {
   const frameRef = useRef<number>()
   const [state, setState] = useState<FrameState>(initFrameState)

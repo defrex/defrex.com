@@ -1,14 +1,15 @@
-import { assign, max, min, random, sample, uniqueId } from 'lodash'
-import { MutatablePerceptron } from '../../lib/perceptron/mutatable-perceptron'
+import { max, min, random, sample } from 'lodash'
 import {
   BoardState,
   Direction,
   Position,
-} from '../components/Board/lib/BoardState'
+} from '../../components/Board/lib/BoardState'
+import { Agent } from '../../lib/Agent'
+import { MutatablePerceptron } from '../../lib/perceptron/mutatable-perceptron'
 
 interface AgentArgs {
   direction?: Direction
-  genome?: MutatablePerceptron
+  perceptron?: MutatablePerceptron
   gridHeight: number
   gridWidth: number
   id?: string
@@ -18,46 +19,46 @@ interface AgentArgs {
   threatType?: string
 }
 
-export class Agent {
+export class NeuroevolutionAgent extends Agent<MutatablePerceptron, AgentArgs> {
   static inputLabels = ['↱🟥', '→🟥', '↳🟥']
   static outputLabels = ['🟦↑', '🟦↓', '🟦→']
 
   public id: string
-  public genome: MutatablePerceptron
+  public perceptron: MutatablePerceptron
   public position: Position
   public moves: number = 0
   public lineage: number = 0
   public direction: Direction = 'right'
   public threatType: string
 
-  private gridWidth: number
-  private gridHeight: number
+  gridWidth: number
+  gridHeight: number
 
-  constructor({ ...args }: AgentArgs) {
-    assign(this, args)
+  constructor(args: AgentArgs) {
+    super(args)
+    this.direction ||= sample(['left', 'right'])!
+    this.threatType ||= this.direction === 'right' ? 'left' : 'right'
+  }
 
-    this.genome ||= new MutatablePerceptron({
-      inputSize: Agent.inputLabels.length,
-      outputSize: Agent.outputLabels.length,
+  initPerceptron(): MutatablePerceptron {
+    return new MutatablePerceptron({
+      inputSize: NeuroevolutionAgent.inputLabels.length,
+      outputSize: NeuroevolutionAgent.outputLabels.length,
       initOutputBias: 2, // ensure they move forward
     })
+  }
 
-    this.direction ||= sample(['left', 'right'])!
-
-    this.threatType ||= this.direction === 'right' ? 'left' : 'right'
-
-    this.position ||= [
+  initPosition(): Position {
+    return [
       this.direction === 'left' ? this.gridWidth - 1 : 0,
       random(0, this.gridHeight - 1),
     ]
-
-    this.id ||= uniqueId()
   }
 
-  private getArgs(): AgentArgs {
+  getArgs(): AgentArgs {
     return {
       direction: this.direction,
-      genome: this.genome,
+      perceptron: this.perceptron,
       gridHeight: this.gridHeight,
       gridWidth: this.gridWidth,
       id: this.id,
@@ -68,26 +69,11 @@ export class Agent {
     }
   }
 
-  setPosition(position: Position): Agent {
-    return new Agent({
-      ...this.getArgs(),
-      position,
-    })
-  }
-
-  resetHistory(): Agent {
-    return new Agent({
-      gridWidth: this.gridWidth,
-      gridHeight: this.gridHeight,
-      genome: this.genome,
-    })
-  }
-
-  mutate(args?: AgentArgs): Agent {
-    return new Agent({
+  mutate(args?: AgentArgs): NeuroevolutionAgent {
+    return new NeuroevolutionAgent({
       ...this.getArgs(),
       ...(args || {}),
-      genome: this.genome.mutate(),
+      perceptron: this.perceptron.mutate(),
       moves: 0,
       lineage: this.lineage + 1,
       direction: this.direction,
@@ -96,33 +82,28 @@ export class Agent {
     })
   }
 
-  fight(otherAgent: Agent): boolean {
+  fight(otherAgent: NeuroevolutionAgent): boolean {
     const isConflict =
       this.position[0] === otherAgent.position[0] &&
       this.position[1] === otherAgent.position[1]
 
     return isConflict
-    // if (!isConflict) {
-    //   return false
-    // } else {
-    //   return this.moves > otherAgent.moves
-    // }
   }
 
-  move(boardState: BoardState): Agent {
+  move(boardState: BoardState): typeof this {
     const inputs = [
       this.threatDistance(boardState, -1),
       this.threatDistance(boardState, 0),
       this.threatDistance(boardState, 1),
     ]
 
-    if (inputs.length !== Agent.inputLabels.length) {
+    if (inputs.length !== NeuroevolutionAgent.inputLabels.length) {
       throw new Error('Unexpected input length')
     }
 
-    const outputs = this.genome.compute(inputs)
+    const outputs = this.perceptron.compute(inputs)
 
-    if (outputs.length !== Agent.outputLabels.length) {
+    if (outputs.length !== NeuroevolutionAgent.outputLabels.length) {
       throw new Error('Unexpected output length')
     }
 
@@ -150,7 +131,7 @@ export class Agent {
       nextMoves++
     }
 
-    return new Agent({
+    return this.cloneWith({
       ...this.getArgs(),
       position: nextPosition,
       moves: nextMoves,

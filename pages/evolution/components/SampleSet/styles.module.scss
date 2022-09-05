@@ -1,5 +1,5 @@
-@use "../../../lib/colors";
-@use "../../../lib/spacing";
+@use "../../../../lib/colors";
+@use "../../../../lib/spacing";
 
 .sampleAgents {
   width: 768px;
@@ -25,9 +25,4 @@
   tbody td:last-child {
     text-align: right;
   }
-}
-
-.colContainer {
-  max-width: 768px * 2;
-  margin: auto;
 }

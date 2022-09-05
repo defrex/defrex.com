@@ -1,0 +1,363 @@
+import { max, min, random, range, some, sum } from 'lodash'
+import { colorValues } from '../../../../lib/colors'
+import {
+  BoardState,
+  ColorPosition,
+  Position,
+} from '../../components/Board/lib/BoardState'
+import { cellSize } from '../../components/FrameBoard'
+import {
+  SampleFrameState,
+  sampleGridHeight,
+  sampleGridWidth,
+} from '../../components/SampleBoard'
+import { Agent } from '../../lib/Agent'
+import { agentColor } from '../../lib/agentColor'
+import {
+  defaultCanvasHeight,
+  defaultCanvasWidth,
+} from '../../neuroevolution/lib/getNextFrameState'
+import { NormativityAgent } from './NormativityAgent'
+
+type MetricValue = {
+  move: number
+  value?: number
+  min?: number
+  max?: number
+}
+
+export type NormativityFrameState = {
+  agents: NormativityAgent[]
+  boardState: BoardState
+  cellSize: number
+  gridHeight: number
+  gridWidth: number
+  history: Record<NormativityMetrics | 'move', number>[]
+  metrics: {
+    fast: Record<NormativityMetrics, MetricValue[]>
+    slow: Record<NormativityMetrics, MetricValue[]>
+  }
+  running: boolean
+  runFor: number | null
+  move: number
+  autoSample: boolean
+  speed: number
+  respawnAgent?: NormativityAgent
+}
+
+const agentCount = 10
+const prizeCount = 3
+export const prizePositionType = 'prize'
+
+export type NormativityMetrics =
+  | 'points'
+  | 'pointsMin'
+  | 'pointsMax'
+  | 'complexity'
+  | 'complexityMax'
+  | 'complexityMin'
+const areaMetricNames: NormativityMetrics[] = ['points', 'complexity']
+const lineMetricNames: NormativityMetrics[] = [
+  'pointsMin',
+  'pointsMax',
+  'complexityMax',
+  'complexityMin',
+]
+const metricNames: NormativityMetrics[] = [
+  ...areaMetricNames,
+  ...lineMetricNames,
+]
+
+function initFrameState(): NormativityFrameState {
+  const gridWidth = defaultCanvasWidth / cellSize
+  const gridHeight = defaultCanvasHeight / cellSize
+  const agents = range(0, agentCount).map(
+    () =>
+      new NormativityAgent({
+        gridWidth,
+        gridHeight,
+      }),
+  )
+  const prizes = range(0, prizeCount).map(
+    () => [gridWidth - 1, random(0, gridHeight - 1)] as Position,
+  )
+
+  return {
+    agents,
+    boardState: new BoardState({
+      gridWidth,
+      gridHeight,
+      cellSize,
+    }).setPositions([
+      ...prizePositionColors(prizes),
+      ...agentPositionColors(agents, gridWidth),
+    ]),
+    cellSize,
+    gridHeight,
+    gridWidth,
+    history: [],
+    metrics: {
+      fast: Object.fromEntries(
+        metricNames.map((name) => [
+          name,
+          [
+            {
+              move: 0,
+              value: 0,
+              min: 0,
+              max: 0,
+            },
+          ] as MetricValue[],
+        ]),
+      ) as Record<NormativityMetrics, MetricValue[]>,
+      slow: Object.fromEntries(
+        metricNames.map((name) => [
+          name,
+          [
+            {
+              move: 0,
+              value: 0,
+              min: 0,
+              max: 0,
+            },
+          ] as MetricValue[],
+        ]),
+      ) as Record<NormativityMetrics, MetricValue[]>,
+    },
+    running: false,
+    runFor: null,
+    move: 0,
+    speed: 0,
+    autoSample: false,
+  }
+}
+
+function getNextFrameState(
+  state: NormativityFrameState,
+): NormativityFrameState {
+  const prizePositions: Position[] = advancePrizePositions(state.boardState)
+  const agents = state.agents.map((agent) => {
+    const movedAgent = agent.move(state.boardState)
+
+    if (inPositions(prizePositions, movedAgent.position)) {
+      return movedAgent.reward()
+    } else {
+      return movedAgent
+    }
+  })
+
+  const boardState = state.boardState.setPositions([
+    ...prizePositionColors(prizePositions),
+    ...agentPositionColors(agents, state.gridWidth),
+  ])
+
+  const move = state.move + 1
+
+  const slowSampleRate = move < 1000 ? 100 : move < 10000 ? 1000 : 5000
+  const slowSampleDuration = 0
+  const fastSampleRate = 16
+  const fastSampleDuration = 1000
+
+  const history: Record<string | 'move', number>[] = [
+    ...state.history.slice(-max([fastSampleDuration, slowSampleRate])!),
+    {
+      move,
+      pointsMax: max(agents.map((agent) => agent.points))!,
+      pointsMin: min(agents.map((agent) => agent.points))!,
+      complexityMin: max(
+        agents.map(
+          (agent) =>
+            agent.perceptron.nodes.length + agent.perceptron.edges.length,
+        ),
+      )!,
+      complexityMax: min(
+        agents.map(
+          (agent) =>
+            agent.perceptron.nodes.length + agent.perceptron.edges.length,
+        ),
+      )!,
+    },
+  ]
+
+  const metrics = {
+    fast: { ...state.metrics.fast },
+    slow: { ...state.metrics.slow },
+  }
+
+  for (const metricSpeed of ['fast', 'slow'] as ['fast', 'slow']) {
+    const sampleRate = metricSpeed === 'fast' ? fastSampleRate : slowSampleRate
+    const sampleDuration =
+      metricSpeed === 'fast' ? fastSampleDuration : slowSampleDuration
+
+    if (move % sampleRate === 0) {
+      for (const metricName of metricNames) {
+        const lookBack = min([sampleRate, history.length])!
+
+        let metricValue: MetricValue
+        if (lineMetricNames.indexOf(metricName) !== -1) {
+          metricValue = {
+            move,
+            value:
+              sum(
+                history.slice(-lookBack).map((history) => history[metricName]),
+              ) / lookBack,
+          }
+        } else {
+          metricValue = {
+            move,
+            min:
+              sum(
+                history
+                  .slice(-lookBack)
+                  .map((history) => history[`${metricName}Min`]),
+              ) / lookBack,
+            max:
+              sum(
+                history
+                  .slice(-lookBack)
+                  .map((history) => history[`${metricName}Max`]),
+              ) / lookBack,
+          }
+        }
+
+        metrics[metricSpeed][metricName] = [
+          ...metrics[metricSpeed][metricName].slice(
+            -(sampleDuration / sampleRate),
+          ),
+          metricValue,
+        ]
+      }
+    }
+  }
+
+  const runFor = state.runFor ? state.runFor - 1 : null
+
+  return {
+    ...state,
+    agents,
+    boardState,
+    history,
+    metrics,
+    move,
+    runFor,
+  }
+}
+
+function agentPositionColors(
+  agents: NormativityAgent[],
+  gridWidth: number,
+): ColorPosition[] {
+  return agents.map((agent) => ({
+    type: 'agent',
+    color: agentColor(agent.points, gridWidth),
+    position: agent.position,
+  }))
+}
+
+function prizePositionColors(prizePositions: Position[]): ColorPosition[] {
+  return prizePositions.map((position) => ({
+    type: prizePositionType,
+    color: colorValues.red60,
+    position,
+  }))
+}
+
+function advancePrizePositions(boardState: BoardState): Position[] {
+  return boardState
+    .getPositions(prizePositionType)
+    .map(([x, y]) => [x - 1, y] as Position)
+    .map(
+      ([x, y]) =>
+        [
+          x < 0 ? boardState.gridWidth - 1 : x,
+          x < 0 ? random(0, boardState.gridHeight - 1) : y,
+        ] as Position,
+    )
+}
+
+function inPositions(positions: Position[], [px, py]: Position): boolean {
+  return some(positions, ([x, y]) => px === x && py === y)
+}
+
+function initSampleFrameState<TAgent extends Agent<any, any>>(
+  agent: TAgent,
+  redPositions: Position[],
+  state?: SampleFrameState,
+): SampleFrameState {
+  agent = agent.setPosition([0, 2])
+  return {
+    agent,
+    agents: [agent],
+    move: 0,
+    running: state ? false : true,
+    result: state && state.result !== null ? state.result : null,
+    boardState: new BoardState({
+      gridWidth: sampleGridWidth,
+      gridHeight: sampleGridHeight,
+      cellSize,
+    }).setPositions([
+      ...agentPositionColors(
+        [agent as unknown as NormativityAgent],
+        sampleGridWidth,
+      ),
+      ...redPositions.map((position) => ({
+        type: 'prize',
+        color: colorValues.red60,
+        position,
+      })),
+    ]),
+  }
+}
+
+function getNextSampleFrameState(state: SampleFrameState): SampleFrameState {
+  let boardState = state.boardState
+  const agent = state.agent.move(boardState)
+  const prizePositions: Position[] = advancePrizePositions(boardState)
+
+  if (agent.position[0] >= state.boardState.gridWidth - 1) {
+    return initSampleFrameState(agent, prizePositions, {
+      ...state,
+      result: 'life',
+    })
+  }
+
+  if (prizePositions.length === 0) {
+    return initSampleFrameState(agent, prizePositions, {
+      ...state,
+      result: 'life',
+    })
+  }
+
+  if (
+    some(
+      prizePositions,
+      ([killerX, killerY]) =>
+        agent.position[0] === killerX && agent.position[1] === killerY,
+    )
+  ) {
+    return initSampleFrameState(agent, prizePositions, {
+      ...state,
+      result: 'death',
+    })
+  }
+
+  return {
+    ...state,
+    agent,
+    boardState: boardState.setPositions([
+      ...prizePositionColors(prizePositions),
+      ...agentPositionColors(
+        state.agents as NormativityAgent[],
+        state.boardState.gridWidth,
+      ),
+    ]),
+    result: null,
+  }
+}
+
+export const normativityFrames = {
+  initFrameState,
+  getNextFrameState,
+  initSampleFrameState,
+  getNextSampleFrameState,
+}

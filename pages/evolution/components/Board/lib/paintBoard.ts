@@ -1,4 +1,4 @@
-import { colorValues } from '../../../../../../lib/colors'
+import { colorValues } from '../../../../../lib/colors'
 import { Edge, edgeDirection, Position } from './BoardState'
 
 export function paintEdge(

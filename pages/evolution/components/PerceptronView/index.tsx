@@ -1,17 +1,17 @@
 import { round } from 'lodash'
 import { MouseEvent, useEffect, useMemo, useState } from 'react'
 import { EdgeData, NodeData } from 'reaflow'
-import { colorValues } from '../../../../../lib/colors'
-import { Agent } from '../../lib/Agent'
-import { Perceptron, getSquashName } from '../../../lib/perceptron/perceptron'
+import { colorValues } from '../../../../lib/colors'
+import { NeuroevolutionAgent } from '../../neuroevolution/lib/NeuroevolutionAgent'
+import { Perceptron, getSquashName } from '../../lib/perceptron/perceptron'
 import styles from './styles.module.scss'
 
-interface GenomeViewProps {
-  genome: Perceptron
+interface PerceptronViewProps {
+  perceptron: Perceptron
   onClick?: (event: MouseEvent<HTMLDivElement>) => void
 }
 
-export function GenomeView({ genome, onClick }: GenomeViewProps) {
+export function PerceptronView({ perceptron, onClick }: PerceptronViewProps) {
   const [realflow, setRealflow] = useState<typeof import('reaflow') | null>(
     null,
   )
@@ -34,15 +34,18 @@ export function GenomeView({ genome, onClick }: GenomeViewProps) {
   }, [])
 
   const nodes: NodeData[] = useMemo(() => {
-    return genome.nodes.map((node, index) => ({
+    return perceptron.nodes.map((node, index) => ({
       id: index.toString(),
       text: `${
-        index < Agent.inputLabels.length
-          ? `${Agent.inputLabels[index]}`
-          : index >= genome.nodes.length - Agent.outputLabels.length
+        index < NeuroevolutionAgent.inputLabels.length
+          ? `${NeuroevolutionAgent.inputLabels[index]}`
+          : index >=
+            perceptron.nodes.length - NeuroevolutionAgent.outputLabels.length
           ? `${
-              Agent.outputLabels[
-                index - (genome.nodes.length - Agent.outputLabels.length)
+              NeuroevolutionAgent.outputLabels[
+                index -
+                  (perceptron.nodes.length -
+                    NeuroevolutionAgent.outputLabels.length)
               ]
             }`
           : node.type === 'hidden'
@@ -50,16 +53,16 @@ export function GenomeView({ genome, onClick }: GenomeViewProps) {
           : node.type
       } ${getSquashName(node.squash)}(${round(node.bias, 2)})`,
     }))
-  }, [genome])
+  }, [perceptron])
 
   const edges: EdgeData[] = useMemo(() => {
-    return genome.edges.map((edge, index) => ({
+    return perceptron.edges.map((edge, index) => ({
       id: index.toString(),
       from: edge.fromNodeIndex.toString(),
       to: edge.toNodeIndex.toString(),
       text: round(edge.weight, 2).toString(),
     }))
-  }, [genome])
+  }, [perceptron])
 
   if (!realflow) {
     return null

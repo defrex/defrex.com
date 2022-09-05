@@ -14,8 +14,10 @@ import {
   BoardState,
   ColorPosition,
   Position,
-} from '../components/Board/lib/BoardState'
-import { Agent } from './Agent'
+} from '../../components/Board/lib/BoardState'
+import { cellSize } from '../../components/FrameBoard'
+import { agentColor } from '../../lib/agentColor'
+import { NeuroevolutionAgent } from './NeuroevolutionAgent'
 
 export type RunMode = 'killer' | 'competition'
 
@@ -27,7 +29,7 @@ type MetricValue = {
 }
 
 export type FrameState = {
-  agents: Agent[]
+  agents: NeuroevolutionAgent[]
   boardState: BoardState
   cellSize: number
   gridHeight: number
@@ -43,7 +45,7 @@ export type FrameState = {
   move: number
   autoSample?: boolean
   speed: number
-  respawnAgent?: Agent
+  respawnAgent?: NeuroevolutionAgent
 }
 
 const minAgents = 10
@@ -51,7 +53,7 @@ const maxAgents = 600
 const maxDifficulty = 30
 const difficultySmoothing = 1
 
-export const defaultCellSize = 16
+const defaultCellSize = cellSize
 export const defaultCanvasWidth =
   typeof window === 'undefined'
     ? 768
@@ -178,10 +180,14 @@ export function getNextFrameState(state: FrameState): FrameState {
       lineageMax: max(agents.map(({ lineage }) => lineage))!,
       lineageMin: min(agents.map(({ lineage }) => lineage))!,
       complexityMin: max(
-        agents.map(({ genome }) => genome.nodes.length + genome.edges.length),
+        agents.map(
+          ({ perceptron }) => perceptron.nodes.length + perceptron.edges.length,
+        ),
       )!,
       complexityMax: min(
-        agents.map(({ genome }) => genome.nodes.length + genome.edges.length),
+        agents.map(
+          ({ perceptron }) => perceptron.nodes.length + perceptron.edges.length,
+        ),
       )!,
     },
   ]
@@ -261,18 +267,8 @@ function isNotInPositions(positions: Position[], [px, py]: Position): boolean {
   return !some(positions, ([x, y]) => px === x && py === y)
 }
 
-export function movesColor(moves: number, gridWidth: number): string {
-  const maxRunColors = 7
-  const runs = Math.floor(moves / gridWidth)
-  const capRuns = Math.min(runs, maxRunColors)
-  const normalizedRuns = capRuns / maxRunColors
-  const color = `hsl(${Math.round(45 + normalizedRuns * 235)}, 100%, 60%)`
-
-  return color
-}
-
-function initAgent(gridWidth: number, gridHeight: number): Agent {
-  return new Agent({
+function initAgent(gridWidth: number, gridHeight: number): NeuroevolutionAgent {
+  return new NeuroevolutionAgent({
     gridWidth,
     gridHeight,
     direction: 'right',
@@ -281,12 +277,12 @@ function initAgent(gridWidth: number, gridHeight: number): Agent {
 }
 
 export function agentPositionColors(
-  agents: Agent[],
+  agents: NeuroevolutionAgent[],
   gridWidth: number,
 ): ColorPosition[] {
   return agents.map(({ direction, position, moves }) => ({
     type: direction,
-    color: movesColor(moves, gridWidth),
+    color: agentColor(moves, gridWidth),
     position,
   }))
 }

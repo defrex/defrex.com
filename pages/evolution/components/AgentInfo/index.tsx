@@ -1,15 +1,15 @@
 import { MouseEvent } from 'react'
-import { Button } from '../../../../../components/Button'
-import { Inline } from '../../../../../components/Inline'
-import { Stack } from '../../../../../components/Stack'
-import { Text } from '../../../../../components/Text'
-import { colors } from '../../../../../lib/colors'
-import { spacing } from '../../../../../lib/spacing'
-import { Agent } from '../../lib/Agent'
+import { Button } from '../../../../components/Button'
+import { Inline } from '../../../../components/Inline'
+import { Stack } from '../../../../components/Stack'
+import { Text } from '../../../../components/Text'
+import { colors } from '../../../../lib/colors'
+import { spacing } from '../../../../lib/spacing'
+import { NeuroevolutionAgent } from '../../neuroevolution/lib/NeuroevolutionAgent'
 
 interface AgentInfoProps {
-  agent: Agent
-  onSelect?: (agent: Agent) => (event: MouseEvent) => void
+  agent: NeuroevolutionAgent
+  onSelect?: (agent: NeuroevolutionAgent) => (event: MouseEvent) => void
 }
 
 export function AgentInfo({ agent, onSelect }: AgentInfoProps) {

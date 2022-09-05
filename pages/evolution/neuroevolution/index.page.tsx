@@ -10,21 +10,20 @@ import { Text } from '../../../components/Text'
 import { colors } from '../../../lib/colors'
 import { spacing } from '../../../lib/spacing'
 import { victoryChartTheme } from '../../../lib/victoryChartTheme'
-import { AgentBehavior } from './components/AgentBehavior'
-import { FrameBoard, SetState } from './components/FrameBoard'
-import { GenomeView } from './components/GenomeView'
+import { AgentBehavior } from '../components/AgentBehavior'
+import { cellSize, FrameBoard, SetState } from '../components/FrameBoard'
+import { PerceptronView } from '../components/PerceptronView'
 import HowItWorks from './components/HowItWorks'
-import { Agent } from './lib/Agent'
+import { NeuroevolutionAgent } from './lib/NeuroevolutionAgent'
 import {
   defaultCanvasHeight,
   defaultCanvasWidth,
-  defaultCellSize,
   FrameState,
   getNextFrameState,
   initFrameState,
-  movesColor,
 } from './lib/getNextFrameState'
 import styles from './styles.module.scss'
+import { agentColor } from '../lib/agentColor'
 
 interface EvolutionProps {}
 
@@ -32,18 +31,23 @@ type AgentSample = {
   move: number
   difficulty: number
   fitness?: number
-  agent: Agent
+  agent: NeuroevolutionAgent
 }
 
-function equivalentSamples(agent: Agent, otherAgent: Agent): boolean {
+function equivalentSamples(
+  agent: NeuroevolutionAgent,
+  otherAgent: NeuroevolutionAgent,
+): boolean {
   return otherAgent.id === agent.id && otherAgent.move === agent.move
 }
 
-export default function Evolution(_props: EvolutionProps) {
+export default function Neuroevolution(_props: EvolutionProps) {
   const [showHowItWorks, setShowHowItWorks] = useState(false)
   const [sampleAgents, setSampleAgents] = useState<AgentSample[]>([])
-  const [showAgentBehavior, setShowAgentBehavior] = useState<Agent | null>(null)
-  const [showAgentNetwork, setShowAgentNetwork] = useState<Agent | null>(null)
+  const [showAgentBehavior, setShowAgentBehavior] =
+    useState<NeuroevolutionAgent | null>(null)
+  const [showAgentNetwork, setShowAgentNetwork] =
+    useState<NeuroevolutionAgent | null>(null)
   const [metricsSpeed, setMetricsSpeed] = useState<
     Record<string, 'fast' | 'slow'>
   >({
@@ -75,7 +79,7 @@ export default function Evolution(_props: EvolutionProps) {
       setSampleAgents((sampleAgents) => {
         // const nextSampleAgent = bestAgent(state.agents)
         const nextSampleAgent = state.agents.reduce(
-          (best: Agent | undefined, agent) => {
+          (best: NeuroevolutionAgent | undefined, agent) => {
             if (
               !some(sampleAgents, (sampleAgent) =>
                 equivalentSamples(agent, sampleAgent.agent),
@@ -120,7 +124,7 @@ export default function Evolution(_props: EvolutionProps) {
   )
 
   const handleClearSampleAgent = useCallback(
-    (agent: Agent) => () => {
+    (agent: NeuroevolutionAgent) => () => {
       setSampleAgents((sampleAgents) => {
         return sampleAgents.filter(
           (sample) => !equivalentSamples(sample.agent, agent),
@@ -131,7 +135,7 @@ export default function Evolution(_props: EvolutionProps) {
   )
 
   const handleToggleAgentBehavior = useCallback(
-    (selection: Agent | null) => () => {
+    (selection: NeuroevolutionAgent | null) => () => {
       setShowAgentBehavior(null)
       if (
         selection &&
@@ -144,7 +148,7 @@ export default function Evolution(_props: EvolutionProps) {
   )
 
   const handleShowAgentNetwork = useCallback(
-    (selection: Agent | null) => () => {
+    (selection: NeuroevolutionAgent | null) => () => {
       setShowAgentNetwork(selection)
     },
     [setShowAgentNetwork],
@@ -317,12 +321,12 @@ export default function Evolution(_props: EvolutionProps) {
                     <td>
                       <div
                         style={{
-                          backgroundColor: movesColor(
+                          backgroundColor: agentColor(
                             agent.moves,
-                            defaultCanvasWidth / defaultCellSize,
+                            defaultCanvasWidth / cellSize,
                           ),
-                          height: defaultCellSize * 0.5,
-                          width: defaultCellSize * 0.5,
+                          height: cellSize * 0.5,
+                          width: cellSize * 0.5,
                         }}
                       />
                     </td>
@@ -335,7 +339,8 @@ export default function Evolution(_props: EvolutionProps) {
                     <td>
                       <Text
                         value={`${
-                          agent.genome.nodes.length + agent.genome.edges.length
+                          agent.perceptron.nodes.length +
+                          agent.perceptron.edges.length
                         }`}
                       />
                     </td>
@@ -373,8 +378,8 @@ export default function Evolution(_props: EvolutionProps) {
             ) : null}
 
             {showAgentNetwork ? (
-              <GenomeView
-                genome={showAgentNetwork.genome}
+              <PerceptronView
+                perceptron={showAgentNetwork.perceptron}
                 onClick={handleShowAgentNetwork(null)}
               />
             ) : null}
