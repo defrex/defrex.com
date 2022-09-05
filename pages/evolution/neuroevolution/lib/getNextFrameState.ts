@@ -9,7 +9,7 @@ import {
   sum,
   zipObject,
 } from 'lodash'
-import { colorValues } from '../../../lib/colors'
+import { colorValues } from '../../../../lib/colors'
 import {
   BoardState,
   ColorPosition,

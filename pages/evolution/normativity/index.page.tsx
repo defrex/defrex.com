@@ -1,8 +1,8 @@
-import { PageContainer } from '../../components/PageContainer'
-import { Stack } from '../../components/Stack'
-import { Text } from '../../components/Text'
-import { colors } from '../../lib/colors'
-import { spacing } from '../../lib/spacing'
+import { PageContainer } from '../../../components/PageContainer'
+import { Stack } from '../../../components/Stack'
+import { Text } from '../../../components/Text'
+import { colors } from '../../../lib/colors'
+import { spacing } from '../../../lib/spacing'
 
 interface NormativityProps {}
 

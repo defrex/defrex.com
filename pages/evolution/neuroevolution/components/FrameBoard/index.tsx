@@ -9,13 +9,13 @@ import {
   useRef,
   useState,
 } from 'react'
-import { Button } from '../../../../components/Button'
-import { Inline } from '../../../../components/Inline'
-import { Stack } from '../../../../components/Stack'
-import { Text } from '../../../../components/Text'
-import { colors } from '../../../../lib/colors'
-import { sleep } from '../../../../lib/sleep'
-import { spacing } from '../../../../lib/spacing'
+import { Button } from '../../../../../components/Button'
+import { Inline } from '../../../../../components/Inline'
+import { Stack } from '../../../../../components/Stack'
+import { Text } from '../../../../../components/Text'
+import { colors } from '../../../../../lib/colors'
+import { sleep } from '../../../../../lib/sleep'
+import { spacing } from '../../../../../lib/spacing'
 import { Board } from '../Board'
 import { BoardState } from '../Board/lib/BoardState'
 

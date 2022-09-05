@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { colorValues } from '../../../../lib/colors'
+import { colorValues } from '../../../../../lib/colors'
 import { BoardState, Edge } from './lib/BoardState'
 import { paintEdge, paintNode } from './lib/paintBoard'
 

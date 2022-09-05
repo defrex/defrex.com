@@ -1,12 +1,9 @@
 import { round } from 'lodash'
 import { MouseEvent, useEffect, useMemo, useState } from 'react'
 import { EdgeData, NodeData } from 'reaflow'
-import { colorValues } from '../../../../lib/colors'
+import { colorValues } from '../../../../../lib/colors'
 import { Agent } from '../../lib/Agent'
-import {
-  Perceptron,
-  getSquashName,
-} from '../../../../lib/perceptron/perceptron'
+import { Perceptron, getSquashName } from '../../../lib/perceptron/perceptron'
 import styles from './styles.module.scss'
 
 interface GenomeViewProps {

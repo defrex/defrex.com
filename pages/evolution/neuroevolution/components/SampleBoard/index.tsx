@@ -1,8 +1,8 @@
 import { some } from 'lodash'
 import { ReactNode, useCallback } from 'react'
-import { Inline } from '../../../../components/Inline'
-import { Text } from '../../../../components/Text'
-import { colorValues } from '../../../../lib/colors'
+import { Inline } from '../../../../../components/Inline'
+import { Text } from '../../../../../components/Text'
+import { colorValues } from '../../../../../lib/colors'
 import { Agent } from '../../lib/Agent'
 import {
   advanceKillPositions,

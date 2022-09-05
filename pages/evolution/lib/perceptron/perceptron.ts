@@ -1,17 +1,17 @@
 import { random, uniq, uniqueId } from 'lodash'
 import { Neuron } from 'synaptic'
 
-export type GeneId = string
+export type Id = string
 
 export interface Node {
   type: 'input' | 'output' | 'hidden'
-  id: GeneId
+  id: Id
   bias: number
   squash?: Neuron.SquashingFunction
 }
 
 export interface Edge {
-  id: GeneId
+  id: Id
   fromNodeIndex: number
   toNodeIndex: number
   weight: number
@@ -101,20 +101,21 @@ export class Perceptron {
       this.edges = edges
     }
 
-    this.network = this.nodes.map((geneNode: Node): Neuron => {
+    this.network = this.nodes.map((node: Node): Neuron => {
       const neuron = new Neuron()
-      if (geneNode.squash) {
-        neuron.squash = geneNode.squash
+      if (node.squash) {
+        neuron.squash = node.squash
       }
-      neuron.bias = geneNode.bias
+      neuron.bias = node.bias
       return neuron
     })
-    this.edges.forEach((geneEdge: Edge) => {
-      this.network[geneEdge.fromNodeIndex].project(
-        this.network[geneEdge.toNodeIndex],
-        geneEdge.weight,
+
+    for (const edge of this.edges) {
+      this.network[edge.fromNodeIndex].project(
+        this.network[edge.toNodeIndex],
+        edge.weight,
       )
-    })
+    }
   }
 
   validate(): boolean {

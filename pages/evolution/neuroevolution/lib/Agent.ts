@@ -1,5 +1,5 @@
 import { assign, max, min, random, sample, uniqueId } from 'lodash'
-import { MutatablePerceptron } from '../../../lib/perceptron/mutatable-perceptron'
+import { MutatablePerceptron } from '../../lib/perceptron/mutatable-perceptron'
 import {
   BoardState,
   Direction,

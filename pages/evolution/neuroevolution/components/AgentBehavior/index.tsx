@@ -1,5 +1,5 @@
-import { Stack } from '../../../../components/Stack'
-import { spacing } from '../../../../lib/spacing'
+import { Stack } from '../../../../../components/Stack'
+import { spacing } from '../../../../../lib/spacing'
 import { Agent } from '../../lib/Agent'
 import { Position } from '../Board/lib/BoardState'
 import { SampleBoard } from '../SampleBoard'

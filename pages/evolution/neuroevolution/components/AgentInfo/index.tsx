@@ -1,10 +1,10 @@
 import { MouseEvent } from 'react'
-import { Button } from '../../../../components/Button'
-import { Inline } from '../../../../components/Inline'
-import { Stack } from '../../../../components/Stack'
-import { Text } from '../../../../components/Text'
-import { colors } from '../../../../lib/colors'
-import { spacing } from '../../../../lib/spacing'
+import { Button } from '../../../../../components/Button'
+import { Inline } from '../../../../../components/Inline'
+import { Stack } from '../../../../../components/Stack'
+import { Text } from '../../../../../components/Text'
+import { colors } from '../../../../../lib/colors'
+import { spacing } from '../../../../../lib/spacing'
 import { Agent } from '../../lib/Agent'
 
 interface AgentInfoProps {

@@ -1,9 +1,9 @@
 import Image from 'next/image'
-import { Stack } from '../../../../components/Stack'
-import { Text } from '../../../../components/Text'
-import { colors } from '../../../../lib/colors'
-import { spacing } from '../../../../lib/spacing'
-import { defaultLearningRate } from '../../../../lib/perceptron/perceptron'
+import { Stack } from '../../../../../components/Stack'
+import { Text } from '../../../../../components/Text'
+import { colors } from '../../../../../lib/colors'
+import { spacing } from '../../../../../lib/spacing'
+import { defaultLearningRate } from '../../../lib/perceptron/perceptron'
 import initialNeuralNetworkImage from './initialNeuralNet.png'
 interface HowItWorksProps {}
 
