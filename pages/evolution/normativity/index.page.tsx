@@ -64,6 +64,7 @@ export default function Normativity(_props: NormativityProps) {
             getNextFrameState={normativityFrames.getNextFrameState}
             width={defaultCanvasWidth}
             height={defaultCanvasHeight}
+            onFrame={sampleSetState.onFrame}
             renderChildren={(state: NormativityFrameState) => (
               <Stack spacing={spacing.large}>
                 <Stack spacing={spacing.small}>

@@ -16,6 +16,12 @@ import {
   Position,
 } from '../../components/Board/lib/BoardState'
 import { cellSize } from '../../components/FrameBoard'
+import {
+  SampleFrameState,
+  sampleGridHeight,
+  sampleGridWidth,
+} from '../../components/SampleBoard'
+import { Agent } from '../../lib/Agent'
 import { agentColor } from '../../lib/agentColor'
 import { NeuroevolutionAgent } from './NeuroevolutionAgent'
 
@@ -43,7 +49,7 @@ export type FrameState = {
   runFor: number | null
   killersPerMove: number
   move: number
-  autoSample?: boolean
+  autoSample: boolean
   speed: number
   respawnAgent?: NeuroevolutionAgent
 }
@@ -87,6 +93,7 @@ export function initFrameState(
 
   return {
     agents,
+    autoSample: false,
     boardState: new BoardState({
       gridWidth,
       gridHeight,
@@ -328,4 +335,85 @@ export function advanceKillPositions(boardState: BoardState): Position[] {
         x < boardState.gridWidth &&
         y < boardState.gridHeight,
     )
+}
+
+function initSampleFrameState<TAgent extends Agent<any, any>>(
+  agent: TAgent,
+  redPositions: Position[],
+  state?: SampleFrameState,
+): SampleFrameState {
+  agent = agent.setPosition([0, 2])
+  return {
+    agent,
+    agents: [agent],
+    move: 0,
+    running: state ? false : true,
+    result: state && state.result !== null ? state.result : null,
+    boardState: new BoardState({
+      gridWidth: sampleGridWidth,
+      gridHeight: sampleGridHeight,
+      cellSize,
+    }).setPositions([
+      ...agentPositionColors(
+        [agent as unknown as NeuroevolutionAgent],
+        sampleGridWidth,
+      ),
+      ...redPositions.map((position) => ({
+        type: 'kill',
+        color: colorValues.red60,
+        position,
+      })),
+    ]),
+  }
+}
+
+function getNextSampleFrameState(state: SampleFrameState): SampleFrameState {
+  let boardState = state.boardState
+  const agent = state.agent.move(boardState)
+  const redPositions: Position[] = advanceKillPositions(boardState)
+
+  if (agent.position[0] >= sampleGridWidth - 1) {
+    return initSampleFrameState(agent, redPositions, {
+      ...state,
+      result: 'life',
+    })
+  }
+
+  if (redPositions.length === 0) {
+    return initSampleFrameState(agent, redPositions, {
+      ...state,
+      result: 'life',
+    })
+  }
+
+  if (
+    some(
+      redPositions,
+      ([killerX, killerY]) =>
+        agent.position[0] === killerX && agent.position[1] === killerY,
+    )
+  ) {
+    return initSampleFrameState(agent, redPositions, {
+      ...state,
+      result: 'death',
+    })
+  }
+
+  return {
+    ...state,
+    agent,
+    boardState: boardState.setPositions([
+      ...killPositionColors(redPositions),
+      ...agentPositionColors(
+        state.agents as NeuroevolutionAgent[],
+        state.boardState.gridWidth,
+      ),
+    ]),
+    result: null,
+  }
+}
+
+export const neuroevolutionFrames = {
+  initSampleFrameState,
+  getNextSampleFrameState,
 }

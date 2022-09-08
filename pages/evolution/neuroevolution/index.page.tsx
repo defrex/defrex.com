@@ -1,4 +1,3 @@
-import { last, round, some } from 'lodash'
 import { useCallback, useState } from 'react'
 import { VictoryArea, VictoryChart, VictoryLine } from 'victory'
 import { Button } from '../../../components/Button'
@@ -10,44 +9,24 @@ import { Text } from '../../../components/Text'
 import { colors } from '../../../lib/colors'
 import { spacing } from '../../../lib/spacing'
 import { victoryChartTheme } from '../../../lib/victoryChartTheme'
-import { AgentBehavior } from '../components/AgentBehavior'
-import { cellSize, FrameBoard, SetState } from '../components/FrameBoard'
-import { PerceptronView } from '../components/PerceptronView'
+import { FrameBoard } from '../components/FrameBoard'
+import { SampleSet, useSampleSetState } from '../components/SampleSet'
 import HowItWorks from './components/HowItWorks'
-import { NeuroevolutionAgent } from './lib/NeuroevolutionAgent'
 import {
   defaultCanvasHeight,
   defaultCanvasWidth,
   FrameState,
   getNextFrameState,
   initFrameState,
+  neuroevolutionFrames,
 } from './lib/getNextFrameState'
 import styles from './styles.module.scss'
-import { agentColor } from '../lib/agentColor'
 
 interface EvolutionProps {}
 
-type AgentSample = {
-  move: number
-  difficulty: number
-  fitness?: number
-  agent: NeuroevolutionAgent
-}
-
-function equivalentSamples(
-  agent: NeuroevolutionAgent,
-  otherAgent: NeuroevolutionAgent,
-): boolean {
-  return otherAgent.id === agent.id && otherAgent.move === agent.move
-}
-
 export default function Neuroevolution(_props: EvolutionProps) {
   const [showHowItWorks, setShowHowItWorks] = useState(false)
-  const [sampleAgents, setSampleAgents] = useState<AgentSample[]>([])
-  const [showAgentBehavior, setShowAgentBehavior] =
-    useState<NeuroevolutionAgent | null>(null)
-  const [showAgentNetwork, setShowAgentNetwork] =
-    useState<NeuroevolutionAgent | null>(null)
+  const sampleSetState = useSampleSetState<FrameState>()
   const [metricsSpeed, setMetricsSpeed] = useState<
     Record<string, 'fast' | 'slow'>
   >({
@@ -67,325 +46,150 @@ export default function Neuroevolution(_props: EvolutionProps) {
     [metricsSpeed, setMetricsSpeed],
   )
 
-  const handleToggleAutoSample = useCallback(
-    (setState: SetState<FrameState>) => () => {
-      setState((state) => ({ ...state, autoSample: !state.autoSample }))
-    },
-    [],
-  )
-
-  const handleSampleAgent = useCallback(
-    (state: FrameState) => () => {
-      setSampleAgents((sampleAgents) => {
-        // const nextSampleAgent = bestAgent(state.agents)
-        const nextSampleAgent = state.agents.reduce(
-          (best: NeuroevolutionAgent | undefined, agent) => {
-            if (
-              !some(sampleAgents, (sampleAgent) =>
-                equivalentSamples(agent, sampleAgent.agent),
-              ) &&
-              (best === undefined || agent.moves > best.moves)
-            ) {
-              return agent
-            }
-            return best
-          },
-          undefined,
-        )
-
-        if (!nextSampleAgent) {
-          console.log('No Samples Left!')
-          return sampleAgents
-        }
-
-        console.log('Sample Agent', nextSampleAgent)
-
-        return [
-          ...sampleAgents,
-          {
-            move: state.move,
-            difficulty: last(state.metrics.fast.difficulty)?.value || 0,
-            agent: nextSampleAgent,
-          },
-        ]
-      })
-    },
-    [setSampleAgents],
-  )
-
-  const handleFrame = useCallback(
-    (state: FrameState): void => {
-      const sampleRate = state.move < 100000 ? 10000 : 100000
-      if (state.autoSample && state.move % sampleRate === 0) {
-        requestAnimationFrame(handleSampleAgent(state))
-      }
-    },
-    [handleSampleAgent],
-  )
-
-  const handleClearSampleAgent = useCallback(
-    (agent: NeuroevolutionAgent) => () => {
-      setSampleAgents((sampleAgents) => {
-        return sampleAgents.filter(
-          (sample) => !equivalentSamples(sample.agent, agent),
-        )
-      })
-    },
-    [setSampleAgents],
-  )
-
-  const handleToggleAgentBehavior = useCallback(
-    (selection: NeuroevolutionAgent | null) => () => {
-      setShowAgentBehavior(null)
-      if (
-        selection &&
-        (!showAgentBehavior || !equivalentSamples(selection, showAgentBehavior))
-      ) {
-        requestAnimationFrame(() => setShowAgentBehavior(selection))
-      }
-    },
-    [setShowAgentBehavior, showAgentBehavior],
-  )
-
-  const handleShowAgentNetwork = useCallback(
-    (selection: NeuroevolutionAgent | null) => () => {
-      setShowAgentNetwork(selection)
-    },
-    [setShowAgentNetwork],
-  )
-
   const handleToggleHowItWorks = useCallback(() => {
     setShowHowItWorks(!showHowItWorks)
   }, [setShowHowItWorks, showHowItWorks])
 
   return (
-    <Stack>
-      <PageContainer title='Neuroevolution'>
-        <Stack spacing={spacing.large}>
-          <Inline expand={0}>
-            <Stack spacing={spacing.small}>
-              <Text value='Neuroevolution' size={20} />
-              <Text
-                value='Neural Networks trained via Evolutionary Algorithm'
-                color={colors.black40}
-              />
-            </Stack>
-            <Button
-              onClick={handleToggleHowItWorks}
-              text={showHowItWorks ? 'Hide' : 'How It Works'}
+    <PageContainer title='Neuroevolution'>
+      <Stack spacing={spacing.large}>
+        <Inline expand={0}>
+          <Stack spacing={spacing.small}>
+            <Text value='Neuroevolution' size={20} />
+            <Text
+              value='Neural Networks trained via Evolutionary Algorithm'
+              color={colors.black40}
             />
-          </Inline>
-
-          {showHowItWorks ? <HowItWorks /> : null}
-        </Stack>
-      </PageContainer>
-      <Inline
-        verticalAlign='top'
-        align='center'
-        className={styles.colContainer}
-        expand={1}
-      >
-        <FrameBoard
-          initFrameState={initFrameState}
-          getNextFrameState={getNextFrameState}
-          onFrame={handleFrame}
-          width={defaultCanvasWidth}
-          height={defaultCanvasHeight}
-          renderControl={(state, setState) => (
-            <Inline align='right' spacing={spacing.small}>
-              <Checkbox
-                onClick={handleToggleAutoSample(setState)}
-                left='Auto'
-                checked={!!state.autoSample}
-              />
-              <Button onClick={handleSampleAgent(state)} text='Take Sample' />
-            </Inline>
-          )}
-          renderChildren={(state: FrameState) => (
-            <Stack spacing={spacing.large}>
-              <Stack spacing={spacing.small}>
-                <Inline expand={0}>
-                  <Text
-                    value={`Difficulty (spawns/frame)`}
-                    color={colors.black40}
-                  />
-                  <Checkbox
-                    onClick={handleToggleMetric('difficulty')}
-                    left='Realtime'
-                    checked={metricsSpeed.difficulty === 'fast'}
-                  />
-                </Inline>
-                <VictoryChart theme={victoryChartTheme} height={200}>
-                  <VictoryLine
-                    data={state.metrics[metricsSpeed.difficulty].difficulty}
-                    x='move'
-                    y='value'
-                  />
-                </VictoryChart>
-              </Stack>
-
-              <Stack spacing={spacing.small}>
-                <Inline expand={0}>
-                  <Text value={`Network Complexity`} color={colors.black40} />
-                  <Checkbox
-                    onClick={handleToggleMetric('complexity')}
-                    left='Realtime'
-                    checked={metricsSpeed.complexity === 'fast'}
-                  />
-                </Inline>
-                <VictoryChart theme={victoryChartTheme} height={200}>
-                  <VictoryArea
-                    data={state.metrics[metricsSpeed.complexity].complexity}
-                    x='move'
-                    y0='min'
-                    y='max'
-                  />
-                  <VictoryLine
-                    data={state.metrics[metricsSpeed.complexity].complexityMax}
-                    x='move'
-                    y='value'
-                  />
-                  <VictoryLine
-                    data={state.metrics[metricsSpeed.complexity].complexityMin}
-                    x='move'
-                    y='value'
-                  />
-                </VictoryChart>
-              </Stack>
-
-              <Stack spacing={spacing.small}>
-                <Inline expand={0}>
-                  <Text value={`Lineage`} color={colors.black40} />
-                  <Checkbox
-                    onClick={handleToggleMetric('lineage')}
-                    left='Realtime'
-                    checked={metricsSpeed.lineage === 'fast'}
-                  />
-                </Inline>
-                <VictoryChart theme={victoryChartTheme} height={200}>
-                  {/* {console.log(state.metrics)} */}
-                  <VictoryArea
-                    data={state.metrics[metricsSpeed.lineage].lineage}
-                    x='move'
-                    y0='min'
-                    y='max'
-                  />
-                  <VictoryLine
-                    data={state.metrics[metricsSpeed.lineage].lineageMax}
-                    x='move'
-                    y='value'
-                  />
-                  <VictoryLine
-                    data={state.metrics[metricsSpeed.lineage].lineageMin}
-                    x='move'
-                    y='value'
-                  />
-                </VictoryChart>
-              </Stack>
-            </Stack>
-          )}
-        />
-
-        {sampleAgents.length > 0 ? (
-          <Stack>
-            <table className={styles.sampleAgents}>
-              <thead>
-                <tr>
-                  <th>
-                    <Text value='At Frame' color={colors.black40} />
-                  </th>
-                  <th>
-                    <Text value='At Difficulty' color={colors.black40} />
-                  </th>
-                  <th></th>
-                  <th>
-                    <Text value='Moves' color={colors.black40} />
-                  </th>
-                  <th>
-                    <Text value='Lineage' color={colors.black40} />
-                  </th>
-                  <th>
-                    <Text value='Complexity' color={colors.black40} />
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {sampleAgents.map(({ move, fitness, difficulty, agent }) => (
-                  <tr key={`${move}-${agent.id}`}>
-                    <td>
-                      <Text value={`${move.toLocaleString()}`} />
-                    </td>
-                    <td>
-                      <Text value={`${round(difficulty || fitness || 0, 2)}`} />
-                    </td>
-                    <td>
-                      <div
-                        style={{
-                          backgroundColor: agentColor(
-                            agent.moves,
-                            defaultCanvasWidth / cellSize,
-                          ),
-                          height: cellSize * 0.5,
-                          width: cellSize * 0.5,
-                        }}
-                      />
-                    </td>
-                    <td>
-                      <Text value={`${agent.moves}`} />
-                    </td>
-                    <td>
-                      <Text value={`${agent.lineage.toLocaleString()}`} />
-                    </td>
-                    <td>
-                      <Text
-                        value={`${
-                          agent.perceptron.nodes.length +
-                          agent.perceptron.edges.length
-                        }`}
-                      />
-                    </td>
-                    <td>
-                      <Inline align='right'>
-                        <Inline spacing={spacing.xsmall}>
-                          <Button
-                            onClick={handleShowAgentNetwork(agent)}
-                            text='Network'
-                          />
-                          <Button
-                            onClick={handleToggleAgentBehavior(agent)}
-                            text='Behavior'
-                            disabled={
-                              !!(
-                                showAgentBehavior &&
-                                equivalentSamples(showAgentBehavior, agent)
-                              )
-                            }
-                          />
-                        </Inline>
-                        <Button
-                          onClick={handleClearSampleAgent(agent)}
-                          text='Trash'
-                        />
-                      </Inline>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {showAgentBehavior ? (
-              <AgentBehavior agent={showAgentBehavior} />
-            ) : null}
-
-            {showAgentNetwork ? (
-              <PerceptronView
-                perceptron={showAgentNetwork.perceptron}
-                onClick={handleShowAgentNetwork(null)}
-              />
-            ) : null}
           </Stack>
-        ) : null}
-      </Inline>
-    </Stack>
+          <Button
+            onClick={handleToggleHowItWorks}
+            text={showHowItWorks ? 'Hide' : 'How It Works'}
+          />
+        </Inline>
+
+        {showHowItWorks ? <HowItWorks /> : null}
+        <Inline
+          verticalAlign='top'
+          align='center'
+          className={styles.colContainer}
+          expand={1}
+        >
+          <FrameBoard
+            initFrameState={initFrameState}
+            getNextFrameState={getNextFrameState}
+            onFrame={sampleSetState.onFrame}
+            width={defaultCanvasWidth}
+            height={defaultCanvasHeight}
+            renderChildren={(state: FrameState) => (
+              <Stack spacing={spacing.large}>
+                <Stack spacing={spacing.small}>
+                  <Inline expand={0}>
+                    <Text
+                      value={`Difficulty (spawns/frame)`}
+                      color={colors.black40}
+                    />
+                    <Checkbox
+                      onClick={handleToggleMetric('difficulty')}
+                      left='Realtime'
+                      checked={metricsSpeed.difficulty === 'fast'}
+                    />
+                  </Inline>
+                  <VictoryChart theme={victoryChartTheme} height={200}>
+                    <VictoryLine
+                      data={state.metrics[metricsSpeed.difficulty].difficulty}
+                      x='move'
+                      y='value'
+                    />
+                  </VictoryChart>
+                </Stack>
+
+                <Stack spacing={spacing.small}>
+                  <Inline expand={0}>
+                    <Text value={`Network Complexity`} color={colors.black40} />
+                    <Checkbox
+                      onClick={handleToggleMetric('complexity')}
+                      left='Realtime'
+                      checked={metricsSpeed.complexity === 'fast'}
+                    />
+                  </Inline>
+                  <VictoryChart theme={victoryChartTheme} height={200}>
+                    <VictoryArea
+                      data={state.metrics[metricsSpeed.complexity].complexity}
+                      x='move'
+                      y0='min'
+                      y='max'
+                    />
+                    <VictoryLine
+                      data={
+                        state.metrics[metricsSpeed.complexity].complexityMax
+                      }
+                      x='move'
+                      y='value'
+                    />
+                    <VictoryLine
+                      data={
+                        state.metrics[metricsSpeed.complexity].complexityMin
+                      }
+                      x='move'
+                      y='value'
+                    />
+                  </VictoryChart>
+                </Stack>
+
+                <Stack spacing={spacing.small}>
+                  <Inline expand={0}>
+                    <Text value={`Lineage`} color={colors.black40} />
+                    <Checkbox
+                      onClick={handleToggleMetric('lineage')}
+                      left='Realtime'
+                      checked={metricsSpeed.lineage === 'fast'}
+                    />
+                  </Inline>
+                  <VictoryChart theme={victoryChartTheme} height={200}>
+                    {/* {console.log(state.metrics)} */}
+                    <VictoryArea
+                      data={state.metrics[metricsSpeed.lineage].lineage}
+                      x='move'
+                      y0='min'
+                      y='max'
+                    />
+                    <VictoryLine
+                      data={state.metrics[metricsSpeed.lineage].lineageMax}
+                      x='move'
+                      y='value'
+                    />
+                    <VictoryLine
+                      data={state.metrics[metricsSpeed.lineage].lineageMin}
+                      x='move'
+                      y='value'
+                    />
+                  </VictoryChart>
+                </Stack>
+              </Stack>
+            )}
+            renderControl={(state, setState) => (
+              <Inline align='right' spacing={spacing.small}>
+                <Checkbox
+                  onClick={sampleSetState.toggleAutoSample(setState)}
+                  left='Auto'
+                  checked={!!state.autoSample}
+                />
+                <Button
+                  onClick={sampleSetState.takeSampleAgent(state)}
+                  text='Take Sample'
+                />
+              </Inline>
+            )}
+          />
+          <SampleSet
+            state={sampleSetState}
+            initSampleFrameState={neuroevolutionFrames.initSampleFrameState}
+            getNextSampleFrameState={
+              neuroevolutionFrames.getNextSampleFrameState
+            }
+          />
+        </Inline>
+      </Stack>
+    </PageContainer>
   )
 }
