@@ -1,5 +1,5 @@
 import { assign, uniqueId } from 'lodash'
-import { BoardState, Position } from '../components/Board/lib/BoardState'
+import { Position } from '../components/Board/lib/BoardState'
 import { Perceptron } from './perceptron/perceptron'
 
 interface AgentArgs<TPerceptron extends Perceptron> {
@@ -46,10 +46,6 @@ export class Agent<
   }
 
   getArgs(): TAgentArgs {
-    throw new NotImplimentedError()
-  }
-
-  move(boardState: BoardState): typeof this {
     throw new NotImplimentedError()
   }
 

@@ -61,6 +61,13 @@ export class Perceptron {
       this.nodes = args.nodes
       this.edges = args.edges
     } else {
+      // const { nodes, edges } = getNeuronTopology(
+      //   this.inputSize,
+      //   this.outputSize,
+      // )
+
+      // this.nodes = nodes
+      // this.edges = edges
       const inputs = new Array(this.inputSize).fill(undefined).map(
         () =>
           ({
@@ -116,6 +123,36 @@ export class Perceptron {
         edge.weight,
       )
     }
+  }
+
+  getArgs(): Partial<PerceptronArgs> {
+    return {
+      inputSize: this.inputSize,
+      outputSize: this.outputSize,
+      nodes: this.nodes,
+      edges: this.edges,
+      learningRate: this.learningRate,
+    }
+  }
+
+  inputNodes(): Node[] {
+    return this.nodes.slice(0, this.inputSize)
+  }
+
+  hiddenNodes(): Node[] {
+    return this.nodes.slice(this.inputSize, -this.outputSize)
+  }
+
+  outputNodes(): Node[] {
+    return this.nodes.slice(-this.outputSize)
+  }
+
+  cloneWith(args: Partial<PerceptronArgs>): typeof this {
+    const PerceptronClass = this.constructor as unknown as typeof Perceptron
+    return new PerceptronClass({
+      ...this.getArgs(),
+      ...args,
+    }) as typeof this
   }
 
   validate(): boolean {

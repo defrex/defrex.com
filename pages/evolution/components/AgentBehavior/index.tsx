@@ -37,24 +37,26 @@ const testRedPositions: Position[][] = [
     [-1, 4],
   ],
 ]
-interface AgentBehaviorProps {
-  agent: Agent<any, any>
+interface AgentBehaviorProps<TAgent extends Agent<any, any>> {
+  agent: TAgent
   initSampleFrameState: (
-    agent: Agent<any, any>,
+    agent: TAgent,
     redPositions: Position[],
-  ) => SampleFrameState
-  getNextSampleFrameState: (state: SampleFrameState) => SampleFrameState
+  ) => SampleFrameState<TAgent>
+  getNextSampleFrameState: (
+    state: SampleFrameState<TAgent>,
+  ) => SampleFrameState<TAgent>
 }
 
-export function AgentBehavior({
+export function AgentBehavior<TAgent extends Agent<any, any>>({
   agent,
   getNextSampleFrameState,
   initSampleFrameState,
-}: AgentBehaviorProps) {
+}: AgentBehaviorProps<TAgent>) {
   return (
     <Stack spacing={spacing.large}>
       {testRedPositions.map((redPositions, index) => (
-        <SampleBoard
+        <SampleBoard<TAgent>
           key={index}
           initSampleFrameState={() => initSampleFrameState(agent, redPositions)}
           getNextSampleFrameState={getNextSampleFrameState}

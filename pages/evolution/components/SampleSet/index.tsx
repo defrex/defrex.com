@@ -20,40 +20,40 @@ import { PerceptronView } from '../PerceptronView'
 import { SampleFrameState } from '../SampleBoard'
 import styles from './styles.module.scss'
 
-type AgentSample = {
+type AgentSample<TAgent extends Agent<any, any>> = {
   move: number
   fitness?: number
-  agent: Agent<any, any>
+  agent: TAgent
 }
 
 interface SampleableFrameState extends DefaultFrameState {
   autoSample: boolean
 }
 
-interface SampleSetState<TFrameState extends SampleableFrameState> {
-  clearSampleAgent: (agent: Agent<any, any>) => () => void
+interface SampleSetState<
+  TAgent extends Agent<any, any>,
+  TFrameState extends SampleableFrameState,
+> {
+  clearSampleAgent: (agent: TAgent) => () => void
   onFrame: (state: TFrameState) => void
-  sampleAgents: AgentSample[]
-  setShowAgentNetwork: (agent: Agent<any, any> | null) => () => void
-  showAgentBehavior: Agent<any, any> | null
-  showAgentNetwork: Agent<any, any> | null
+  sampleAgents: AgentSample<TAgent>[]
+  setShowAgentNetwork: (agent: TAgent | null) => () => void
+  showAgentBehavior: TAgent | null
+  showAgentNetwork: TAgent | null
   takeSampleAgent: (state: TFrameState) => () => void
-  toggleAgentBehavior: (agent: Agent<any, any> | null) => () => void
+  toggleAgentBehavior: (agent: TAgent | null) => () => void
   toggleAutoSample: (setState: SetState<TFrameState>) => () => void
 }
 
 export function useSampleSetState<
+  TAgent extends Agent<any, any>,
   TFrameState extends SampleableFrameState,
->(): SampleSetState<TFrameState> {
-  const [sampleAgents, setSampleAgents] = useState<AgentSample[]>([])
-  const [showAgentBehavior, setShowAgentBehavior] = useState<Agent<
-    any,
-    any
-  > | null>(null)
-  const [showAgentNetwork, setShowAgentNetwork] = useState<Agent<
-    any,
-    any
-  > | null>(null)
+>(): SampleSetState<TAgent, TFrameState> {
+  const [sampleAgents, setSampleAgents] = useState<AgentSample<TAgent>[]>([])
+  const [showAgentBehavior, setShowAgentBehavior] = useState<TAgent | null>(
+    null,
+  )
+  const [showAgentNetwork, setShowAgentNetwork] = useState<TAgent | null>(null)
 
   const toggleAutoSample = useCallback(
     (setState: SetState<TFrameState>) => () => {
@@ -65,21 +65,17 @@ export function useSampleSetState<
   const takeSampleAgent = useCallback(
     (state: TFrameState) => () => {
       setSampleAgents((sampleAgents) => {
-        // const nextSampleAgent = bestAgent(state.agents)
-        const nextSampleAgent = state.agents.reduce(
-          (best: Agent<any, any> | undefined, agent) => {
-            if (
-              !some(sampleAgents, (sampleAgent) =>
-                equivalentSamples(agent, sampleAgent.agent),
-              ) &&
-              (best === undefined || agent.moves > best.moves)
-            ) {
-              return agent
-            }
-            return best
-          },
-          undefined,
-        )
+        const nextSampleAgent = state.agents.reduce((best: any, agent) => {
+          if (
+            !some(sampleAgents, (sampleAgent) =>
+              equivalentSamples(agent, sampleAgent.agent),
+            ) &&
+            (best === undefined || agent.moves > best.moves)
+          ) {
+            return agent
+          }
+          return best
+        }, undefined)
 
         if (!nextSampleAgent) {
           console.log('No Samples Left!')
@@ -108,7 +104,7 @@ export function useSampleSetState<
   }, [])
 
   const clearSampleAgent = useCallback(
-    (agent: Agent<any, any>) => () => {
+    (agent: TAgent) => () => {
       setSampleAgents((sampleAgents) => {
         return sampleAgents.filter(
           (sample) => !equivalentSamples(sample.agent, agent),
@@ -119,7 +115,7 @@ export function useSampleSetState<
   )
 
   const toggleAgentBehavior = useCallback(
-    (selection: Agent<any, any> | null) => () => {
+    (selection: TAgent | null) => () => {
       setShowAgentBehavior(null)
       if (
         selection &&
@@ -132,7 +128,7 @@ export function useSampleSetState<
   )
 
   const currySetShowAgentNetwork = useCallback(
-    (agent: Agent<any, any> | null) => () => {
+    (agent: TAgent | null) => () => {
       setShowAgentNetwork(agent)
     },
     [setShowAgentNetwork],
@@ -151,20 +147,29 @@ export function useSampleSetState<
   }
 }
 
-interface SampleSetProps<TFrameState extends SampleableFrameState> {
-  state: SampleSetState<TFrameState>
+interface SampleSetProps<
+  TAgent extends Agent<any, any>,
+  TFrameState extends SampleableFrameState,
+> {
+  state: SampleSetState<TAgent, TFrameState>
   initSampleFrameState: (
-    agent: Agent<any, any>,
+    agent: TAgent,
     redPositions: Position[],
-  ) => SampleFrameState
-  getNextSampleFrameState: (state: SampleFrameState) => SampleFrameState
+    state?: SampleFrameState<TAgent>,
+  ) => SampleFrameState<TAgent>
+  getNextSampleFrameState: (
+    state: SampleFrameState<TAgent>,
+  ) => SampleFrameState<TAgent>
 }
 
-export function SampleSet<TFrameState extends SampleableFrameState>({
+export function SampleSet<
+  TAgent extends Agent<any, any>,
+  TFrameState extends SampleableFrameState,
+>({
   state,
   initSampleFrameState,
   getNextSampleFrameState,
-}: SampleSetProps<TFrameState>) {
+}: SampleSetProps<TAgent, TFrameState>) {
   return state.sampleAgents.length > 0 ? (
     <Stack>
       <table className={styles.sampleAgents}>
@@ -241,7 +246,7 @@ export function SampleSet<TFrameState extends SampleableFrameState>({
       </table>
 
       {state.showAgentBehavior ? (
-        <AgentBehavior
+        <AgentBehavior<TAgent>
           agent={state.showAgentBehavior}
           initSampleFrameState={initSampleFrameState}
           getNextSampleFrameState={getNextSampleFrameState}
@@ -262,5 +267,5 @@ function equivalentSamples(
   agent: Agent<any, any>,
   otherAgent: Agent<any, any>,
 ): boolean {
-  return otherAgent.id === agent.id && otherAgent.move === agent.move
+  return otherAgent.id === agent.id && otherAgent.moves === agent.moves
 }

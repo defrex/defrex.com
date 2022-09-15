@@ -15,6 +15,7 @@ import {
   defaultCanvasHeight,
   defaultCanvasWidth,
 } from '../neuroevolution/lib/getNextFrameState'
+import { NormativityAgent } from './lib/NormativityAgent'
 import {
   normativityFrames,
   NormativityFrameState,
@@ -24,16 +25,19 @@ import styles from './styles.module.scss'
 interface NormativityProps {}
 
 export default function Normativity(_props: NormativityProps) {
-  const sampleSetState = useSampleSetState<NormativityFrameState>()
+  const sampleSetState = useSampleSetState<
+    NormativityAgent,
+    NormativityFrameState
+  >()
   const [metricsSpeed, setMetricsSpeed] = useState<
     Record<string, 'fast' | 'slow'>
   >({
     points: 'slow',
-    complexity: 'slow',
+    ppt: 'slow',
   })
 
   const handleToggleMetric = useCallback(
-    (metric: 'points' | 'complexity') => () => {
+    (metric: 'points' | 'ppt') => () => {
       setMetricsSpeed({
         ...metricsSpeed,
         [metric]: metricsSpeed[metric] === 'fast' ? 'slow' : 'fast',
@@ -69,6 +73,23 @@ export default function Normativity(_props: NormativityProps) {
               <Stack spacing={spacing.large}>
                 <Stack spacing={spacing.small}>
                   <Inline expand={0}>
+                    <Text value={`PPT/Fitness`} color={colors.black40} />
+                    <Checkbox
+                      onClick={handleToggleMetric('ppt')}
+                      left='Realtime'
+                      checked={metricsSpeed.ppt === 'fast'}
+                    />
+                  </Inline>
+                  <VictoryChart theme={victoryChartTheme} height={200}>
+                    <VictoryLine
+                      data={state.metrics[metricsSpeed.ppt].ppt ?? []}
+                      x='move'
+                      y='value'
+                    />
+                  </VictoryChart>
+                </Stack>
+                <Stack spacing={spacing.small}>
+                  <Inline expand={0}>
                     <Text value={`Points`} color={colors.black40} />
                     <Checkbox
                       onClick={handleToggleMetric('points')}
@@ -78,53 +99,10 @@ export default function Normativity(_props: NormativityProps) {
                   </Inline>
                   <VictoryChart theme={victoryChartTheme} height={200}>
                     <VictoryArea
-                      data={state.metrics[metricsSpeed.points].points}
+                      data={state.metrics[metricsSpeed.points].points ?? []}
                       x='move'
                       y0='min'
                       y='max'
-                    />
-                    <VictoryLine
-                      data={state.metrics[metricsSpeed.points].pointsMax}
-                      x='move'
-                      y='value'
-                    />
-                    <VictoryLine
-                      data={state.metrics[metricsSpeed.points].pointsMin}
-                      x='move'
-                      y='value'
-                    />
-                  </VictoryChart>
-                </Stack>
-
-                <Stack spacing={spacing.small}>
-                  <Inline expand={0}>
-                    <Text value={`Network Complexity`} color={colors.black40} />
-                    <Checkbox
-                      onClick={handleToggleMetric('complexity')}
-                      left='Realtime'
-                      checked={metricsSpeed.complexity === 'fast'}
-                    />
-                  </Inline>
-                  <VictoryChart theme={victoryChartTheme} height={200}>
-                    <VictoryArea
-                      data={state.metrics[metricsSpeed.complexity].complexity}
-                      x='move'
-                      y0='min'
-                      y='max'
-                    />
-                    <VictoryLine
-                      data={
-                        state.metrics[metricsSpeed.complexity].complexityMax
-                      }
-                      x='move'
-                      y='value'
-                    />
-                    <VictoryLine
-                      data={
-                        state.metrics[metricsSpeed.complexity].complexityMin
-                      }
-                      x='move'
-                      y='value'
                     />
                   </VictoryChart>
                 </Stack>
@@ -144,7 +122,7 @@ export default function Normativity(_props: NormativityProps) {
               </Inline>
             )}
           />
-          <SampleSet
+          <SampleSet<NormativityAgent, NormativityFrameState>
             state={sampleSetState}
             initSampleFrameState={normativityFrames.initSampleFrameState}
             getNextSampleFrameState={normativityFrames.getNextSampleFrameState}

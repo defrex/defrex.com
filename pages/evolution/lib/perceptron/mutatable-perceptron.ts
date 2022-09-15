@@ -32,27 +32,6 @@ function mutateScalar(value: number, learningRate: number): number {
 export const defaultLearningRate = 0.5
 
 export class MutatablePerceptron extends Perceptron {
-  private getArgs(): PerceptronArgs {
-    return {
-      inputSize: this.inputSize,
-      outputSize: this.outputSize,
-      nodes: this.nodes,
-      edges: this.edges,
-    }
-  }
-
-  private inputNodes(): Node[] {
-    return this.nodes.slice(0, this.inputSize)
-  }
-
-  private hiddenNodes(): Node[] {
-    return this.nodes.slice(this.inputSize, -this.outputSize)
-  }
-
-  private outputNodes(): Node[] {
-    return this.nodes.slice(-this.outputSize)
-  }
-
   mutate(): MutatablePerceptron {
     const mutation = sample([
       ...range(1).map(() => 'addNode' as const),
@@ -208,8 +187,7 @@ export class MutatablePerceptron extends Perceptron {
     }, [] as Node[])
 
     try {
-      return new MutatablePerceptron({
-        ...this.getArgs(),
+      return this.cloneWith({
         nodes: nextNodes,
         edges: nextEdges,
       })

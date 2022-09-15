@@ -1,11 +1,13 @@
-import { max, min, random } from 'lodash'
+import { max, min, random, uniq } from 'lodash'
+import { Neuron } from 'synaptic'
 import {
   BoardState,
   Direction,
   Position,
 } from '../../components/Board/lib/BoardState'
 import { Agent } from '../../lib/Agent'
-import { BackpropablePerceptron } from '../../lib/perceptron/backpropable-genome'
+import { BackpropablePerceptron } from '../../lib/perceptron/backpropable-perceptron'
+import { getNeuronTopology } from '../../lib/perceptron/get-neuron-topology'
 import { prizePositionType } from './normativityFrames'
 
 interface NormativityAgentArgs {
@@ -17,6 +19,13 @@ interface NormativityAgentArgs {
   position?: Position
   points?: number
 }
+
+const defaultTopology = getNeuronTopology({
+  inputSize: 3,
+  outputSize: 3,
+  hiddenLayerSizes: [3],
+  squash: Neuron.squash.ReLU,
+})
 
 export class NormativityAgent extends Agent<
   BackpropablePerceptron,
@@ -40,9 +49,11 @@ export class NormativityAgent extends Agent<
   }
 
   initPerceptron(): BackpropablePerceptron {
+    console.log('new perceptron')
     return new BackpropablePerceptron({
       inputSize: NormativityAgent.inputLabels.length,
       outputSize: NormativityAgent.outputLabels.length,
+      ...defaultTopology,
     })
   }
 
@@ -62,7 +73,14 @@ export class NormativityAgent extends Agent<
     }
   }
 
-  move(boardState: BoardState): typeof this {
+  reward(): typeof this {
+    return this.cloneWith({
+      points: this.points + 1,
+      position: this.initPosition(),
+    })
+  }
+
+  move(boardState: BoardState, agents: NormativityAgent[]): NormativityAgent[] {
     const inputs = [
       this.prizeDistance(boardState, -1),
       this.prizeDistance(boardState, 0),
@@ -103,12 +121,42 @@ export class NormativityAgent extends Agent<
       nextMoves++
     }
 
+    return this.normalize(
+      inputs,
+      outputs,
+      agents.map((agent) =>
+        agent.id === this.id
+          ? this.cloneWith({
+              ...this.getArgs(),
+              position: nextPosition,
+              moves: nextMoves,
+              id: this.id,
+            })
+          : agent,
+      ),
+    )
+  }
+
+  learn(
+    inputs: number[],
+    outputs: number[],
+    learningRate: number,
+  ): typeof this {
     return this.cloneWith({
-      ...this.getArgs(),
-      position: nextPosition,
-      moves: nextMoves,
-      id: this.id,
+      perceptron: this.perceptron.backprop(inputs, outputs, learningRate),
     })
+  }
+
+  normalize(
+    inputs: number[],
+    outputs: number[],
+    agents: NormativityAgent[],
+  ): NormativityAgent[] {
+    const maxPoints = max(uniq([...agents, this]).map((agent) => agent.points))!
+    const percent = this.points / maxPoints
+    const learningRate = 0.5 * percent
+
+    return agents.map((agent) => agent.learn(inputs, outputs, learningRate))
   }
 
   private prizeDistance(boardState: BoardState, offset: number): number {
@@ -130,12 +178,5 @@ export class NormativityAgent extends Agent<
     )
 
     return min(prizeDistances)!
-  }
-
-  reward(): typeof this {
-    return this.cloneWith({
-      points: this.points + 1,
-      position: this.initPosition(),
-    })
   }
 }

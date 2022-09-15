@@ -11,7 +11,6 @@ import {
   sampleGridHeight,
   sampleGridWidth,
 } from '../../components/SampleBoard'
-import { Agent } from '../../lib/Agent'
 import { agentColor } from '../../lib/agentColor'
 import {
   defaultCanvasHeight,
@@ -49,23 +48,14 @@ const agentCount = 10
 const prizeCount = 3
 export const prizePositionType = 'prize'
 
-export type NormativityMetrics =
-  | 'points'
-  | 'pointsMin'
-  | 'pointsMax'
-  | 'complexity'
-  | 'complexityMax'
-  | 'complexityMin'
-const areaMetricNames: NormativityMetrics[] = ['points', 'complexity']
-const lineMetricNames: NormativityMetrics[] = [
-  'pointsMin',
-  'pointsMax',
-  'complexityMax',
-  'complexityMin',
-]
+export type NormativityMetrics = 'points' | 'ppt'
+const areaMetricNames: NormativityMetrics[] = ['points']
+const lineMetricNames: NormativityMetrics[] = []
+const changeMetricNames: NormativityMetrics[] = ['ppt']
 const metricNames: NormativityMetrics[] = [
   ...areaMetricNames,
   ...lineMetricNames,
+  ...changeMetricNames,
 ]
 
 function initFrameState(): NormativityFrameState {
@@ -136,15 +126,15 @@ function getNextFrameState(
   state: NormativityFrameState,
 ): NormativityFrameState {
   const prizePositions: Position[] = advancePrizePositions(state.boardState)
-  const agents = state.agents.map((agent) => {
-    const movedAgent = agent.move(state.boardState)
 
-    if (inPositions(prizePositions, movedAgent.position)) {
-      return movedAgent.reward()
-    } else {
-      return movedAgent
-    }
-  })
+  let agents = state.agents
+  for (const agent of state.agents) {
+    agents = agent.move(state.boardState, agents)
+  }
+
+  agents = agents.map((agent) =>
+    inPositions(prizePositions, agent.position) ? agent.reward() : agent,
+  )
 
   const boardState = state.boardState.setPositions([
     ...prizePositionColors(prizePositions),
@@ -164,18 +154,7 @@ function getNextFrameState(
       move,
       pointsMax: max(agents.map((agent) => agent.points))!,
       pointsMin: min(agents.map((agent) => agent.points))!,
-      complexityMin: max(
-        agents.map(
-          (agent) =>
-            agent.perceptron.nodes.length + agent.perceptron.edges.length,
-        ),
-      )!,
-      complexityMax: min(
-        agents.map(
-          (agent) =>
-            agent.perceptron.nodes.length + agent.perceptron.edges.length,
-        ),
-      )!,
+      ppt: max(agents.map((agent) => agent.points))!,
     },
   ]
 
@@ -201,6 +180,24 @@ function getNextFrameState(
               sum(
                 history.slice(-lookBack).map((history) => history[metricName]),
               ) / lookBack,
+          }
+        } else if (changeMetricNames.indexOf(metricName) !== -1) {
+          const prePeriodValues = history
+            .slice(0, -lookBack)
+            .map((history) => history[metricName])
+          const prePeriosAverage =
+            prePeriodValues.length > 0
+              ? sum(prePeriodValues) / prePeriodValues.length
+              : 0
+          const periodValues = history
+            .slice(-lookBack)
+            .map((history) => history[metricName])
+          const periodAverage = sum(periodValues) / periodValues.length
+          const change = periodAverage - prePeriosAverage
+
+          metricValue = {
+            move,
+            value: change,
           }
         } else {
           metricValue = {
@@ -279,11 +276,11 @@ function inPositions(positions: Position[], [px, py]: Position): boolean {
   return some(positions, ([x, y]) => px === x && py === y)
 }
 
-function initSampleFrameState<TAgent extends Agent<any, any>>(
-  agent: TAgent,
+function initSampleFrameState(
+  agent: NormativityAgent,
   redPositions: Position[],
-  state?: SampleFrameState,
-): SampleFrameState {
+  state?: SampleFrameState<NormativityAgent>,
+): SampleFrameState<NormativityAgent> {
   agent = agent.setPosition([0, 2])
   return {
     agent,
@@ -309,9 +306,11 @@ function initSampleFrameState<TAgent extends Agent<any, any>>(
   }
 }
 
-function getNextSampleFrameState(state: SampleFrameState): SampleFrameState {
+function getNextSampleFrameState(
+  state: SampleFrameState<NormativityAgent>,
+): SampleFrameState<NormativityAgent> {
   let boardState = state.boardState
-  const agent = state.agent.move(boardState)
+  const [agent] = state.agent.move(boardState, state.agents)
   const prizePositions: Position[] = advancePrizePositions(boardState)
 
   if (agent.position[0] >= state.boardState.gridWidth - 1) {

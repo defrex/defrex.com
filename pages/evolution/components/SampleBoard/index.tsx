@@ -9,8 +9,10 @@ import {
   FrameBoard,
 } from '../FrameBoard'
 
-export interface SampleFrameState extends DefaultFrameState {
-  agent: Agent<any, any>
+export interface SampleFrameState<TAgent extends Agent<any, any>>
+  extends DefaultFrameState {
+  agent: TAgent
+  agents: TAgent[]
   boardState: BoardState
   result: 'death' | 'life' | null
 }
@@ -19,15 +21,19 @@ const canvasHeight = cellSize * 5
 export const sampleGridWidth = canvasWidth / cellSize
 export const sampleGridHeight = canvasHeight / cellSize
 
-interface SampleBoardProps {
-  initSampleFrameState: (state?: SampleFrameState) => SampleFrameState
-  getNextSampleFrameState: (state: SampleFrameState) => SampleFrameState
+interface SampleBoardProps<TAgent extends Agent<any, any>> {
+  initSampleFrameState: (
+    state?: SampleFrameState<TAgent>,
+  ) => SampleFrameState<TAgent>
+  getNextSampleFrameState: (
+    state: SampleFrameState<TAgent>,
+  ) => SampleFrameState<TAgent>
 }
 
-export function SampleBoard({
+export function SampleBoard<TAgent extends Agent<any, any>>({
   initSampleFrameState,
   getNextSampleFrameState,
-}: SampleBoardProps) {
+}: SampleBoardProps<TAgent>) {
   return (
     <FrameBoard
       initFrameState={initSampleFrameState}
@@ -36,7 +42,7 @@ export function SampleBoard({
       height={canvasHeight}
       turbo={false}
       reset={false}
-      renderControl={(state: SampleFrameState) => (
+      renderControl={(state: SampleFrameState<TAgent>) => (
         <Inline align='right'>
           <Text
             value={
