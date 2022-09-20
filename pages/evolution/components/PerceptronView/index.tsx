@@ -71,8 +71,6 @@ export function PerceptronView({ perceptron, onClick }: PerceptronViewProps) {
       <div className={styles.genomeView} onClick={onClick}>
         <realflow.Canvas
           fit={true}
-          // maxWidth={768}
-          // maxHeight={768}
           nodes={nodes}
           edges={edges}
           disabled={true}

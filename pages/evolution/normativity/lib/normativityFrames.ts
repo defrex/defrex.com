@@ -44,8 +44,8 @@ export type NormativityFrameState = {
   respawnAgent?: NormativityAgent
 }
 
-const agentCount = 10
-const prizeCount = 3
+const agentCount = 15
+const prizeCount = 5
 export const prizePositionType = 'prize'
 
 export type NormativityMetrics = 'points' | 'ppt'
@@ -183,9 +183,9 @@ function getNextFrameState(
           }
         } else if (changeMetricNames.indexOf(metricName) !== -1) {
           const prePeriodValues = history
-            .slice(0, -lookBack)
+            .slice(lookBack * -2, -lookBack)
             .map((history) => history[metricName])
-          const prePeriosAverage =
+          const prePeriodAverage =
             prePeriodValues.length > 0
               ? sum(prePeriodValues) / prePeriodValues.length
               : 0
@@ -193,7 +193,7 @@ function getNextFrameState(
             .slice(-lookBack)
             .map((history) => history[metricName])
           const periodAverage = sum(periodValues) / periodValues.length
-          const change = periodAverage - prePeriosAverage
+          const change = (periodAverage - prePeriodAverage) / lookBack
 
           metricValue = {
             move,

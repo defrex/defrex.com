@@ -23,8 +23,8 @@ interface NormativityAgentArgs {
 const defaultTopology = getNeuronTopology({
   inputSize: 3,
   outputSize: 3,
-  hiddenLayerSizes: [3],
-  squash: Neuron.squash.ReLU,
+  hiddenLayerSizes: [5, 5, 5],
+  squash: Neuron.squash.LOGISTIC,
 })
 
 export class NormativityAgent extends Agent<
@@ -154,9 +154,13 @@ export class NormativityAgent extends Agent<
   ): NormativityAgent[] {
     const maxPoints = max(uniq([...agents, this]).map((agent) => agent.points))!
     const percent = this.points / maxPoints
-    const learningRate = 0.5 * percent
+    const learningRate = 0.75 * percent
 
-    return agents.map((agent) => agent.learn(inputs, outputs, learningRate))
+    return agents.map((agent) =>
+      agent.points < this.points
+        ? agent.learn(inputs, outputs, learningRate)
+        : agent,
+    )
   }
 
   private prizeDistance(boardState: BoardState, offset: number): number {
