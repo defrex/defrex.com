@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { VictoryArea, VictoryChart, VictoryLine } from 'victory'
+import { VictoryArea, VictoryChart } from 'victory'
 import { Button } from '../../../components/Button'
 import { Checkbox } from '../../../components/Checkbox'
 import { Inline } from '../../../components/Inline'
@@ -79,14 +79,15 @@ export default function Normativity() {
                     />
                   </Inline>
                   <VictoryChart theme={victoryChartTheme} height={200}>
-                    <VictoryLine
+                    <VictoryArea
                       data={state.metrics[metricsSpeed.ppt].ppt ?? []}
                       x='move'
-                      y='value'
+                      y0='min'
+                      y='max'
                     />
                   </VictoryChart>
                 </Stack>
-                <Stack spacing={spacing.small}>
+                {/* <Stack spacing={spacing.small}>
                   <Inline expand={0}>
                     <Text value={`Points`} color={colors.black40} />
                     <Checkbox
@@ -103,7 +104,7 @@ export default function Normativity() {
                       y='max'
                     />
                   </VictoryChart>
-                </Stack>
+                </Stack> */}
               </Stack>
             )}
             renderControl={(state, setState) => (

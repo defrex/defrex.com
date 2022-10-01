@@ -46,10 +46,14 @@ export interface NormativityFrameState {
 
 const agentCount = 15
 const prizeCount = 5
+const prizeJiggle = {
+  x: 0.5,
+  y: 0,
+}
 export const prizePositionType = 'prize'
 
 export type NormativityMetrics = 'points' | 'ppt'
-const areaMetricNames: NormativityMetrics[] = ['points']
+const areaMetricNames: NormativityMetrics[] = [] // ['points']
 const lineMetricNames: NormativityMetrics[] = []
 const changeMetricNames: NormativityMetrics[] = ['ppt']
 const metricNames: NormativityMetrics[] = [
@@ -143,7 +147,7 @@ function getNextFrameState(
 
   const move = state.move + 1
 
-  const slowSampleRate = move < 1000 ? 100 : move < 10000 ? 1000 : 5000
+  const slowSampleRate = move < 1000 ? 500 : move < 10000 ? 1000 : 5000
   const slowSampleDuration = 0
   const fastSampleRate = 16
   const fastSampleDuration = 1000
@@ -154,7 +158,8 @@ function getNextFrameState(
       move,
       pointsMax: max(agents.map((agent) => agent.points))!,
       pointsMin: min(agents.map((agent) => agent.points))!,
-      ppt: max(agents.map((agent) => agent.points))!,
+      pptMax: max(agents.map((agent) => agent.points))!,
+      pptMin: min(agents.map((agent) => agent.points))!,
     },
   ]
 
@@ -172,7 +177,7 @@ function getNextFrameState(
       for (const metricName of metricNames) {
         const lookBack = min([sampleRate, history.length])!
 
-        let metricValue: MetricValue
+        let metricValue: MetricValue | undefined
         if (lineMetricNames.includes(metricName)) {
           metricValue = {
             move,
@@ -182,24 +187,27 @@ function getNextFrameState(
               ) / lookBack,
           }
         } else if (changeMetricNames.includes(metricName)) {
-          const prePeriodValues = history
-            .slice(lookBack * -2, -lookBack)
-            .map((history) => history[metricName])
-          const prePeriodAverage =
-            prePeriodValues.length > 0
-              ? sum(prePeriodValues) / prePeriodValues.length
-              : 0
-          const periodValues = history
-            .slice(-lookBack)
-            .map((history) => history[metricName])
-          const periodAverage = sum(periodValues) / periodValues.length
-          const change = (periodAverage - prePeriodAverage) / lookBack
-
           metricValue = {
             move,
-            value: change,
           }
-        } else {
+
+          for (const suffix of ['Max', 'Min'] as ['Max', 'Min']) {
+            const prePeriodValues = history
+              .slice(lookBack * -2, -lookBack)
+              .map((history) => history[`${metricName}${suffix}`])
+            const prePeriodAverage =
+              prePeriodValues.length > 0
+                ? sum(prePeriodValues) / prePeriodValues.length
+                : 0
+            const periodValues = history
+              .slice(-lookBack)
+              .map((history) => history[`${metricName}${suffix}`])
+            const periodAverage = sum(periodValues) / periodValues.length
+            const change = (periodAverage - prePeriodAverage) / lookBack
+
+            metricValue[suffix.toLowerCase() as 'max' | 'min'] = change
+          }
+        } else if (areaMetricNames.includes(metricName)) {
           metricValue = {
             move,
             min:
@@ -217,12 +225,14 @@ function getNextFrameState(
           }
         }
 
-        metrics[metricSpeed][metricName] = [
-          ...metrics[metricSpeed][metricName].slice(
-            -(sampleDuration / sampleRate),
-          ),
-          metricValue,
-        ]
+        if (metricValue) {
+          metrics[metricSpeed][metricName] = [
+            ...metrics[metricSpeed][metricName].slice(
+              -(sampleDuration / sampleRate),
+            ),
+            metricValue,
+          ]
+        }
       }
     }
   }
@@ -263,9 +273,10 @@ function advancePrizePositions(boardState: BoardState): Position[] {
   return boardState
     .getPositions(prizePositionType)
     .map(([x, y]) => {
-      const x1 = Math.random() < 0.5 ? x - 1 : x
+      const x1 = Math.random() < prizeJiggle.x ? x - 1 : x
       const ySeed = Math.random()
-      const y1 = ySeed < 0.1 ? y - 1 : ySeed < 0.2 ? y + 1 : y
+      const y1 =
+        ySeed < prizeJiggle.y ? y - 1 : ySeed < prizeJiggle.y * 2 ? y + 1 : y
       return [x1, y1] as Position
     })
     .map(
