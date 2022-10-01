@@ -18,20 +18,20 @@ import {
 } from '../../neuroevolution/lib/getNextFrameState'
 import { NormativityAgent } from './NormativityAgent'
 
-type MetricValue = {
+interface MetricValue {
   move: number
   value?: number
   min?: number
   max?: number
 }
 
-export type NormativityFrameState = {
+export interface NormativityFrameState {
   agents: NormativityAgent[]
   boardState: BoardState
   cellSize: number
   gridHeight: number
   gridWidth: number
-  history: Record<NormativityMetrics | 'move', number>[]
+  history: Array<Record<NormativityMetrics | 'move', number>>
   metrics: {
     fast: Record<NormativityMetrics, MetricValue[]>
     slow: Record<NormativityMetrics, MetricValue[]>
@@ -148,7 +148,7 @@ function getNextFrameState(
   const fastSampleRate = 16
   const fastSampleDuration = 1000
 
-  const history: Record<string | 'move', number>[] = [
+  const history: Array<Record<string | 'move', number>> = [
     ...state.history.slice(-max([fastSampleDuration, slowSampleRate])!),
     {
       move,
@@ -173,7 +173,7 @@ function getNextFrameState(
         const lookBack = min([sampleRate, history.length])!
 
         let metricValue: MetricValue
-        if (lineMetricNames.indexOf(metricName) !== -1) {
+        if (lineMetricNames.includes(metricName)) {
           metricValue = {
             move,
             value:
@@ -181,7 +181,7 @@ function getNextFrameState(
                 history.slice(-lookBack).map((history) => history[metricName]),
               ) / lookBack,
           }
-        } else if (changeMetricNames.indexOf(metricName) !== -1) {
+        } else if (changeMetricNames.includes(metricName)) {
           const prePeriodValues = history
             .slice(lookBack * -2, -lookBack)
             .map((history) => history[metricName])
@@ -227,7 +227,7 @@ function getNextFrameState(
     }
   }
 
-  const runFor = state.runFor ? state.runFor - 1 : null
+  const runFor = state.runFor !== null ? state.runFor - 1 : null
 
   return {
     ...state,
@@ -286,8 +286,8 @@ function initSampleFrameState(
     agent,
     agents: [agent],
     move: 0,
-    running: state ? false : true,
-    result: state && state.result !== null ? state.result : null,
+    running: Boolean(state),
+    result: state?.result ?? null,
     boardState: new BoardState({
       gridWidth: sampleGridWidth,
       gridHeight: sampleGridHeight,
@@ -309,7 +309,7 @@ function initSampleFrameState(
 function getNextSampleFrameState(
   state: SampleFrameState<NormativityAgent>,
 ): SampleFrameState<NormativityAgent> {
-  let boardState = state.boardState
+  const boardState = state.boardState
   const [agent] = state.agent.move(boardState, state.agents)
   const prizePositions: Position[] = advancePrizePositions(boardState)
 
@@ -345,10 +345,7 @@ function getNextSampleFrameState(
     agent,
     boardState: boardState.setPositions([
       ...prizePositionColors(prizePositions),
-      ...agentPositionColors(
-        state.agents as NormativityAgent[],
-        state.boardState.gridWidth,
-      ),
+      ...agentPositionColors(state.agents, state.boardState.gridWidth),
     ]),
     result: null,
   }

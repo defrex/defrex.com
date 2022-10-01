@@ -22,9 +22,7 @@ import {
 } from './lib/normativityFrames'
 import styles from './styles.module.scss'
 
-interface NormativityProps {}
-
-export default function Normativity(_props: NormativityProps) {
+export default function Normativity() {
   const sampleSetState = useSampleSetState<
     NormativityAgent,
     NormativityFrameState
