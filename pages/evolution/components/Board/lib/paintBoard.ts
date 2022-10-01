@@ -6,7 +6,7 @@ export function paintEdge(
   nodeSize: number,
   [fromPosition, toPosition]: Edge,
   color: string = colorValues.black40,
-) {
+): void {
   const direction = edgeDirection([fromPosition, toPosition])
   const fromX = fromPosition[0] * nodeSize
   const fromY = fromPosition[1] * nodeSize
@@ -34,7 +34,7 @@ export function clearEdge(
   context: CanvasRenderingContext2D,
   nodeSize: number,
   [fromPosition, toPosition]: Edge,
-) {
+): void {
   const direction = edgeDirection([fromPosition, toPosition])
   const fromX = fromPosition[0] * nodeSize
   const fromY = fromPosition[1] * nodeSize
@@ -55,7 +55,7 @@ export function paintNode(
   nodeSize: number,
   [gridX, gridY]: Position,
   color: string = colorValues.brand,
-) {
+): void {
   const dotHeight = nodeSize * 0.5
   const dotWidth = nodeSize * 0.5
   context.fillStyle = color
@@ -71,7 +71,7 @@ export function clearNode(
   context: CanvasRenderingContext2D,
   nodeSize: number,
   [gridX, gridY]: Position,
-) {
+): void {
   const dotHeight = nodeSize * 0.25
   const dotWidth = nodeSize * 0.25
   context.clearRect(

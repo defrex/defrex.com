@@ -20,7 +20,7 @@ import { PerceptronView } from '../PerceptronView'
 import { SampleFrameState } from '../SampleBoard'
 import styles from './styles.module.scss'
 
-type AgentSample<TAgent extends Agent<any, any>> = {
+interface AgentSample<TAgent extends Agent<any, any>> {
   move: number
   fitness?: number
   agent: TAgent
@@ -36,7 +36,7 @@ interface SampleSetState<
 > {
   clearSampleAgent: (agent: TAgent) => () => void
   onFrame: (state: TFrameState) => void
-  sampleAgents: AgentSample<TAgent>[]
+  sampleAgents: Array<AgentSample<TAgent>>
   setShowAgentNetwork: (agent: TAgent | null) => () => void
   showAgentBehavior: TAgent | null
   showAgentNetwork: TAgent | null
@@ -49,7 +49,9 @@ export function useSampleSetState<
   TAgent extends Agent<any, any>,
   TFrameState extends SampleableFrameState,
 >(): SampleSetState<TAgent, TFrameState> {
-  const [sampleAgents, setSampleAgents] = useState<AgentSample<TAgent>[]>([])
+  const [sampleAgents, setSampleAgents] = useState<Array<AgentSample<TAgent>>>(
+    [],
+  )
   const [showAgentBehavior, setShowAgentBehavior] = useState<TAgent | null>(
     null,
   )
@@ -151,6 +153,7 @@ interface SampleSetProps<
   TAgent extends Agent<any, any>,
   TFrameState extends SampleableFrameState,
 > {
+  showBehavior?: boolean
   state: SampleSetState<TAgent, TFrameState>
   initSampleFrameState: (
     agent: TAgent,
@@ -166,6 +169,7 @@ export function SampleSet<
   TAgent extends Agent<any, any>,
   TFrameState extends SampleableFrameState,
 >({
+  showBehavior,
   state,
   initSampleFrameState,
   getNextSampleFrameState,
@@ -211,8 +215,8 @@ export function SampleSet<
               <td>
                 <Text
                   value={`${
-                    agent.perceptron.nodes.length +
-                    agent.perceptron.edges.length
+                    (agent.perceptron.nodes.length as number) +
+                    (agent.perceptron.edges.length as number)
                   }`}
                 />
               </td>
@@ -223,16 +227,18 @@ export function SampleSet<
                       onClick={state.setShowAgentNetwork(agent)}
                       text='Network'
                     />
-                    <Button
-                      onClick={state.toggleAgentBehavior(agent)}
-                      text='Behavior'
-                      disabled={
-                        !!(
-                          state.showAgentBehavior &&
-                          equivalentSamples(state.showAgentBehavior, agent)
-                        )
-                      }
-                    />
+                    {showBehavior === true ? (
+                      <Button
+                        onClick={state.toggleAgentBehavior(agent)}
+                        text='Behavior'
+                        disabled={
+                          !!(
+                            state.showAgentBehavior !== null &&
+                            equivalentSamples(state.showAgentBehavior, agent)
+                          )
+                        }
+                      />
+                    ) : null}
                   </Inline>
                   <Button
                     onClick={state.clearSampleAgent(agent)}
@@ -245,7 +251,7 @@ export function SampleSet<
         </tbody>
       </table>
 
-      {state.showAgentBehavior ? (
+      {showBehavior === true && state.showAgentBehavior !== null ? (
         <AgentBehavior<TAgent>
           agent={state.showAgentBehavior}
           initSampleFrameState={initSampleFrameState}
@@ -253,7 +259,7 @@ export function SampleSet<
         />
       ) : null}
 
-      {state.showAgentNetwork ? (
+      {state.showAgentNetwork !== null ? (
         <PerceptronView
           perceptron={state.showAgentNetwork.perceptron}
           onClick={state.setShowAgentNetwork(null)}

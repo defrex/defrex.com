@@ -262,7 +262,12 @@ function prizePositionColors(prizePositions: Position[]): ColorPosition[] {
 function advancePrizePositions(boardState: BoardState): Position[] {
   return boardState
     .getPositions(prizePositionType)
-    .map(([x, y]) => [x - 1, y] as Position)
+    .map(([x, y]) => {
+      const x1 = Math.random() < 0.5 ? x - 1 : x
+      const ySeed = Math.random()
+      const y1 = ySeed < 0.1 ? y - 1 : ySeed < 0.2 ? y + 1 : y
+      return [x1, y1] as Position
+    })
     .map(
       ([x, y]) =>
         [

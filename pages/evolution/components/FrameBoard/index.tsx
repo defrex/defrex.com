@@ -21,7 +21,7 @@ import { Board } from '../Board'
 import { BoardState } from '../Board/lib/BoardState'
 
 export interface DefaultFrameState {
-  agents: Agent<any, any>[]
+  agents: Array<Agent<any, any>>
   boardState: BoardState
   fps?: number
   fpss?: number[]
@@ -103,7 +103,7 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
       let nextState = getNextFrameState(prevState)
       if (onFrame) onFrame(nextState)
 
-      let extraFrames = (prevState.framesPerFrame || 1) - 1
+      let extraFrames = (prevState.framesPerFrame ?? 1) - 1
       while (extraFrames--) {
         nextState = getNextFrameState(nextState)
         if (onFrame) onFrame(nextState)
@@ -112,8 +112,8 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
       nextState.time = time
 
       nextState.fpss = [
-        ...(nextState.fpss?.slice(-5) || []),
-        framesPerSecond(nextState.time, prevState.time || time),
+        ...(nextState.fpss?.slice(-5) ?? []),
+        framesPerSecond(nextState.time, prevState.time ?? time),
       ]
       nextState.fps = round(sum(nextState.fpss) / nextState.fpss.length)
       if (nextState.fps === Infinity) {
@@ -121,9 +121,9 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
       }
 
       if (nextState.turbo && nextState.fps && nextState.fps > 40) {
-        nextState.framesPerFrame = (nextState.framesPerFrame || 0) + 1
+        nextState.framesPerFrame = (nextState.framesPerFrame ?? 0) + 1
       } else if (nextState.turbo && nextState.fps && nextState.fps < 20) {
-        nextState.framesPerFrame = (nextState.framesPerFrame || 0) - 1
+        nextState.framesPerFrame = (nextState.framesPerFrame ?? 0) - 1
       }
 
       nextState.runFor = prevState.runFor ? prevState.runFor - 1 : null
@@ -131,7 +131,7 @@ export function FrameBoard<FrameState extends DefaultFrameState>({
         nextState.runFor === null ? nextState.running : nextState.runFor > 0
 
       if (nextState.speed && nextState.speed > 0) {
-        sleep(nextState.speed).then(() => {
+        void sleep(nextState.speed).then(() => {
           frameRef.current = requestAnimationFrame(renderFrame)
         })
       } else {

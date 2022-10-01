@@ -20,13 +20,12 @@ import {
   initFrameState,
   neuroevolutionFrames,
 } from './lib/getNextFrameState'
+import { NeuroevolutionAgent } from './lib/NeuroevolutionAgent'
 import styles from './styles.module.scss'
 
-interface EvolutionProps {}
-
-export default function Neuroevolution(_props: EvolutionProps) {
+export default function Neuroevolution() {
   const [showHowItWorks, setShowHowItWorks] = useState(false)
-  const sampleSetState = useSampleSetState<FrameState>()
+  const sampleSetState = useSampleSetState<NeuroevolutionAgent, FrameState>()
   const [metricsSpeed, setMetricsSpeed] = useState<
     Record<string, 'fast' | 'slow'>
   >({

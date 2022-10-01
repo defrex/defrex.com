@@ -50,7 +50,7 @@ export default function Normativity() {
         <Stack spacing={spacing.small}>
           <Text value='Normativity' size={20} />
           <Text
-            value='Agent model demonstrating the emergence of normativity.'
+            value='Agent model demonstrating the normativity.'
             color={colors.black40}
           />
         </Stack>

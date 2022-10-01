@@ -5,11 +5,11 @@ import {
   Position,
 } from '../../components/Board/lib/BoardState'
 import { Agent } from '../../lib/Agent'
-import { MutatablePerceptron } from '../../lib/perceptron/mutatable-perceptron'
+import { Perceptron } from '../../lib/perceptron/perceptron'
 
 interface AgentArgs {
   direction?: Direction
-  perceptron?: MutatablePerceptron
+  perceptron?: Perceptron
   gridHeight: number
   gridWidth: number
   id?: string
@@ -19,12 +19,12 @@ interface AgentArgs {
   threatType?: string
 }
 
-export class NeuroevolutionAgent extends Agent<MutatablePerceptron, AgentArgs> {
+export class NeuroevolutionAgent extends Agent<Perceptron, AgentArgs> {
   static inputLabels = ['↱🟥', '→🟥', '↳🟥']
   static outputLabels = ['🟦↑', '🟦↓', '🟦→']
 
   public id: string
-  public perceptron: MutatablePerceptron
+  public perceptron: Perceptron
   public position: Position
   public moves: number = 0
   public lineage: number = 0
@@ -40,8 +40,8 @@ export class NeuroevolutionAgent extends Agent<MutatablePerceptron, AgentArgs> {
     this.threatType ||= this.direction === 'right' ? 'left' : 'right'
   }
 
-  initPerceptron(): MutatablePerceptron {
-    return new MutatablePerceptron({
+  initPerceptron(): Perceptron {
+    return new Perceptron({
       inputSize: NeuroevolutionAgent.inputLabels.length,
       outputSize: NeuroevolutionAgent.outputLabels.length,
       initOutputBias: 2, // ensure they move forward
@@ -72,7 +72,7 @@ export class NeuroevolutionAgent extends Agent<MutatablePerceptron, AgentArgs> {
   mutate(args?: AgentArgs): NeuroevolutionAgent {
     return new NeuroevolutionAgent({
       ...this.getArgs(),
-      ...(args || {}),
+      ...(args ?? {}),
       perceptron: this.perceptron.mutate(),
       moves: 0,
       lineage: this.lineage + 1,

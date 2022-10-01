@@ -5,9 +5,8 @@ import { colors } from '../../../../../lib/colors'
 import { spacing } from '../../../../../lib/spacing'
 import { defaultLearningRate } from '../../../lib/perceptron/perceptron'
 import initialNeuralNetworkImage from './initialNeuralNet.png'
-interface HowItWorksProps {}
 
-export default function HowItWorks(_props: HowItWorksProps) {
+export default function HowItWorks() {
   return (
     <Stack spacing={spacing.large}>
       <Text value='How It Works' size={16} />

@@ -27,7 +27,7 @@ export class BoardState {
     this.gridWidth = args.gridWidth
     this.gridHeight = args.gridHeight
     this.cellSize = args.cellSize
-    this.positions = args.positions || []
+    this.positions = args.positions ?? []
   }
 
   private getArgs(): BoardStateArgs {

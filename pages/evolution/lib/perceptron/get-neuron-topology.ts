@@ -17,36 +17,36 @@ export function getNeuronTopology({
 }: GetNeuronTopologyArgs): { nodes: Node[]; edges: Edge[] } {
   const edges: Edge[] = []
 
-  const inputNodes = new Array(inputSize).fill(undefined).map(
-    () =>
-      ({
-        type: 'input',
-        id: uniqueId(),
-        bias: 0,
-        squash,
-      } as Node),
-  )
+  const inputNodes = new Array(inputSize).fill(undefined).map(() => {
+    const node: Node = {
+      type: 'input',
+      id: uniqueId(),
+      bias: 0,
+      squash,
+    }
+    return node
+  })
 
-  const outputNodes = new Array(outputSize).fill(undefined).map(
-    () =>
-      ({
-        type: 'output',
+  const outputNodes = new Array(outputSize).fill(undefined).map(() => {
+    const node: Node = {
+      type: 'output',
+      id: uniqueId(),
+      bias: random(-1, 1, true),
+      squash,
+    }
+    return node
+  })
+
+  const hiddenNodes = hiddenLayerSizes.map((hiddenLayerSize) =>
+    new Array(hiddenLayerSize).fill(undefined).map(() => {
+      const node: Node = {
+        type: 'hidden',
         id: uniqueId(),
         bias: random(-1, 1, true),
         squash,
-      } as Node),
-  )
-
-  const hiddenNodes = hiddenLayerSizes.map((hiddenLayerSize) =>
-    new Array(hiddenLayerSize).fill(undefined).map(
-      () =>
-        ({
-          type: 'hidden',
-          id: uniqueId(),
-          bias: random(-1, 1, true),
-          squash,
-        } as Node),
-    ),
+      }
+      return node
+    }),
   )
 
   const layers = [inputNodes, ...hiddenNodes, outputNodes]

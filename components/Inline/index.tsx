@@ -41,7 +41,7 @@ export function Inline({
   )
 
   const childClassName = useCallback(
-    (index) => {
+    (index: number) => {
       return classnames(
         index + 1 < realChildren.length
           ? styles[`inline-item-${spacing}${debug ? '-debug' : ''}`]

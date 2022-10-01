@@ -18,7 +18,7 @@ export function PerceptronView({ perceptron, onClick }: PerceptronViewProps) {
 
   useEffect(() => {
     if (realflow) return
-    import('reaflow').then((realflowImport) => {
+    void import('reaflow').then((realflowImport) => {
       setRealflow(realflowImport)
     })
   }, [realflow, setRealflow])

@@ -6,12 +6,12 @@ import {
   Position,
 } from '../../components/Board/lib/BoardState'
 import { Agent } from '../../lib/Agent'
-import { BackpropablePerceptron } from '../../lib/perceptron/backpropable-perceptron'
 import { getNeuronTopology } from '../../lib/perceptron/get-neuron-topology'
+import { Perceptron } from '../../lib/perceptron/perceptron'
 import { prizePositionType } from './normativityFrames'
 
 interface NormativityAgentArgs {
-  perceptron?: BackpropablePerceptron
+  perceptron?: Perceptron
   gridHeight: number
   gridWidth: number
   id?: string
@@ -27,15 +27,12 @@ const defaultTopology = getNeuronTopology({
   squash: Neuron.squash.LOGISTIC,
 })
 
-export class NormativityAgent extends Agent<
-  BackpropablePerceptron,
-  NormativityAgentArgs
-> {
+export class NormativityAgent extends Agent<Perceptron, NormativityAgentArgs> {
   static inputLabels = ['↱🟥', '→🟥', '↳🟥']
   static outputLabels = ['🟦↑', '🟦↓', '🟦→']
 
   public id: string
-  public perceptron: BackpropablePerceptron
+  public perceptron: Perceptron
   public position: Position
   public moves: number = 0
   public points: number
@@ -48,9 +45,9 @@ export class NormativityAgent extends Agent<
     this.points = args.points ?? 0
   }
 
-  initPerceptron(): BackpropablePerceptron {
+  initPerceptron(): Perceptron {
     console.log('new perceptron')
-    return new BackpropablePerceptron({
+    return new Perceptron({
       inputSize: NormativityAgent.inputLabels.length,
       outputSize: NormativityAgent.outputLabels.length,
       ...defaultTopology,

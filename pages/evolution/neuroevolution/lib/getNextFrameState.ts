@@ -21,26 +21,25 @@ import {
   sampleGridHeight,
   sampleGridWidth,
 } from '../../components/SampleBoard'
-import { Agent } from '../../lib/Agent'
 import { agentColor } from '../../lib/agentColor'
 import { NeuroevolutionAgent } from './NeuroevolutionAgent'
 
 export type RunMode = 'killer' | 'competition'
 
-type MetricValue = {
+interface MetricValue {
   move: number
   value?: number
   min?: number
   max?: number
 }
 
-export type FrameState = {
+export interface FrameState {
   agents: NeuroevolutionAgent[]
   boardState: BoardState
   cellSize: number
   gridHeight: number
   gridWidth: number
-  history: Record<string | 'move', number>[]
+  history: Array<Record<string | 'move', number>>
   metrics: {
     fast: Record<string, MetricValue[]>
     slow: Record<string, MetricValue[]>
@@ -161,7 +160,7 @@ export function getNextFrameState(state: FrameState): FrameState {
 
   while (agents.length < minAgents) {
     agents.push(
-      respawnAgent?.mutate() || initAgent(state.gridWidth, state.gridHeight),
+      respawnAgent?.mutate() ?? initAgent(state.gridWidth, state.gridHeight),
     )
   }
 
@@ -177,7 +176,7 @@ export function getNextFrameState(state: FrameState): FrameState {
   const fastSampleRate = 16
   const fastSampleDuration = 1000
 
-  const history: Record<string | 'move', number>[] = [
+  const history: Array<Record<string | 'move', number>> = [
     ...state.history.slice(-max([fastSampleDuration, slowSampleRate])!),
     {
       move,
@@ -219,7 +218,7 @@ export function getNextFrameState(state: FrameState): FrameState {
         const lookBack = min([sampleRate, history.length])!
         let metricValue: MetricValue
 
-        if (lineMetricNames.indexOf(metricName) !== -1) {
+        if (lineMetricNames.includes(metricName)) {
           metricValue = {
             move,
             value:
@@ -337,18 +336,18 @@ export function advanceKillPositions(boardState: BoardState): Position[] {
     )
 }
 
-function initSampleFrameState<TAgent extends Agent<any, any>>(
-  agent: TAgent,
+function initSampleFrameState(
+  agent: NeuroevolutionAgent,
   redPositions: Position[],
-  state?: SampleFrameState,
-): SampleFrameState {
+  state?: SampleFrameState<NeuroevolutionAgent>,
+): SampleFrameState<NeuroevolutionAgent> {
   agent = agent.setPosition([0, 2])
   return {
     agent,
     agents: [agent],
     move: 0,
-    running: state ? false : true,
-    result: state && state.result !== null ? state.result : null,
+    running: Boolean(state),
+    result: state?.result ?? null,
     boardState: new BoardState({
       gridWidth: sampleGridWidth,
       gridHeight: sampleGridHeight,
@@ -367,8 +366,10 @@ function initSampleFrameState<TAgent extends Agent<any, any>>(
   }
 }
 
-function getNextSampleFrameState(state: SampleFrameState): SampleFrameState {
-  let boardState = state.boardState
+function getNextSampleFrameState(
+  state: SampleFrameState<NeuroevolutionAgent>,
+): SampleFrameState<NeuroevolutionAgent> {
+  const boardState = state.boardState
   const agent = state.agent.move(boardState)
   const redPositions: Position[] = advanceKillPositions(boardState)
 
@@ -404,10 +405,7 @@ function getNextSampleFrameState(state: SampleFrameState): SampleFrameState {
     agent,
     boardState: boardState.setPositions([
       ...killPositionColors(redPositions),
-      ...agentPositionColors(
-        state.agents as NeuroevolutionAgent[],
-        state.boardState.gridWidth,
-      ),
+      ...agentPositionColors(state.agents, state.boardState.gridWidth),
     ]),
     result: null,
   }

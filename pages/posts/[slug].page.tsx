@@ -45,7 +45,7 @@ export async function getStaticPaths() {
   }
 }
 
-export async function getStaticProps({ params }: any) {
+export async function getStaticProps({ params }: { params: { slug: string } }) {
   const { slug } = params
 
   const post = await import(`../../content/posts/${slug}.md`)

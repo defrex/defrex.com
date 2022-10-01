@@ -14,7 +14,7 @@ export default function Tile({ posts }: IndexProps) {
       <PageContainer />
       <Inset>
         {range(500).map((index) => (
-          <img src='/img/tile.svg' className={styles.tile} />
+          <img key={index} src='/img/tile.svg' className={styles.tile} />
         ))}
       </Inset>
     </>
