@@ -3,18 +3,19 @@
   "scripts": {
     "build": "next build",
     "serve": "next start",
-    "start": "next"
+    "lint": "next lint",
+    "dev": "next"
   },
   "dependencies": {
     "classnames": "~2.3.1",
     "lodash": "~4.17.21",
-    "next": "~12.0.8",
+    "next": "^12.2.5",
     "react": "~17.0.2",
     "react-dom": "~17.0.2",
     "react-markdown": "~7.1.2",
     "reaflow": "~4.2.15",
     "sass": "~1.48.0",
-    "synaptic": "~1.1.4",
+    "synaptic": "^1.1.4",
     "tslib": "~2.3.1",
     "victory": "~36.2.0"
   },
@@ -25,8 +26,17 @@
     "@types/react": "~17.0.38",
     "@types/react-transition-group": "~4.4.4",
     "@types/synaptic": "~1.0.4",
-    "eslint": "~8.7.0",
+    "@typescript-eslint/eslint-plugin": "^5.38.1",
+    "eslint": "^8.24.0",
+    "eslint-config-next": "12.3.1",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-config-standard-with-typescript": "^23.0.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-n": "^15.3.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-promise": "^6.0.1",
+    "eslint-plugin-react": "^7.31.8",
     "frontmatter-markdown-loader": "~3.6.3",
-    "typescript": "~4.5.4"
+    "typescript": "^4.8.4"
   }
 }

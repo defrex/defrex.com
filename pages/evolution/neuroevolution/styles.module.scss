@@ -1,0 +1,33 @@
+@use "../../../lib/colors";
+@use "../../../lib/spacing";
+
+.sampleAgents {
+  width: 768px;
+
+  th {
+    text-align: left;
+  }
+
+  th,
+  td {
+    padding: spacing.$xsmall;
+  }
+
+  tr td:first-child {
+    border-top-left-radius: spacing.$xsmall;
+    border-bottom-left-radius: spacing.$xsmall;
+  }
+  tr td:last-child {
+    border-top-right-radius: spacing.$xsmall;
+    border-bottom-right-radius: spacing.$xsmall;
+  }
+
+  tbody td:last-child {
+    text-align: right;
+  }
+}
+
+.colContainer {
+  max-width: 768px * 2;
+  margin: auto;
+}
