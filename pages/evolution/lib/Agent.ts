@@ -24,7 +24,7 @@ export class Agent<
   public id: string
   public perceptron: TPerceptron
   public position: Position
-  public moves: number = 0
+  public moves: number
 
   gridWidth: number
   gridHeight: number

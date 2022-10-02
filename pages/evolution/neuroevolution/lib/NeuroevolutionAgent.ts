@@ -1,4 +1,4 @@
-import { max, min, random, sample } from 'lodash'
+import { max, min, random, sample, uniq } from 'lodash'
 import {
   BoardState,
   Direction,
@@ -26,7 +26,7 @@ export class NeuroevolutionAgent extends Agent<Perceptron, AgentArgs> {
   public id: string
   public perceptron: Perceptron
   public position: Position
-  public moves: number = 0
+  public moves: number
   public lineage: number = 0
   public direction: Direction = 'right'
   public threatType: string
@@ -90,7 +90,15 @@ export class NeuroevolutionAgent extends Agent<Perceptron, AgentArgs> {
     return isConflict
   }
 
-  move(boardState: BoardState): typeof this {
+  move(
+    boardState: BoardState,
+    normalizeAgents: NeuroevolutionAgent[],
+  ): { agent: NeuroevolutionAgent; normalizeAgents: NeuroevolutionAgent[] }
+  move(boardState: BoardState): { agent: NeuroevolutionAgent }
+  move(
+    boardState: BoardState,
+    normalizeAgents?: NeuroevolutionAgent[],
+  ): { agent: NeuroevolutionAgent; normalizeAgents?: NeuroevolutionAgent[] } {
     const inputs = [
       this.threatDistance(boardState, -1),
       this.threatDistance(boardState, 0),
@@ -126,16 +134,40 @@ export class NeuroevolutionAgent extends Agent<Perceptron, AgentArgs> {
       direction || this.direction,
     )
 
-    let nextMoves = this.moves
-    if (direction === this.direction) {
-      nextMoves++
+    return {
+      agent: this.cloneWith({
+        position: nextPosition,
+        moves: this.moves + 1,
+      }),
+      normalizeAgents: normalizeAgents
+        ? this.normalize(inputs, outputs, normalizeAgents)
+        : undefined,
     }
+  }
 
+  normalize(
+    inputs: number[],
+    outputs: number[],
+    agents: NeuroevolutionAgent[],
+  ): NeuroevolutionAgent[] {
+    const maxPoints = max(uniq([...agents, this]).map((agent) => agent.moves))!
+    const percent = this.moves / maxPoints
+    const learningRate = 0.75 * percent
+
+    return agents.map((agent) =>
+      agent.moves < this.moves
+        ? agent.learn(inputs, outputs, learningRate)
+        : agent,
+    )
+  }
+
+  learn(
+    inputs: number[],
+    outputs: number[],
+    learningRate: number,
+  ): typeof this {
     return this.cloneWith({
-      ...this.getArgs(),
-      position: nextPosition,
-      moves: nextMoves,
-      id: this.id,
+      perceptron: this.perceptron.backprop(inputs, outputs, learningRate),
     })
   }
 
@@ -150,8 +182,8 @@ export class NeuroevolutionAgent extends Agent<Perceptron, AgentArgs> {
     }
     let threatDistances = boardState
       .getPositions(this.threatType) // kill positions
-      .filter(([x, y]) => y === currentY) // on the current row
-      .map(([x, y]) => x - currentX) // distance from current position (- == left, + == right)
+      .filter(([_x, y]) => y === currentY) // on the current row
+      .map(([x, _y]) => x - currentX) // distance from current position (- == left, + == right)
 
     if (this.direction === 'left') {
       threatDistances = threatDistances.map((d) => -d)

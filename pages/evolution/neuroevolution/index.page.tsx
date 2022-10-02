@@ -30,13 +30,13 @@ export default function Neuroevolution() {
     Record<string, 'fast' | 'slow'>
   >({
     population: 'slow',
-    lineage: 'slow',
+    moves: 'slow',
     difficulty: 'slow',
     complexity: 'slow',
   })
 
   const handleToggleMetric = useCallback(
-    (metric: 'population' | 'lineage' | 'difficulty' | 'complexity') => () => {
+    (metric: 'population' | 'moves' | 'difficulty' | 'complexity') => () => {
       setMetricsSpeed({
         ...metricsSpeed,
         [metric]: metricsSpeed[metric] === 'fast' ? 'slow' : 'fast',
@@ -137,28 +137,28 @@ export default function Neuroevolution() {
 
                 <Stack spacing={spacing.small}>
                   <Inline expand={0}>
-                    <Text value={`Lineage`} color={colors.black40} />
+                    <Text value={`Moves`} color={colors.black40} />
                     <Checkbox
-                      onClick={handleToggleMetric('lineage')}
+                      onClick={handleToggleMetric('moves')}
                       left='Realtime'
-                      checked={metricsSpeed.lineage === 'fast'}
+                      checked={metricsSpeed.moves === 'fast'}
                     />
                   </Inline>
                   <VictoryChart theme={victoryChartTheme} height={200}>
                     {/* {console.log(state.metrics)} */}
                     <VictoryArea
-                      data={state.metrics[metricsSpeed.lineage].lineage}
+                      data={state.metrics[metricsSpeed.moves].moves}
                       x='move'
                       y0='min'
                       y='max'
                     />
                     <VictoryLine
-                      data={state.metrics[metricsSpeed.lineage].lineageMax}
+                      data={state.metrics[metricsSpeed.moves].movesMax}
                       x='move'
                       y='value'
                     />
                     <VictoryLine
-                      data={state.metrics[metricsSpeed.lineage].lineageMin}
+                      data={state.metrics[metricsSpeed.moves].movesMin}
                       x='move'
                       y='value'
                     />

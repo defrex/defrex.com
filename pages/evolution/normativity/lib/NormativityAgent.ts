@@ -171,8 +171,8 @@ export class NormativityAgent extends Agent<Perceptron, NormativityAgentArgs> {
     }
     let prizeDistances = boardState
       .getPositions(prizePositionType)
-      .filter(([x, y]) => y === currentY) // on the current row
-      .map(([x, y]) => x - currentX) // distance from current position (- == left, + == right)
+      .filter(([_x, y]) => y === currentY) // on the current row
+      .map(([x, _y]) => x - currentX) // distance from current position (- == left, + == right)
 
     prizeDistances = prizeDistances.map((distance) =>
       distance < 0 ? this.gridWidth + distance : distance,

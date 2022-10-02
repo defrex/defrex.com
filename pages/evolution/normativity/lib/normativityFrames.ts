@@ -191,7 +191,7 @@ function getNextFrameState(
             move,
           }
 
-          for (const suffix of ['Max', 'Min'] as ['Max', 'Min']) {
+          for (const suffix of ['Max', 'Min']) {
             const prePeriodValues = history
               .slice(lookBack * -2, -lookBack)
               .map((history) => history[`${metricName}${suffix}`])

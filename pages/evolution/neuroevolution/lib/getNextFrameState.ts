@@ -69,13 +69,13 @@ export const defaultCanvasWidth =
     : 256
 export const defaultCanvasHeight = 512
 
-const areaMetricNames = ['lineage', 'complexity']
+const areaMetricNames = ['moves', 'complexity']
 const lineMetricNames = [
   'difficulty',
   'population',
   'killers',
-  'lineageMax',
-  'lineageMin',
+  'movesMax',
+  'movesMin',
   'complexityMin',
   'complexityMax',
 ]
@@ -131,7 +131,16 @@ export function getNextFrameState(state: FrameState): FrameState {
     killPositions.push([state.gridWidth - 1, random(0, state.gridHeight - 1)])
   }
 
-  const movedAgents = state.agents.map((agent) => agent.move(state.boardState))
+  const movedAgents = state.agents.reduce<NeuroevolutionAgent[]>(
+    (agents, agent) => {
+      const { agent: movedAgent, normalizeAgents } = agent.move(
+        state.boardState,
+        agents.filter(({ id }) => id !== agent.id),
+      )
+      return [...normalizeAgents, movedAgent]
+    },
+    state.agents,
+  )
   const agents = movedAgents.filter((agent) =>
     isNotInPositions(killPositions, agent.position),
   )
@@ -183,8 +192,8 @@ export function getNextFrameState(state: FrameState): FrameState {
       difficulty: difficultyFromSurvivors(agents.length),
       population: agents.length,
       killers: boardState.getPositions('kill').length,
-      lineageMax: max(agents.map(({ lineage }) => lineage))!,
-      lineageMin: min(agents.map(({ lineage }) => lineage))!,
+      movesMax: max(agents.map((agent) => agent.moves))!,
+      movesMin: min(agents.map((agent) => agent.moves))!,
       complexityMin: max(
         agents.map(
           ({ perceptron }) => perceptron.nodes.length + perceptron.edges.length,
@@ -353,10 +362,7 @@ function initSampleFrameState(
       gridHeight: sampleGridHeight,
       cellSize,
     }).setPositions([
-      ...agentPositionColors(
-        [agent as unknown as NeuroevolutionAgent],
-        sampleGridWidth,
-      ),
+      ...agentPositionColors([agent], sampleGridWidth),
       ...redPositions.map((position) => ({
         type: 'kill',
         color: colorValues.red60,
@@ -370,7 +376,7 @@ function getNextSampleFrameState(
   state: SampleFrameState<NeuroevolutionAgent>,
 ): SampleFrameState<NeuroevolutionAgent> {
   const boardState = state.boardState
-  const agent = state.agent.move(boardState)
+  const { agent } = state.agent.move(boardState)
   const redPositions: Position[] = advanceKillPositions(boardState)
 
   if (agent.position[0] >= sampleGridWidth - 1) {

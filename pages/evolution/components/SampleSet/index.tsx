@@ -192,7 +192,7 @@ export function SampleSet<
           </tr>
         </thead>
         <tbody>
-          {state.sampleAgents.map(({ move, fitness, agent }) => (
+          {state.sampleAgents.map(({ move, agent }) => (
             <tr key={`${move}-${agent.id}`}>
               <td>
                 <Text value={`${move.toLocaleString()}`} />
